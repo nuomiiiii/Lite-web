@@ -25,12 +25,14 @@ import {
   Dialog,
   Flex,
   IconButton,
+  Select,
   Switch,
   Tabs,
   TextField,
 } from "@radix-ui/themes";
 import {
   Pencil,
+  Plus,
   Search,
   SlidersHorizontal,
   Trash2,
@@ -244,6 +246,10 @@ const PingLossContent = () => {
     const selectedSet = new Set(selected);
     return targets.filter((target) => selectedSet.has(target.key));
   }, [targets, selected]);
+  const availableTargets = React.useMemo(
+    () => sortTargets(targets.filter((target) => !target.rule), "task"),
+    [targets],
+  );
 
   if (loading || nodesLoading || tasksLoading) {
     return <Loading text={t("loading")} />;
@@ -267,16 +273,28 @@ const PingLossContent = () => {
         <label className="text-2xl font-semibold">
           {t("notification.ping_loss.full_title")}
         </label>
-        <TextField.Root
-          className="w-full sm:w-64"
-          value={search}
-          placeholder={t("common.search")}
-          onChange={(event) => setSearch(event.target.value)}
-        >
-          <TextField.Slot>
-            <Search size={16} />
-          </TextField.Slot>
-        </TextField.Root>
+        <Flex gap="2" align="center" wrap="wrap" className="w-full sm:w-auto">
+          <TextField.Root
+            className="w-full sm:w-64"
+            value={search}
+            placeholder={t("common.search")}
+            onChange={(event) => setSearch(event.target.value)}
+          >
+            <TextField.Slot>
+              <Search size={16} />
+            </TextField.Slot>
+          </TextField.Root>
+          <ConfigurationDialog
+            targets={[]}
+            availableTargets={availableTargets}
+            onSaved={refresh}
+          >
+            <Button>
+              <Plus size={16} />
+              {t("common.add")}
+            </Button>
+          </ConfigurationDialog>
+        </Flex>
       </Flex>
 
       <Tabs.Root value={view} onValueChange={(value) => setView(value as ViewMode)}>
@@ -502,11 +520,13 @@ const AlertRow = ({
 const ConfigurationDialog = ({
   children,
   targets,
+  availableTargets,
   onSaved,
   batch = false,
 }: {
   children: React.ReactNode;
   targets: AlertTarget[];
+  availableTargets?: AlertTarget[];
   onSaved: () => Promise<void>;
   batch?: boolean;
 }) => {
@@ -514,12 +534,31 @@ const ConfigurationDialog = ({
   const [open, setOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [form, setForm] = React.useState<FormState>(defaultForm);
+  const [createTargetKey, setCreateTargetKey] = React.useState("");
   const enableId = React.useId();
-  const targetSignature = targets.map((target) => target.key).join("|");
+  const createMode = availableTargets !== undefined;
+  const availableTargetSignature = (availableTargets || [])
+    .map((target) => target.key)
+    .join("|");
+  const activeTargets = createMode
+    ? (availableTargets || []).filter(
+        (target) => target.key === createTargetKey,
+      )
+    : targets;
+  const targetSignature = activeTargets.map((target) => target.key).join("|");
+
+  React.useEffect(() => {
+    if (!open || !createMode) return;
+    setCreateTargetKey((current) =>
+      (availableTargets || []).some((target) => target.key === current)
+        ? current
+        : availableTargets?.[0]?.key || "",
+    );
+  }, [open, createMode, availableTargetSignature]);
 
   React.useEffect(() => {
     if (!open) return;
-    const rule = targets.find((target) => target.rule)?.rule;
+    const rule = activeTargets.find((target) => target.rule)?.rule;
     setForm(
       rule
         ? {
@@ -535,7 +574,7 @@ const ConfigurationDialog = ({
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (targets.length === 0) {
+    if (activeTargets.length === 0) {
       toast.error(t("notification.ping_loss.select_required"));
       return;
     }
@@ -553,7 +592,7 @@ const ConfigurationDialog = ({
       return;
     }
 
-    const notifications = targets.map((target) => ({
+    const notifications = activeTargets.map((target) => ({
       ...(target.rule ? { id: target.rule.id } : {}),
       client: target.client,
       task_id: target.taskId,
@@ -582,7 +621,7 @@ const ConfigurationDialog = ({
     }
   };
 
-  const firstRule = targets.find((target) => target.rule)?.rule;
+  const firstRule = activeTargets.find((target) => target.rule)?.rule;
   const title = batch
     ? t("notification.ping_loss.batch_edit")
     : firstRule
@@ -601,6 +640,24 @@ const ConfigurationDialog = ({
           </span>
         ) : null}
         <form onSubmit={submit} className="mt-4 flex flex-col gap-4">
+          {createMode ? (
+            <Field label={`${t("ping.task")} / ${t("common.server")}`}>
+              <Select.Root
+                value={createTargetKey}
+                onValueChange={setCreateTargetKey}
+                disabled={(availableTargets || []).length === 0}
+              >
+                <Select.Trigger placeholder={t("common.select")} />
+                <Select.Content>
+                  {(availableTargets || []).map((target) => (
+                    <Select.Item key={target.key} value={target.key}>
+                      {target.task.name || `#${target.taskId}`} / {target.clientName}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </Field>
+          ) : null}
           <Flex justify="between" align="center">
             <label htmlFor={enableId}>{t("common.status")}</label>
             <Switch
@@ -658,7 +715,7 @@ const ConfigurationDialog = ({
                 {t("common.cancel")}
               </Button>
             </Dialog.Close>
-            <Button type="submit" disabled={saving || targets.length === 0}>
+            <Button type="submit" disabled={saving || activeTargets.length === 0}>
               {t("common.save")}
             </Button>
           </Flex>

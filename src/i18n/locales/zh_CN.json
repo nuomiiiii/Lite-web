@@ -474,7 +474,7 @@
       "cooldown": "冷却时间",
       "cooldown_minutes": "冷却时间（分钟）",
       "delete_title": "删除延迟监测告警",
-      "edit": "编辑延迟监测告警",
+      "edit": "编辑",
       "empty": "暂无延迟监测告警规则",
       "full_title": "延迟监测告警",
       "invalid_form": "请完整填写有效的告警配置",
