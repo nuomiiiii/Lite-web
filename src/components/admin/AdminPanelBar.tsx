@@ -24,7 +24,8 @@ import LoginDialog from "../Login";
 import { useAccount } from "@/contexts/AccountContext";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";
 import Tips from "../ui/tips";
-import { CircleFadingArrowUp } from "lucide-react";
+import { CircleFadingArrowUp, Download, LoaderCircle } from "lucide-react";
+import { toast } from "sonner";
 import { useRPC2Call } from "@/contexts/RPC2Context";
 import { resolveI18nText } from "@/utils/i18nText";
 import {
@@ -57,6 +58,28 @@ interface GithubReleaseInfo {
   draft?: boolean;
   prerelease?: boolean;
 }
+
+interface VersionInfo {
+  hash: string;
+  version: string;
+  deployment: "docker" | "linux" | "windows" | "unknown";
+}
+
+interface SelfUpdateCapability {
+  deployment: string;
+  distribution?: string;
+  distribution_version?: string;
+  supported: boolean;
+  reason?: string;
+  last_result?: {
+    status: string;
+    target_version: string;
+    target_hash: string;
+    message?: string;
+  };
+}
+
+type UpdatePhase = "idle" | "preparing" | "restarting";
 
 function parseSemver(input?: string | null): number[] | null {
   if (!input) return null;
@@ -129,7 +152,7 @@ function isReleaseNewer(
 }
 
 const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
-  const { call } = useRPC2Call();
+  const { call, callViaHTTP } = useRPC2Call();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openSubMenus, setOpenSubMenus] = useState<{ [key: string]: boolean }>({
     // 默认所有子菜单关闭
@@ -142,10 +165,11 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   const { publicInfo } = usePublicInfo();
   //const navigate = useNavigate();
   // 获取版本信息
-  const [versionInfo, setVersionInfo] = useState<{
-    hash: string;
-    version: string;
-  } | null>(null);
+  const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
+  const [selfUpdate, setSelfUpdate] = useState<SelfUpdateCapability | null>(
+    null,
+  );
+  const [updatePhase, setUpdatePhase] = useState<UpdatePhase>("idle");
   const currentLanguage =
     i18n.resolvedLanguage ||
     i18n.language ||
@@ -233,6 +257,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
         setVersionInfo({
           hash: data.hash?.slice(0, 7),
           version: data.version,
+          deployment: data.deployment || "unknown",
         });
       } catch (error) {
         console.error("Failed to fetch version info:", error);
@@ -240,7 +265,26 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     };
 
     fetchVersionInfo();
-  }, []);
+  }, [call]);
+
+  useEffect(() => {
+    if (versionInfo?.deployment !== "linux") {
+      setSelfUpdate(null);
+      return;
+    }
+    let ignore = false;
+    call("admin:getSelfUpdateStatus")
+      .then((status: SelfUpdateCapability) => {
+        if (!ignore) setSelfUpdate(status);
+      })
+      .catch((error) => {
+        console.warn("Failed to load self-update capability:", error);
+        if (!ignore) setSelfUpdate(null);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [call, versionInfo?.deployment]);
 
   // 获取 GitHub releases 列表，并筛选出“比当前版本新的所有 release”
   useEffect(() => {
@@ -348,6 +392,89 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     },
   };
 
+  async function waitForUpdatedService(targetVersion: string, targetHash: string) {
+    const deadline = Date.now() + 150_000;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => window.setTimeout(resolve, 2_000));
+      try {
+        const response = await fetch("/api/version", { cache: "no-store" });
+        if (!response.ok) continue;
+        const body = await response.json();
+        const observed = body?.data ?? body;
+        if (
+          observed?.version === targetVersion &&
+          String(observed?.hash || "").toLowerCase() ===
+            targetHash.toLowerCase()
+        ) {
+          toast.success(t("common.self_update_succeeded", "更新成功，正在刷新页面"));
+          window.setTimeout(() => window.location.reload(), 800);
+          return;
+        }
+        const status = await callViaHTTP<unknown, SelfUpdateCapability>(
+          "admin:getSelfUpdateStatus",
+          {},
+          { timeout: 5_000 },
+        );
+        if (
+          status.last_result?.target_version === targetVersion &&
+          ["rolled_back", "rollback_failed", "failed"].includes(
+            status.last_result.status,
+          )
+        ) {
+          const terminalError = new Error(
+            status.last_result.status === "rolled_back"
+              ? t(
+                  "common.self_update_rolled_back",
+                  "新版本未通过健康检查，已自动恢复原版本和数据",
+                )
+              : status.last_result.message ||
+                  t("common.self_update_failed", "自动更新失败"),
+          );
+          terminalError.name = "SelfUpdateTerminalError";
+          throw terminalError;
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === "SelfUpdateTerminalError") {
+          throw error;
+        }
+      }
+    }
+    throw new Error(
+      t(
+        "common.self_update_timeout",
+        "更新状态确认超时，请稍后刷新页面查看当前版本",
+      ),
+    );
+  }
+
+  async function startSelfUpdate() {
+    if (!latestRelease || updatePhase !== "idle") return;
+    const targetVersion = latestRelease.tag_name || latestRelease.name || "";
+    const targetHash = parseReleaseVersionHash(latestRelease.body);
+    if (!targetVersion || !targetHash) {
+      toast.error(t("common.self_update_metadata_missing", "发布版本缺少自动更新校验信息"));
+      return;
+    }
+    setUpdatePhase("preparing");
+    try {
+      await callViaHTTP(
+        "admin:startSelfUpdate",
+        { version: targetVersion, version_hash: targetHash },
+        { timeout: 360_000 },
+      );
+      setUpdatePhase("restarting");
+      toast.info(t("common.self_update_restarting", "更新已校验，服务正在重启"));
+      await waitForUpdatedService(targetVersion, targetHash);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : t("common.self_update_failed", "自动更新失败");
+      toast.error(message);
+      setUpdatePhase("idle");
+    }
+  }
+
   function logout() {
     window.open("/api/logout", "_self");
   }
@@ -440,14 +567,35 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                         ))}
                       </div>
                     </div>
-                    <div className="flex justify-end">
-                      <a
-                        href={latestRelease?.html_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Button variant="soft">Github</Button>
-                      </a>
+                    <div className="flex items-center justify-end gap-2">
+                      {versionInfo?.deployment === "linux" &&
+                      selfUpdate?.supported &&
+                      parseReleaseVersionHash(latestRelease?.body) ? (
+                        <Button
+                          variant="soft"
+                          onClick={startSelfUpdate}
+                          disabled={updatePhase !== "idle"}
+                        >
+                          {updatePhase === "idle" ? (
+                            <Download size={16} />
+                          ) : (
+                            <LoaderCircle size={16} className="animate-spin" />
+                          )}
+                          {updatePhase === "preparing"
+                            ? t("common.self_update_preparing", "正在下载并校验")
+                            : updatePhase === "restarting"
+                              ? t("common.self_update_restarting_short", "正在更新")
+                              : t("common.update_now", "立即更新")}
+                        </Button>
+                      ) : (
+                        <a
+                          href={latestRelease?.html_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Button variant="soft">GitHub</Button>
+                        </a>
+                      )}
                     </div>
                   </div>
                 </Tips>
