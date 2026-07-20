@@ -492,18 +492,30 @@
     "title": "Notifikasi",
     "traffic_report": {
       "batch_edit": "Edit Massal",
+      "billing_content": "Trafik tertagih",
       "daily": "Harian",
       "errors": {
         "fetch_failed": "Gagal memuat pengaturan laporan trafik",
         "save_failed": "Gagal menyimpan pengaturan laporan trafik",
         "select_cadence": "Pilih setidaknya satu periode laporan saat mengaktifkan laporan trafik",
+        "select_content": "Pilih setidaknya satu jenis isi saat mengaktifkan laporan trafik",
+        "send_failed": "Gagal mengirim laporan harian",
         "update_failed": "Gagal memperbarui pengaturan laporan trafik"
       },
       "full_title": "Laporan Trafik Terjadwal",
       "monthly": "Bulanan",
+      "no_daily_targets": "Tidak ada server dengan laporan harian aktif",
+      "report_content": "Isi Laporan",
+      "report_time": "Waktu Pengiriman Laporan",
+      "report_time_description": "Laporan harian, mingguan, dan bulanan dikirim pada waktu Beijing ini",
       "report_type": "Tipe Laporan",
+      "send_daily": "Kirim Laporan Harian",
+      "send_daily_description": "Kirim laporan hari ini dari pukul 00.00 waktu Beijing hingga sekarang",
+      "send_now": "Kirim sekarang",
       "separator": ", ",
+      "sent_success": "Laporan hari ini dikirim untuk {{count}} server",
       "title": "Laporan Trafik",
+      "traffic_content": "Trafik unggah/unduh",
       "weekly": "Mingguan"
     }
   },

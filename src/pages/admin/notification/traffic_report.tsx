@@ -17,7 +17,7 @@ import {
   type TrafficReportNotification,
 } from "@/contexts/TrafficReportContext";
 import React from "react";
-import { Pencil, Search } from "lucide-react";
+import { Pencil, Search, Send } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Badge,
@@ -30,13 +30,30 @@ import {
 } from "@radix-ui/themes";
 import { toast } from "sonner";
 import Loading from "@/components/loading";
+import {
+  SettingCardButton,
+  SettingCardShortTextInput,
+} from "@/components/admin/SettingCard";
+import { useSettings } from "@/lib/api";
 
-const ensureCadenceSelected = (
-  values: { enable: boolean; daily: boolean; weekly: boolean; monthly: boolean },
+type TrafficReportFormValues = {
+  enable: boolean;
+  daily: boolean;
+  weekly: boolean;
+  monthly: boolean;
+  include_traffic: boolean;
+  include_billing: boolean;
+};
+
+const validateReportSelection = (
+  values: TrafficReportFormValues,
   t: (key: string, options?: Record<string, unknown>) => string
 ) => {
   if (values.enable && !values.daily && !values.weekly && !values.monthly) {
     throw new Error(t("notification.traffic_report.errors.select_cadence"));
+  }
+  if (values.enable && !values.include_traffic && !values.include_billing) {
+    throw new Error(t("notification.traffic_report.errors.select_content"));
   }
 };
 
@@ -86,8 +103,8 @@ const TrafficReportEditForm = ({
   loading,
   onCancel,
 }: {
-  initialValues: { enable: boolean; daily: boolean; weekly: boolean; monthly: boolean };
-  onSubmit: (values: { enable: boolean; daily: boolean; weekly: boolean; monthly: boolean }) => void;
+  initialValues: TrafficReportFormValues;
+  onSubmit: (values: TrafficReportFormValues) => void;
   loading?: boolean;
   onCancel?: () => void;
 }) => {
@@ -96,12 +113,25 @@ const TrafficReportEditForm = ({
   const [daily, setDaily] = React.useState(initialValues.daily);
   const [weekly, setWeekly] = React.useState(initialValues.weekly);
   const [monthly, setMonthly] = React.useState(initialValues.monthly);
+  const [includeTraffic, setIncludeTraffic] = React.useState(
+    initialValues.include_traffic
+  );
+  const [includeBilling, setIncludeBilling] = React.useState(
+    initialValues.include_billing
+  );
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit({ enable: enabled, daily, weekly, monthly });
+        onSubmit({
+          enable: enabled,
+          daily,
+          weekly,
+          monthly,
+          include_traffic: includeTraffic,
+          include_billing: includeBilling,
+        });
       }}
       className="flex flex-col gap-3"
     >
@@ -143,6 +173,28 @@ const TrafficReportEditForm = ({
         </label>
       </Flex>
 
+      <label className="font-medium mt-2">
+        {t("notification.traffic_report.report_content")}
+      </label>
+      <Flex direction="column" gap="2">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <Checkbox
+            id="include-traffic"
+            checked={includeTraffic}
+            onCheckedChange={(v) => setIncludeTraffic(!!v)}
+          />
+          <span>{t("notification.traffic_report.traffic_content")}</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <Checkbox
+            id="include-billing"
+            checked={includeBilling}
+            onCheckedChange={(v) => setIncludeBilling(!!v)}
+          />
+          <span>{t("notification.traffic_report.billing_content")}</span>
+        </label>
+      </Flex>
+
       <Flex gap="2" justify="end" className="mt-4">
         {onCancel && (
           <Dialog.Close>
@@ -157,6 +209,23 @@ const TrafficReportEditForm = ({
       </Flex>
     </form>
   );
+};
+
+const reportContentLabel = (
+  n: TrafficReportNotification | undefined,
+  t: (key: string) => string
+): string => {
+  if (!n) return "-";
+  const parts: string[] = [];
+  if (n.include_traffic) {
+    parts.push(t("notification.traffic_report.traffic_content"));
+  }
+  if (n.include_billing) {
+    parts.push(t("notification.traffic_report.billing_content"));
+  }
+  return parts.length > 0
+    ? parts.join(t("notification.traffic_report.separator"))
+    : "-";
 };
 
 // 把三个 bool 转成展示文字
@@ -185,6 +254,12 @@ const InnerLayout = () => {
   } = useTrafficReportNotification();
   const { isLoading: onNodeLoading, error: onNodeError } = useNodeDetails();
   const { t } = useTranslation();
+  const {
+    settings,
+    loading: settingsLoading,
+    error: settingsError,
+    updateSetting,
+  } = useSettings();
   const [batchLoading, setBatchLoading] = React.useState(false);
   const [batchDialogOpen, setBatchDialogOpen] = React.useState(false);
   const [batchForm, setBatchForm] = React.useState({
@@ -192,16 +267,13 @@ const InnerLayout = () => {
     daily: false,
     weekly: false,
     monthly: false,
+    include_traffic: true,
+    include_billing: false,
   });
 
-  const handleBatchEdit = (values: {
-    enable: boolean;
-    daily: boolean;
-    weekly: boolean;
-    monthly: boolean;
-  }) => {
+  const handleBatchEdit = (values: TrafficReportFormValues) => {
     try {
-      ensureCadenceSelected(values, t);
+      validateReportSelection(values, t);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("common.error"));
       return;
@@ -237,11 +309,11 @@ const InnerLayout = () => {
       });
   };
 
-  if (onLoading || onNodeLoading) {
+  if (onLoading || onNodeLoading || settingsLoading) {
     return <Loading text={t("loading")} />;
   }
-  if (onError || onNodeError) {
-    return <div>{t("common.error")}: {onError?.message || onNodeError}</div>;
+  if (onError || onNodeError || settingsError) {
+    return <div>{t("common.error")}: {onError?.message || onNodeError || settingsError}</div>;
   }
 
   return (
@@ -264,6 +336,57 @@ const InnerLayout = () => {
           </TextField.Slot>
         </TextField.Root>
       </Flex>
+
+      <div className="grid gap-2">
+        <SettingCardShortTextInput
+          title={t("notification.traffic_report.report_time")}
+          description={t("notification.traffic_report.report_time_description")}
+          type="time"
+          defaultValue={settings.traffic_report_time || "00:00"}
+          className="w-40"
+          OnSave={async (value) => {
+            try {
+              await updateSetting("traffic_report_time", value);
+              toast.success(t("settings.settings_saved"));
+            } catch (error) {
+              toast.error(getErrorMessage(error, t));
+              throw error;
+            }
+          }}
+        />
+        <SettingCardButton
+          title={t("notification.traffic_report.send_daily")}
+          description={t("notification.traffic_report.send_daily_description")}
+          onClick={async () => {
+            try {
+              const response = await fetch(
+                "/api/admin/notification/traffic-report/send-daily",
+                { method: "POST" }
+              );
+              const payload = await parseJsonOrThrow(
+                response,
+                t("notification.traffic_report.errors.send_failed")
+              );
+              const result = payload?.data;
+              if (!result?.sent) {
+                toast.warning(t("notification.traffic_report.no_daily_targets"));
+                return;
+              }
+              toast.success(
+                t("notification.traffic_report.sent_success", {
+                  count: result.client_count,
+                })
+              );
+            } catch (error) {
+              toast.error(getErrorMessage(error, t));
+              throw error;
+            }
+          }}
+        >
+          <Send size={16} />
+          {t("notification.traffic_report.send_now")}
+        </SettingCardButton>
+      </div>
 
       <TrafficReportTable
         search={search}
@@ -289,6 +412,8 @@ const InnerLayout = () => {
                   daily: first?.daily ?? false,
                   weekly: first?.weekly ?? false,
                   monthly: first?.monthly ?? false,
+                  include_traffic: first?.include_traffic ?? true,
+                  include_billing: first?.include_billing ?? false,
                 });
               }}
               disabled={batchLoading || selected.length === 0}
@@ -350,6 +475,7 @@ const TrafficReportTable = ({
             <TableHead>{t("common.server")}</TableHead>
             <TableHead>{t("common.status")}</TableHead>
             <TableHead>{t("notification.traffic_report.report_type")}</TableHead>
+            <TableHead>{t("notification.traffic_report.report_content")}</TableHead>
             <TableHead>{t("common.action")}</TableHead>
           </TableRow>
         </TableHeader>
@@ -381,6 +507,7 @@ const TrafficReportTable = ({
                   </Badge>
                 </TableCell>
                 <TableCell>{reportTypeLabel(n, t)}</TableCell>
+                <TableCell>{reportContentLabel(n, t)}</TableCell>
                 <TableCell>
                   <ActionButtons
                     nodeUUID={node.uuid}
@@ -424,11 +551,13 @@ const ActionButtons = ({
               daily: trafficReport?.daily ?? false,
               weekly: trafficReport?.weekly ?? false,
               monthly: trafficReport?.monthly ?? false,
+              include_traffic: trafficReport?.include_traffic ?? true,
+              include_billing: trafficReport?.include_billing ?? false,
             }}
             loading={editSaving}
             onSubmit={(values) => {
               try {
-                ensureCadenceSelected(values, t);
+                validateReportSelection(values, t);
               } catch (error) {
                 toast.error(
                   error instanceof Error ? error.message : t("common.error")

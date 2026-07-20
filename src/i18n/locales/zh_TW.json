@@ -492,18 +492,30 @@
     "title": "通知",
     "traffic_report": {
       "batch_edit": "批量修改",
+      "billing_content": "計費流量",
       "daily": "日報",
       "errors": {
         "fetch_failed": "取得流量定時報告設定失敗",
         "save_failed": "儲存流量定時報告設定失敗",
         "select_cadence": "啟用流量定時報告時，至少選擇一種報告週期",
+        "select_content": "啟用流量定時報告時，至少選擇一種報告內容",
+        "send_failed": "傳送日報訊息失敗",
         "update_failed": "更新流量定時報告設定失敗"
       },
       "full_title": "流量定時報告設定",
       "monthly": "月報",
+      "no_daily_targets": "沒有已啟用日報的伺服器",
+      "report_content": "報告內容",
+      "report_time": "報告推送時間",
+      "report_time_description": "日報、週報和月報均按北京時間在此時刻推送",
       "report_type": "定時類型",
+      "send_daily": "傳送日報訊息",
+      "send_daily_description": "立即傳送北京時間今日 00:00 至目前時刻的日報",
+      "send_now": "立即傳送",
       "separator": "、",
+      "sent_success": "已傳送 {{count}} 台伺服器的今日日報",
       "title": "流量定時報告",
+      "traffic_content": "上行/下行流量",
       "weekly": "週報"
     }
   },

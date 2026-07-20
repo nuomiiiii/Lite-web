@@ -466,7 +466,7 @@ const AlertRow = ({
           onCheckedChange={(checked) => onSelectedChange(checked === true)}
         />
       </TableCell>
-      <TableCell className="font-medium">{primary}</TableCell>
+      <TableCell>{primary}</TableCell>
       <TableCell>{secondary}</TableCell>
       <TableCell>{target.task.target || "-"}</TableCell>
       <TableCell>

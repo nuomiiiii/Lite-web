@@ -492,18 +492,30 @@
     "title": "Notification",
     "traffic_report": {
       "batch_edit": "Batch Edit",
+      "billing_content": "Billable traffic",
       "daily": "Daily",
       "errors": {
         "fetch_failed": "Failed to fetch traffic report notifications",
         "save_failed": "Failed to save traffic report settings",
         "select_cadence": "Select at least one report cadence when enabling traffic reports",
+        "select_content": "Select at least one content type when enabling traffic reports",
+        "send_failed": "Failed to send the daily report",
         "update_failed": "Failed to update traffic report notifications"
       },
       "full_title": "Scheduled Traffic Report",
       "monthly": "Monthly",
+      "no_daily_targets": "No servers have daily reports enabled",
+      "report_content": "Report Content",
+      "report_time": "Report Delivery Time",
+      "report_time_description": "Daily, weekly, and monthly reports are sent at this Beijing time",
       "report_type": "Report Type",
+      "send_daily": "Send Daily Report",
+      "send_daily_description": "Send today's report from 00:00 Beijing time through now",
+      "send_now": "Send now",
       "separator": ", ",
+      "sent_success": "Today's report was sent for {{count}} servers",
       "title": "Traffic Report",
+      "traffic_content": "Upload/download traffic",
       "weekly": "Weekly"
     }
   },
