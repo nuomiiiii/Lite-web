@@ -502,7 +502,7 @@
         "send_failed": "发送日报消息失败",
         "update_failed": "更新流量定时报告配置失败"
       },
-      "full_title": "流量定时报告设置",
+      "full_title": "流量定时报告",
       "monthly": "月报",
       "no_daily_targets": "没有已启用日报的服务器",
       "report_content": "报告内容",

@@ -17,7 +17,7 @@ import {
   type TrafficReportNotification,
 } from "@/contexts/TrafficReportContext";
 import React from "react";
-import { Pencil, Search, Send } from "lucide-react";
+import { Clock3, Pencil, Save, Search, Send } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Badge,
@@ -30,10 +30,6 @@ import {
 } from "@radix-ui/themes";
 import { toast } from "sonner";
 import Loading from "@/components/loading";
-import {
-  SettingCardButton,
-  SettingCardShortTextInput,
-} from "@/components/admin/SettingCard";
 import { useSettings } from "@/lib/api";
 
 type TrafficReportFormValues = {
@@ -96,6 +92,29 @@ const TrafficReportPage = () => {
   );
 };
 
+const ReportOption = ({
+  id,
+  checked,
+  onCheckedChange,
+  children,
+}: {
+  id: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  children: React.ReactNode;
+}) => (
+  <div className="flex items-center gap-2">
+    <Checkbox
+      id={id}
+      checked={checked}
+      onCheckedChange={(value) => onCheckedChange(value === true)}
+    />
+    <label htmlFor={id} className="cursor-pointer select-none">
+      {children}
+    </label>
+  </div>
+);
+
 // 表单：编辑单条或批量修改
 const TrafficReportEditForm = ({
   initialValues,
@@ -109,6 +128,7 @@ const TrafficReportEditForm = ({
   onCancel?: () => void;
 }) => {
   const { t } = useTranslation();
+  const formId = React.useId();
   const [enabled, setEnabled] = React.useState(initialValues.enable);
   const [daily, setDaily] = React.useState(initialValues.daily);
   const [weekly, setWeekly] = React.useState(initialValues.weekly);
@@ -135,9 +155,9 @@ const TrafficReportEditForm = ({
       }}
       className="flex flex-col gap-3"
     >
-      <label htmlFor="status">{t("common.status")}</label>
+      <label htmlFor={`${formId}-status`}>{t("common.status")}</label>
       <Switch
-        id="status"
+        id={`${formId}-status`}
         name="status"
         checked={enabled}
         onCheckedChange={setEnabled}
@@ -147,52 +167,47 @@ const TrafficReportEditForm = ({
         {t("notification.traffic_report.report_type")}
       </label>
       <Flex direction="column" gap="2">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <Checkbox
-            id="daily"
-            checked={daily}
-            onCheckedChange={(v) => setDaily(!!v)}
-          />
-          <span>{t("notification.traffic_report.daily")}</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <Checkbox
-            id="weekly"
-            checked={weekly}
-            onCheckedChange={(v) => setWeekly(!!v)}
-          />
-          <span>{t("notification.traffic_report.weekly")}</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <Checkbox
-            id="monthly"
-            checked={monthly}
-            onCheckedChange={(v) => setMonthly(!!v)}
-          />
-          <span>{t("notification.traffic_report.monthly")}</span>
-        </label>
+        <ReportOption
+          id={`${formId}-daily`}
+          checked={daily}
+          onCheckedChange={setDaily}
+        >
+          {t("notification.traffic_report.daily")}
+        </ReportOption>
+        <ReportOption
+          id={`${formId}-weekly`}
+          checked={weekly}
+          onCheckedChange={setWeekly}
+        >
+          {t("notification.traffic_report.weekly")}
+        </ReportOption>
+        <ReportOption
+          id={`${formId}-monthly`}
+          checked={monthly}
+          onCheckedChange={setMonthly}
+        >
+          {t("notification.traffic_report.monthly")}
+        </ReportOption>
       </Flex>
 
       <label className="font-medium mt-2">
         {t("notification.traffic_report.report_content")}
       </label>
       <Flex direction="column" gap="2">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <Checkbox
-            id="include-traffic"
-            checked={includeTraffic}
-            onCheckedChange={(v) => setIncludeTraffic(!!v)}
-          />
-          <span>{t("notification.traffic_report.traffic_content")}</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <Checkbox
-            id="include-billing"
-            checked={includeBilling}
-            onCheckedChange={(v) => setIncludeBilling(!!v)}
-          />
-          <span>{t("notification.traffic_report.billing_content")}</span>
-        </label>
+        <ReportOption
+          id={`${formId}-include-traffic`}
+          checked={includeTraffic}
+          onCheckedChange={setIncludeTraffic}
+        >
+          {t("notification.traffic_report.traffic_content")}
+        </ReportOption>
+        <ReportOption
+          id={`${formId}-include-billing`}
+          checked={includeBilling}
+          onCheckedChange={setIncludeBilling}
+        >
+          {t("notification.traffic_report.billing_content")}
+        </ReportOption>
       </Flex>
 
       <Flex gap="2" justify="end" className="mt-4">
@@ -252,7 +267,11 @@ const InnerLayout = () => {
     trafficReportNotification,
     refresh,
   } = useTrafficReportNotification();
-  const { isLoading: onNodeLoading, error: onNodeError } = useNodeDetails();
+  const {
+    nodeDetail,
+    isLoading: onNodeLoading,
+    error: onNodeError,
+  } = useNodeDetails();
   const { t } = useTranslation();
   const {
     settings,
@@ -262,6 +281,9 @@ const InnerLayout = () => {
   } = useSettings();
   const [batchLoading, setBatchLoading] = React.useState(false);
   const [batchDialogOpen, setBatchDialogOpen] = React.useState(false);
+  const [reportTime, setReportTime] = React.useState("00:00");
+  const [reportTimeSaving, setReportTimeSaving] = React.useState(false);
+  const [dailySending, setDailySending] = React.useState(false);
   const [batchForm, setBatchForm] = React.useState({
     enable: true,
     daily: false,
@@ -270,6 +292,53 @@ const InnerLayout = () => {
     include_traffic: true,
     include_billing: false,
   });
+
+  const savedReportTime = settings.traffic_report_time || "00:00";
+  const reportTimeValid = /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(reportTime);
+
+  React.useEffect(() => {
+    setReportTime(savedReportTime);
+  }, [savedReportTime]);
+
+  const saveReportTime = async () => {
+    setReportTimeSaving(true);
+    try {
+      await updateSetting("traffic_report_time", reportTime);
+      toast.success(t("settings.settings_saved"));
+    } catch (error) {
+      toast.error(getErrorMessage(error, t));
+    } finally {
+      setReportTimeSaving(false);
+    }
+  };
+
+  const sendDailyReport = async () => {
+    setDailySending(true);
+    try {
+      const response = await fetch(
+        "/api/admin/notification/traffic-report/send-daily",
+        { method: "POST" }
+      );
+      const payload = await parseJsonOrThrow(
+        response,
+        t("notification.traffic_report.errors.send_failed")
+      );
+      const result = payload?.data;
+      if (!result?.sent) {
+        toast.warning(t("notification.traffic_report.no_daily_targets"));
+        return;
+      }
+      toast.success(
+        t("notification.traffic_report.sent_success", {
+          count: result.client_count,
+        })
+      );
+    } catch (error) {
+      toast.error(getErrorMessage(error, t));
+    } finally {
+      setDailySending(false);
+    }
+  };
 
   const handleBatchEdit = (values: TrafficReportFormValues) => {
     try {
@@ -317,14 +386,14 @@ const InnerLayout = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4 md:p-4 p-1">
-      <Flex justify="between" align="center" wrap="wrap">
-        <label className="text-2xl font-semibold">
+    <div className="flex flex-col gap-5 p-2 md:p-4">
+      <Flex justify="between" align="center" gap="3" wrap="wrap">
+        <h1 className="text-xl font-semibold">
           {t("notification.traffic_report.full_title")}
-        </label>
+        </h1>
         <TextField.Root
           type="text"
-          className="max-w-64"
+          className="w-full sm:w-64"
           placeholder={t("common.search")}
           value={search}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -337,101 +406,123 @@ const InnerLayout = () => {
         </TextField.Root>
       </Flex>
 
-      <div className="grid gap-2">
-        <SettingCardShortTextInput
-          title={t("notification.traffic_report.report_time")}
-          description={t("notification.traffic_report.report_time_description")}
-          type="time"
-          defaultValue={settings.traffic_report_time || "00:00"}
-          className="w-40"
-          OnSave={async (value) => {
-            try {
-              await updateSetting("traffic_report_time", value);
-              toast.success(t("settings.settings_saved"));
-            } catch (error) {
-              toast.error(getErrorMessage(error, t));
-              throw error;
-            }
-          }}
-        />
-        <SettingCardButton
-          title={t("notification.traffic_report.send_daily")}
-          description={t("notification.traffic_report.send_daily_description")}
-          onClick={async () => {
-            try {
-              const response = await fetch(
-                "/api/admin/notification/traffic-report/send-daily",
-                { method: "POST" }
-              );
-              const payload = await parseJsonOrThrow(
-                response,
-                t("notification.traffic_report.errors.send_failed")
-              );
-              const result = payload?.data;
-              if (!result?.sent) {
-                toast.warning(t("notification.traffic_report.no_daily_targets"));
-                return;
+      <div className="grid overflow-hidden rounded-md border border-[var(--gray-a5)] lg:grid-cols-2">
+        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <Clock3
+              className="mt-0.5 shrink-0 text-[var(--accent-10)]"
+              size={18}
+            />
+            <div className="min-w-0">
+              <div className="font-medium">
+                {t("notification.traffic_report.report_time")}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {t("notification.traffic_report.report_time_description")}
+              </div>
+            </div>
+          </div>
+          <Flex gap="2" align="center" className="shrink-0">
+            <TextField.Root
+              type="time"
+              aria-label={t("notification.traffic_report.report_time")}
+              className="w-32"
+              value={reportTime}
+              onChange={(event) => setReportTime(event.target.value)}
+              disabled={reportTimeSaving}
+            />
+            <Button
+              type="button"
+              variant="soft"
+              onClick={saveReportTime}
+              disabled={
+                reportTimeSaving ||
+                !reportTimeValid ||
+                reportTime === savedReportTime
               }
-              toast.success(
-                t("notification.traffic_report.sent_success", {
-                  count: result.client_count,
-                })
-              );
-            } catch (error) {
-              toast.error(getErrorMessage(error, t));
-              throw error;
-            }
-          }}
-        >
-          <Send size={16} />
-          {t("notification.traffic_report.send_now")}
-        </SettingCardButton>
+            >
+              <Save size={16} />
+              {t("common.save")}
+            </Button>
+          </Flex>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-[var(--gray-a5)] p-4 sm:flex-row sm:items-center sm:justify-between lg:border-l lg:border-t-0">
+          <div className="flex min-w-0 items-start gap-3">
+            <Send
+              className="mt-0.5 shrink-0 text-[var(--accent-10)]"
+              size={18}
+            />
+            <div className="min-w-0">
+              <div className="font-medium">
+                {t("notification.traffic_report.send_daily")}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {t("notification.traffic_report.send_daily_description")}
+              </div>
+            </div>
+          </div>
+          <Button
+            type="button"
+            className="shrink-0"
+            onClick={sendDailyReport}
+            disabled={dailySending}
+          >
+            <Send size={16} />
+            {t("notification.traffic_report.send_now")}
+          </Button>
+        </div>
       </div>
 
-      <TrafficReportTable
-        search={search}
-        selected={selected}
-        onSelectionChange={setSelected}
-      />
-
-      <label className="text-sm text-muted-foreground">
-        {t("common.selected", { count: selected.length })}
-      </label>
-
-      <Flex gap="2" align="center">
-        <Dialog.Root open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
-          <Dialog.Trigger>
-            <Button
-              variant="soft"
-              onClick={() => {
-                const first = trafficReportNotification.find(
-                  (n) => n.client === selected[0]
-                );
-                setBatchForm({
-                  enable: first?.enable ?? true,
-                  daily: first?.daily ?? false,
-                  weekly: first?.weekly ?? false,
-                  monthly: first?.monthly ?? false,
-                  include_traffic: first?.include_traffic ?? true,
-                  include_billing: first?.include_billing ?? false,
-                });
-              }}
-              disabled={batchLoading || selected.length === 0}
-            >
-              {t("notification.traffic_report.batch_edit")}
-            </Button>
-          </Dialog.Trigger>
-          <Dialog.Content>
-            <Dialog.Title>{t("notification.traffic_report.batch_edit")}</Dialog.Title>
-            <TrafficReportEditForm
-              initialValues={batchForm}
-              loading={batchLoading}
-              onSubmit={handleBatchEdit}
-              onCancel={() => setBatchDialogOpen(false)}
-            />
-          </Dialog.Content>
-        </Dialog.Root>
-      </Flex>
+      <div className="overflow-hidden rounded-md border border-[var(--gray-a5)]">
+        <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[var(--gray-a5)] bg-[var(--gray-a2)] px-3 py-2">
+          <span className="text-sm text-muted-foreground">
+            {t("common.selected_total", {
+              count: selected.length,
+              total: nodeDetail.length,
+            })}
+          </span>
+          <Dialog.Root open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
+            <Dialog.Trigger>
+              <Button
+                variant="soft"
+                onClick={() => {
+                  const first = trafficReportNotification.find(
+                    (n) => n.client === selected[0]
+                  );
+                  setBatchForm({
+                    enable: first?.enable ?? true,
+                    daily: first?.daily ?? false,
+                    weekly: first?.weekly ?? false,
+                    monthly: first?.monthly ?? false,
+                    include_traffic: first?.include_traffic ?? true,
+                    include_billing: first?.include_billing ?? false,
+                  });
+                }}
+                disabled={batchLoading || selected.length === 0}
+              >
+                {t("notification.traffic_report.batch_edit")}
+              </Button>
+            </Dialog.Trigger>
+            <Dialog.Content>
+              <Dialog.Title>
+                {t("notification.traffic_report.batch_edit")}
+              </Dialog.Title>
+              <TrafficReportEditForm
+                initialValues={batchForm}
+                loading={batchLoading}
+                onSubmit={handleBatchEdit}
+                onCancel={() => setBatchDialogOpen(false)}
+              />
+            </Dialog.Content>
+          </Dialog.Root>
+        </div>
+        <TrafficReportTable
+          search={search}
+          selected={selected}
+          onSelectionChange={setSelected}
+        />
+      </div>
     </div>
   );
 };
@@ -454,8 +545,8 @@ const TrafficReportTable = ({
     .filter((node) => node.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="rounded-lg overflow-hidden">
-      <Table>
+    <div className="overflow-x-auto">
+      <Table className="min-w-[720px]">
         <TableHeader>
           <TableRow>
             <TableHead className="w-6">
@@ -539,7 +630,11 @@ const ActionButtons = ({
     <Flex gap="2" align="center">
       <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
         <Dialog.Trigger>
-          <IconButton variant="ghost">
+          <IconButton
+            variant="ghost"
+            aria-label={t("common.edit")}
+            title={t("common.edit")}
+          >
             <Pencil size={16} />
           </IconButton>
         </Dialog.Trigger>
