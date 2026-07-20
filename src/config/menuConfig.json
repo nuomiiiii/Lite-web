@@ -68,6 +68,11 @@
           "icon": "BarChart2"
         },
         {
+          "labelKey": "notification.ping_loss.title",
+          "path": "/admin/notification/ping-loss",
+          "icon": "WifiOff"
+        },
+        {
           "labelKey": "settings.general.title",
           "path": "/admin/notification/general",
           "icon": "Ellipsis"

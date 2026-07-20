@@ -468,6 +468,24 @@
       "tips": "为了避免频繁发送通知，我们设置了宽限期：</br> <b>宽限期</b>：客户端离线后，如果在这段时间内没有重新上线，就会发送离线通知",
       "title": "离线通知"
     },
+    "ping_loss": {
+      "add": "新增丢包告警",
+      "cooldown": "冷却时间",
+      "cooldown_minutes": "冷却时间（分钟）",
+      "delete_title": "删除丢包告警",
+      "edit": "编辑丢包告警",
+      "empty": "暂无丢包告警规则",
+      "full_title": "延迟检测丢包告警",
+      "invalid_form": "请完整填写有效的告警配置",
+      "last_notified": "最后通知",
+      "minimum_samples": "最少样本数",
+      "minutes": "{{count}} 分钟",
+      "never": "从未触发",
+      "threshold": "丢包阈值",
+      "title": "丢包告警",
+      "window": "统计窗口",
+      "window_minutes": "统计窗口（分钟）"
+    },
     "title": "通知",
     "traffic_report": {
       "batch_edit": "批量修改",

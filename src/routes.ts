@@ -138,6 +138,12 @@ export const routes: RouteObject[] = [
               lazy(() => import("./pages/admin/notification/traffic_report"))
             ),
           },
+          {
+            path: "ping-loss",
+            element: React.createElement(
+              lazy(() => import("./pages/admin/notification/ping_loss"))
+            ),
+          },
         ],
       },
       {

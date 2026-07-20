@@ -468,6 +468,24 @@
       "tips": "頻繁な通知を避けるために、猶予期間を設定しました：</br> <b>猶予期間</b>：クライアントがオフラインになった後、この期間内に再度オンラインにならなければ、オフライン通知が送信されます。",
       "title": "オフライン通知"
     },
+    "ping_loss": {
+      "add": "パケットロス通知を追加",
+      "cooldown": "クールダウン",
+      "cooldown_minutes": "クールダウン（分）",
+      "delete_title": "パケットロス通知を削除",
+      "edit": "パケットロス通知を編集",
+      "empty": "パケットロス通知ルールはありません",
+      "full_title": "遅延監視パケットロス通知",
+      "invalid_form": "有効な通知設定をすべて入力してください",
+      "last_notified": "最後の通知",
+      "minimum_samples": "最小サンプル数",
+      "minutes": "{{count}} 分",
+      "never": "未通知",
+      "threshold": "パケットロスしきい値",
+      "title": "パケットロス",
+      "window": "集計期間",
+      "window_minutes": "集計期間（分）"
+    },
     "title": "通知",
     "traffic_report": {
       "batch_edit": "一括編集",

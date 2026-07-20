@@ -655,6 +655,8 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             backgroundColor: "var(--accent-3)",
             display: isMobile && sidebarOpen ? "none" : "block",
             height: "100%", // Ensure the container takes full height
+            minWidth: 0,
+            maxWidth: "100%",
             overflow: "hidden", // Prevent this container from scrolling
           }}
         >

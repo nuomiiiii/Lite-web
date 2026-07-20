@@ -468,6 +468,24 @@
       "tips": "To prevent frequent notifications, we use a grace period:</br> <b>Grace Period</b>: If a client goes offline and doesn't reconnect within this time, an offline notification will be sent.",
       "title": "Offline"
     },
+    "ping_loss": {
+      "add": "Add packet loss alert",
+      "cooldown": "Cooldown",
+      "cooldown_minutes": "Cooldown (minutes)",
+      "delete_title": "Delete packet loss alert",
+      "edit": "Edit packet loss alert",
+      "empty": "No packet loss alert rules",
+      "full_title": "Ping Packet Loss Alerts",
+      "invalid_form": "Complete all alert fields with valid values",
+      "last_notified": "Last notified",
+      "minimum_samples": "Minimum samples",
+      "minutes": "{{count}} min",
+      "never": "Never triggered",
+      "threshold": "Packet loss threshold",
+      "title": "Packet Loss",
+      "window": "Window",
+      "window_minutes": "Window (minutes)"
+    },
     "title": "Notification",
     "traffic_report": {
       "batch_edit": "Batch Edit",

@@ -468,6 +468,24 @@
       "tips": "Untuk mencegah notifikasi terlalu sering, kami menggunakan masa tenggang:</br> <b>Masa Tenggang</b>: Jika klien offline dan tidak terhubung kembali dalam waktu ini, notifikasi offline akan dikirim.",
       "title": "Mati"
     },
+    "ping_loss": {
+      "add": "Tambah peringatan packet loss",
+      "cooldown": "Jeda",
+      "cooldown_minutes": "Jeda (menit)",
+      "delete_title": "Hapus peringatan packet loss",
+      "edit": "Edit peringatan packet loss",
+      "empty": "Belum ada aturan peringatan packet loss",
+      "full_title": "Peringatan Packet Loss Latensi",
+      "invalid_form": "Lengkapi semua pengaturan peringatan dengan nilai yang valid",
+      "last_notified": "Terakhir diberitahu",
+      "minimum_samples": "Sampel minimum",
+      "minutes": "{{count}} menit",
+      "never": "Belum pernah dipicu",
+      "threshold": "Ambang packet loss",
+      "title": "Packet Loss",
+      "window": "Jendela",
+      "window_minutes": "Jendela (menit)"
+    },
     "title": "Notifikasi",
     "traffic_report": {
       "batch_edit": "Edit Massal",
