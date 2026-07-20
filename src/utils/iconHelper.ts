@@ -21,7 +21,8 @@ import {
   Globe,
   Terminal,
   Database,
-  WifiOff
+  WifiOff,
+  Store
 } from "lucide-react";
 
 
@@ -49,5 +50,6 @@ export const iconMap: Record<string, React.ComponentType<any>> = {
   Terminal,
   Database,
   WifiOff,
+  Store,
 };
 
