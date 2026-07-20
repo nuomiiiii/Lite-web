@@ -48,6 +48,86 @@ interface AdminPanelBarProps {
   content: ReactNode;
 }
 
+interface GithubReleaseInfo {
+  tag_name: string;
+  name?: string;
+  body?: string;
+  html_url: string;
+  published_at?: string;
+  draft?: boolean;
+  prerelease?: boolean;
+}
+
+function parseSemver(input?: string | null): number[] | null {
+  if (!input) return null;
+  const normalized = String(input).trim().replace(/^v/i, "");
+  const match = normalized.match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+function compareSemver(left?: string | null, right?: string | null) {
+  const a = parseSemver(left);
+  const b = parseSemver(right);
+  if (!a || !b) return null;
+  for (let i = 0; i < 3; i++) {
+    if (a[i] > b[i]) return 1;
+    if (a[i] < b[i]) return -1;
+  }
+  return 0;
+}
+
+function parseReleaseVersionHash(body?: string | null) {
+  const match = body?.match(
+    /<!--\s*komari-version-hash:\s*([a-z0-9]{7})\s*-->/i,
+  );
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
+function formatVersion(version?: string | null, hash?: string | null) {
+  if (!version) return "";
+  const normalizedHash = hash?.trim();
+  return normalizedHash && normalizedHash !== "unknown"
+    ? `${version} (${normalizedHash})`
+    : version;
+}
+
+function formatReleaseVersion(release?: GithubReleaseInfo | null) {
+  if (!release) return "";
+  return formatVersion(
+    release.tag_name || release.name,
+    parseReleaseVersionHash(release.body),
+  );
+}
+
+function visibleReleaseBody(body?: string | null) {
+  return (body ?? "")
+    .replace(/<!--\s*komari-version-hash:\s*[a-z0-9]{7}\s*-->/i, "")
+    .trim();
+}
+
+function isReleaseNewer(
+  release: GithubReleaseInfo,
+  currentVersion?: string | null,
+  currentHash?: string | null,
+) {
+  const comparison = compareSemver(
+    release.tag_name || release.name,
+    currentVersion,
+  );
+  if (comparison === null) return false;
+  if (comparison !== 0) return comparison > 0;
+
+  const releaseHash = parseReleaseVersionHash(release.body);
+  const normalizedCurrentHash = currentHash?.trim().toLowerCase();
+  return Boolean(
+    releaseHash &&
+      normalizedCurrentHash &&
+      normalizedCurrentHash !== "unknown" &&
+      releaseHash !== normalizedCurrentHash,
+  );
+}
+
 const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   const { call } = useRPC2Call();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -71,15 +151,6 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     i18n.language ||
     (typeof navigator !== "undefined" ? navigator.language : "");
   // GitHub 最新发布信息与更新检测
-  interface GithubReleaseInfo {
-    tag_name: string;
-    name?: string;
-    body?: string;
-    html_url: string;
-    published_at?: string;
-    draft?: boolean;
-    prerelease?: boolean;
-  }
   const [latestRelease, setLatestRelease] = useState<GithubReleaseInfo | null>(
     null,
   );
@@ -171,30 +242,11 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     fetchVersionInfo();
   }, []);
 
-  // 规范化版本为 [major, minor, patch] 数组，忽略前缀 v 和后缀
-  function parseSemver(input?: string | null): number[] | null {
-    if (!input) return null;
-    const s = String(input).trim().replace(/^v/i, "");
-    const match = s.match(/^(\d+)\.(\d+)\.(\d+)/);
-    if (!match) return null;
-    return [Number(match[1]), Number(match[2]), Number(match[3])];
-  }
-
-  function isNewerVersion(latest?: string | null, current?: string | null) {
-    const a = parseSemver(latest);
-    const b = parseSemver(current);
-    if (!a || !b) return false;
-    for (let i = 0; i < 3; i++) {
-      if (a[i] > b[i]) return true;
-      if (a[i] < b[i]) return false;
-    }
-    return false;
-  }
-
   // 获取 GitHub releases 列表，并筛选出“比当前版本新的所有 release”
   useEffect(() => {
     let ignore = false;
     const currentVersion = (publicInfo as any)?.version || versionInfo?.version;
+    const currentHash = versionInfo?.hash;
     if (!currentVersion) return;
 
     async function loadReleases() {
@@ -213,9 +265,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
         if (ignore) return;
         const valid = (data || [])
           .filter((r) => !r.draft && !r.prerelease)
-          .filter((r) =>
-            isNewerVersion(r?.tag_name || r?.name, currentVersion),
-          );
+          .filter((r) => isReleaseNewer(r, currentVersion, currentHash));
         setReleasesSince(valid);
         setLatestRelease(valid.length ? valid[0] : null);
         setUpdateAvailable(valid.length > 0);
@@ -353,12 +403,13 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                     </label>
                     <div className="text-sm text-muted-foreground">
                       <span style={{ marginRight: 8 }}>
-                        {(publicInfo as any)?.version || versionInfo?.version}
+                        {formatVersion(
+                          (publicInfo as any)?.version || versionInfo?.version,
+                          versionInfo?.hash,
+                        )}
                       </span>
                       <span>{"> "}</span>
-                      <span>
-                        {(latestRelease?.tag_name || latestRelease?.name) ?? ""}
-                      </span>
+                      <span>{formatReleaseVersion(latestRelease)}</span>
                     </div>
 
                     <div className="rounded-md p-2 overflow-auto max-h-80">
@@ -367,7 +418,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                           <div key={r.html_url} className="flex flex-col gap-2">
                             <div className="flex items-center justify-between">
                               <div className="font-medium">
-                                {r.name || r.tag_name}
+                                {formatReleaseVersion(r)}
                               </div>
                               {r.published_at && (
                                 <div className="text-xs text-muted-foreground">
@@ -376,7 +427,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                               )}
                             </div>
                             <div className="whitespace-pre-wrap break-words">
-                              {r.body || ""}
+                              {visibleReleaseBody(r.body)}
                             </div>
                             <div
                               style={{
