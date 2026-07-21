@@ -618,7 +618,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                 </Tips>
               )}
               <span
-                className="text-sm text-muted-foreground leading-none overflow-hidden"
+                className="text-sm text-muted-foreground leading-normal overflow-visible"
                 hidden={isMobile}
               >
                 {(publicInfo as any)?.version ||
