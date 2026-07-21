@@ -612,7 +612,7 @@ const AutoDiscoverySection = ({
             </Flex>
           </div>
 
-          <Flex direction="column" gap="2">
+          <Flex direction="column" gap="2" className="[&_label]:font-normal">
             <Flex gap="2" align="center">
               <Checkbox
                 checked={enableGhproxy}
@@ -1414,6 +1414,8 @@ type InstallOptions = {
   monthRotate: string;
 };
 function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings: any }) {
+  const { t } = useTranslation();
+  const { refresh } = useNodeDetails();
   const configuredResetDay = Number(node.traffic_reset_day);
   const initialResetDay =
     Number.isInteger(configuredResetDay) &&
@@ -1452,6 +1454,23 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
   const [enableMonthRotate, setEnableMonthRotate] = React.useState(
     initialResetDay !== "",
   );
+  const [savingResetDay, setSavingResetDay] = React.useState(false);
+
+  React.useEffect(() => {
+    setEnableMonthRotate(initialResetDay !== "");
+    setInstallOptions((previous) => ({
+      ...previous,
+      monthRotate: initialResetDay,
+    }));
+  }, [node.uuid, initialResetDay]);
+
+  const selectedTrafficResetDay = () => {
+    if (!enableMonthRotate) return 0;
+    const value = Number(installOptions.monthRotate);
+    return Number.isInteger(value) && value >= 1 && value <= 31
+      ? value
+      : null;
+  };
 
   const generateCommand = () => {
     const host = function () {
@@ -1595,15 +1614,51 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
     return finalCommand;
   };
 
-  const copyToClipboard = async (text: string) => {
+  const saveAndCopyCommand = async () => {
+    const trafficResetDay = selectedTrafficResetDay();
+    if (trafficResetDay === null) {
+      toast.error(
+        t(
+          "admin.nodeTable.invalidMonthRotate",
+          "网络统计月重置日必须是 1 到 31 的整数",
+        ),
+      );
+      return;
+    }
+
+    setSavingResetDay(true);
     try {
-      await navigator.clipboard.writeText(text);
-      toast.success(t("copy_success", "已复制到剪贴板"));
+      if (trafficResetDay !== (node.traffic_reset_day ?? 0)) {
+        const response = await fetch(`/api/admin/client/${node.uuid}/edit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ traffic_reset_day: trafficResetDay }),
+        });
+        if (!response.ok) {
+          const message = await response.text();
+          throw new Error(message || `HTTP ${response.status}`);
+        }
+        refresh();
+      }
+
+      await navigator.clipboard.writeText(generateCommand());
+      toast.success(
+        t(
+          "admin.nodeTable.installCommandSaved",
+          "配置已保存，指令已复制到剪贴板",
+        ),
+      );
     } catch (err) {
-      console.error("Failed to copy text: ", err);
+      console.error("Failed to save install options or copy command:", err);
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t("admin.nodeTable.installCommandSaveFailed", "保存配置失败"),
+      );
+    } finally {
+      setSavingResetDay(false);
     }
   };
-  const { t } = useTranslation();
   return (
     <Dialog.Root>
       <Dialog.Trigger>
@@ -1769,7 +1824,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
                 </label>
               </Flex>
             </div>
-            <Flex direction="column" gap="2">
+            <Flex direction="column" gap="2" className="[&_label]:font-normal">
               <Flex gap="2" align="center">
                 <Checkbox
                   checked={enableGhproxy}
@@ -2162,7 +2217,8 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
           <Flex justify="center">
             <Button
               style={{ width: "100%" }}
-              onClick={() => copyToClipboard(generateCommand())}
+              disabled={savingResetDay || selectedTrafficResetDay() === null}
+              onClick={saveAndCopyCommand}
             >
               <Copy size={16} />
               {t("copy")}

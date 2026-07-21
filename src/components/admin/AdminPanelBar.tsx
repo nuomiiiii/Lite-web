@@ -504,10 +504,11 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             align="center"
             className="border-b-1"
           >
-            <Flex gap="3" align="center">
+            <Flex gap="3" align="end" className="min-h-8">
               <IconButton
                 variant="ghost"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="shrink-0"
                 style={{
                   display: isMobile && sidebarOpen ? "none" : "flex",
                   color: "var(--gray-11)",
@@ -515,14 +516,25 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               >
                 <TablerMenu2 />
               </IconButton>
-              <a href="/" target="_blank" rel="noopener noreferrer">
-                <label className="text-xl font-bold">Komari</label>
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-end leading-none"
+              >
+                <span className="text-xl font-bold leading-none">Komari</span>
               </a>
               {updateAvailable && releasesSince.length > 0 && (
                 <Tips
                   mode="dialog"
-                  className="check-update"
-                  trigger={<CircleFadingArrowUp color="#FB4141" size="16" />}
+                  className="check-update flex items-end leading-none"
+                  trigger={
+                    <CircleFadingArrowUp
+                      className="block"
+                      color="#FB4141"
+                      size="16"
+                    />
+                  }
                 >
                   <div className="flex flex-col gap-2 max-w-[80vw] md:max-w-[720px]">
                     <label className="font-bold">
@@ -600,14 +612,14 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                   </div>
                 </Tips>
               )}
-              <label
-                className="text-sm text-muted-foreground self-end overflow-hidden"
+              <span
+                className="text-sm text-muted-foreground leading-none overflow-hidden"
                 hidden={isMobile}
               >
                 {(publicInfo as any)?.version ||
                   (versionInfo &&
                     `${versionInfo.version} (${versionInfo.hash})`)}
-              </label>
+              </span>
             </Flex>
             <Flex gap="3" align="center" overflowX="auto">
               {account && !account.logged_in && (

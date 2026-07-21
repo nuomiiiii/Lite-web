@@ -219,7 +219,7 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
                   </label>
                 </Flex>
               </div>
-              <Flex direction="column" gap="2">
+              <Flex direction="column" gap="2" className="[&_label]:font-normal">
                 <label className="text-sm font-bold">
                   {t("admin.nodeTable.ghproxy", "GitHub 代理")}
                 </label>
