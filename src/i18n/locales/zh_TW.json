@@ -93,6 +93,8 @@
       "tokenPlaceholder": "請輸入 Token",
       "trafficLimit": "流量閾值",
       "trafficLimit_description": "用於首頁流量進度條，設置為 0 B 禁用。",
+      "trafficResetDay": "流量重置日",
+      "trafficResetDay_description": "0 表示關閉；1-31 表示每月重置日。儲存後自動同步到 Agent。",
       "trafficLimitType": "統計方式",
       "trafficLimitType_down": "僅下載",
       "trafficLimitType_max": "取最大",

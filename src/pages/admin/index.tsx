@@ -317,7 +317,7 @@ const AutoDiscoverySection = ({
     if (selectedPlatform === "windows") {
       scriptFile = "install.ps1";
     }
-    let scriptUrl = `https://raw.githubusercontent.com/komari-monitor/komari-agent/refs/heads/main/${scriptFile}`;
+    let scriptUrl = `https://raw.githubusercontent.com/nuomiiiii/komari-agent/refs/heads/main/${scriptFile}`;
     if (enableGhproxy && ghproxy) {
       scriptUrl = scriptUrl.slice(8); // 去掉 https://
       if (ghproxy.endsWith("/")) {
@@ -375,7 +375,7 @@ const AutoDiscoverySection = ({
           `touch .komari-auto-discovery.json && ` +
           `docker run -d --name komari-agent --restart=always ` +
           `-v .komari-auto-discovery.json:/app/auto-discovery.json ` +
-          `ghcr.io/komari-monitor/komari-agent:latest ` +
+          `ghcr.io/nuomiiiii/komari-agent:latest ` +
           quoteShellArgs(dockerArgs);
         break;
       }
@@ -1414,6 +1414,13 @@ type InstallOptions = {
   monthRotate: string;
 };
 function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings: any }) {
+  const configuredResetDay = Number(node.traffic_reset_day);
+  const initialResetDay =
+    Number.isInteger(configuredResetDay) &&
+    configuredResetDay >= 1 &&
+    configuredResetDay <= 31
+      ? String(configuredResetDay)
+      : "";
   const [selectedPlatform, setSelectedPlatform] =
     React.useState<Platform>("linux");
   const [installOptions, setInstallOptions] = React.useState<InstallOptions>({
@@ -1430,7 +1437,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
     excludeNics: "",
     includeMountpoints: "",
     interval: "",
-    monthRotate: "",
+    monthRotate: initialResetDay,
   });
 
   const [enableGhproxy, setEnableGhproxy] = React.useState(false);
@@ -1442,7 +1449,9 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
   const [enableIncludeMountpoints, setEnableIncludeMountpoints] =
     React.useState(false);
   const [enableInterval, setEnableInterval] = React.useState(false);
-  const [enableMonthRotate, setEnableMonthRotate] = React.useState(false);
+  const [enableMonthRotate, setEnableMonthRotate] = React.useState(
+    initialResetDay !== "",
+  );
 
   const generateCommand = () => {
     const host = function () {
@@ -1525,7 +1534,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
       scriptFile = "install.ps1";
     }
     let scriptUrl =
-      `https://raw.githubusercontent.com/komari-monitor/komari-agent/refs/heads/main/${scriptFile}`;
+      `https://raw.githubusercontent.com/nuomiiiii/komari-agent/refs/heads/main/${scriptFile}`;
     if (enableGhproxy) {
       if (enableGhproxy && ghproxy) {
         scriptUrl = scriptUrl.slice(8); // 去掉 https://
@@ -1578,7 +1587,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
         }
         finalCommand =
           `docker run -d --name komari-agent --restart=always ` +
-          `ghcr.io/komari-monitor/komari-agent:latest ` +
+          `ghcr.io/nuomiiiii/komari-agent:latest ` +
           quoteShellArgs(dockerArgs);
         break;
       }
@@ -2178,17 +2187,24 @@ function EditButton({ node }: { node: NodeDetail }) {
   const [saving, setSaving] = useState(false);
   const [traffic_limit, setTrafficLimit] = useState(0);
   const [traffic_limit_type, setTrafficLimitType] = useState("sum");
+  const [trafficResetDay, setTrafficResetDay] = useState(0);
 
   React.useEffect(() => {
     setHidden(node.hidden);
     setTrafficLimit(node.traffic_limit || 0);
     setTrafficLimitType(node.traffic_limit_type || "sum");
-  }, [node.hidden, node.traffic_limit, node.traffic_limit_type]);
+    setTrafficResetDay(node.traffic_reset_day ?? 0);
+  }, [
+    node.hidden,
+    node.traffic_limit,
+    node.traffic_limit_type,
+    node.traffic_reset_day,
+  ]);
 
   const save = async () => {
     try {
       setSaving(true);
-      await fetch(`/api/admin/client/${node.uuid}/edit`, {
+      const response = await fetch(`/api/admin/client/${node.uuid}/edit`, {
         method: "POST",
         body: JSON.stringify({
           name: nameRef.current?.value,
@@ -2199,16 +2215,22 @@ function EditButton({ node }: { node: NodeDetail }) {
           hidden,
           traffic_limit,
           traffic_limit_type,
+          traffic_reset_day: trafficResetDay,
         }),
         headers: {
           "Content-Type": "application/json",
         },
       });
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || `HTTP ${response.status}`);
+      }
       refresh();
       setOpen(false);
       toast.success(t("admin.nodeEdit.saveSuccess", "保存成功"));
     } catch (error) {
       console.error("Error updating client:", error);
+      toast.error(t("admin.nodeEdit.saveError", "保存失败"));
     } finally {
       setSaving(false);
     }
@@ -2303,6 +2325,32 @@ function EditButton({ node }: { node: NodeDetail }) {
             />
           </div>
           <SettingCardCollapse title={t("admin.nodeEdit.trafficLimit")}>
+            <div className="px-4 py-2">
+              <label className="block mb-1 text-sm font-medium">
+                {t("admin.nodeEdit.trafficResetDay", "流量重置日")}
+              </label>
+              <TextField.Root
+                type="number"
+                min="0"
+                max="31"
+                value={String(trafficResetDay)}
+                onChange={(event) => {
+                  const day = Number.parseInt(event.target.value || "0", 10);
+                  setTrafficResetDay(
+                    Math.min(
+                      31,
+                      Math.max(0, Number.isFinite(day) ? day : 0),
+                    ),
+                  );
+                }}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t(
+                  "admin.nodeEdit.trafficResetDay_description",
+                  "0 表示关闭；1-31 表示每月重置日。保存后自动同步到 Agent。",
+                )}
+              </p>
+            </div>
             <SettingCardSelect
               bordless
               title={t("admin.nodeEdit.trafficLimitType")}

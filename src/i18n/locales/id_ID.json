@@ -93,6 +93,8 @@
       "tokenPlaceholder": "Masukkan token",
       "trafficLimit": "Batas Lalu Lintas",
       "trafficLimit_description": "Digunakan untuk menampilkan progres lalu lintas di beranda. Atur ke 0 B untuk menonaktifkan.",
+      "trafficResetDay": "Hari Reset Lalu Lintas",
+      "trafficResetDay_description": "0 menonaktifkan reset; 1-31 memilih hari reset bulanan. Perubahan disinkronkan ke Agent secara otomatis.",
       "trafficLimitType": "Jenis Batas Lalu Lintas",
       "trafficLimitType_down": "Unduh Saja",
       "trafficLimitType_max": "Maksimum",

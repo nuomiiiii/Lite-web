@@ -64,6 +64,10 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
     if (installOptions.ignoreUnsafeCert) {
       args.push("--ignore-unsafe-cert");
     }
+    const trafficResetDay = Number(row.original.traffic_reset_day);
+    if (Number.isInteger(trafficResetDay) && trafficResetDay >= 1 && trafficResetDay <= 31) {
+      args.push("--month-rotate", String(trafficResetDay));
+    }
     const ghproxy = installOptions.ghproxy.trim();
     if (ghproxy) {
       const finalGhproxy = ghproxy.startsWith("http")
@@ -87,13 +91,13 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
     switch (selectedPlatform) {
       case "linux":
         finalCommand =
-          `wget -qO- https://raw.githubusercontent.com/komari-monitor/komari-agent/refs/heads/main/install.sh | sudo bash -s -- ` +
+          `wget -qO- https://raw.githubusercontent.com/nuomiiiii/komari-agent/refs/heads/main/install.sh | sudo bash -s -- ` +
           quoteShellArgs(args);
         break;
       case "windows":
         finalCommand =
           `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ` +
-          `"iwr 'https://raw.githubusercontent.com/komari-monitor/komari-agent/refs/heads/main/install.ps1'` +
+          `"iwr 'https://raw.githubusercontent.com/nuomiiiii/komari-agent/refs/heads/main/install.ps1'` +
           ` -UseBasicParsing -OutFile 'install.ps1'; &` +
           ` '.\\install.ps1'`;
         args.forEach((arg) => {
@@ -103,7 +107,7 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
         break;
       case "macos":
         finalCommand =
-          `zsh <(curl -sL https://raw.githubusercontent.com/komari-monitor/komari-agent/refs/heads/main/install.sh) ` +
+          `zsh <(curl -sL https://raw.githubusercontent.com/nuomiiiii/komari-agent/refs/heads/main/install.sh) ` +
           quoteShellArgs(args);
         break;
     }

@@ -93,6 +93,8 @@
       "tokenPlaceholder": "Please enter Token",
       "trafficLimit": "Traffic Threshold",
       "trafficLimit_description": "Used for the homepage traffic progress bar, set to 0 B to disable.",
+      "trafficResetDay": "Traffic Reset Day",
+      "trafficResetDay_description": "0 disables reset; 1-31 selects the monthly reset day. Changes sync to the Agent automatically.",
       "trafficLimitType": "Traffic Limit Type",
       "trafficLimitType_down": "Download Only",
       "trafficLimitType_max": "Max",

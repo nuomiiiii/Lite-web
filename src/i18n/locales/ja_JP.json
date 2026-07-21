@@ -93,6 +93,8 @@
       "tokenPlaceholder": "トークンを入力してください",
       "trafficLimit": "トラフィック制限",
       "trafficLimit_description": "ホームページのトラフィック進捗バーに使用され、0 Bに設定すると無効になります。",
+      "trafficResetDay": "トラフィックのリセット日",
+      "trafficResetDay_description": "0 で無効、1-31 で毎月のリセット日を指定します。保存後、Agent に自動同期されます。",
       "trafficLimitType": "統計方法",
       "trafficLimitType_down": "ダウンロードのみ",
       "trafficLimitType_max": "最大値を取る",
