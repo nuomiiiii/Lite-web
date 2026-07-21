@@ -504,8 +504,13 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             align="center"
             className="border-b-1"
           >
-            <Flex gap="3" align="end" className="min-h-8">
+            <Flex
+              gap="3"
+              align="end"
+              style={{ minHeight: "calc(32px * var(--scaling))" }}
+            >
               <IconButton
+                size="2"
                 variant="ghost"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="shrink-0"
@@ -514,7 +519,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                   color: "var(--gray-11)",
                 }}
               >
-                <TablerMenu2 />
+                <TablerMenu2 className="h-6 w-6" />
               </IconButton>
               <a
                 href="/"
@@ -522,17 +527,17 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                 rel="noopener noreferrer"
                 className="flex items-end leading-none"
               >
-                <span className="text-xl font-bold leading-none">Komari</span>
+                <span className="text-2xl font-bold leading-none">Komari</span>
               </a>
               {updateAvailable && releasesSince.length > 0 && (
                 <Tips
                   mode="dialog"
-                  className="check-update flex items-end leading-none"
+                  className="check-update flex h-6 w-6 items-end leading-none"
                   trigger={
                     <CircleFadingArrowUp
-                      className="block"
+                      className="block h-6 w-6"
                       color="#FB4141"
-                      size="16"
+                      size="24"
                     />
                   }
                 >
