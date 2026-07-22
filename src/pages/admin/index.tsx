@@ -2739,7 +2739,8 @@ function BillingButton({ node }: { node: NodeDetail }) {
       );
       const expiredAtValue = (formData.get("expiredAt") as string) || "";
       const expiredAt = dateInputToISOString(expiredAtValue);
-      const currencyValue = (formData.get("currency") as string) || "$";
+      const rawCurrency = ((formData.get("currency") as string) || "$").trim();
+      const currencyValue = rawCurrency.toUpperCase() === "CAD" ? "CAD" : rawCurrency;
 
       await fetch(`/api/admin/client/${node.uuid}/edit`, {
         method: "POST",
@@ -2754,6 +2755,7 @@ function BillingButton({ node }: { node: NodeDetail }) {
           "Content-Type": "application/json",
         },
       });
+      setCurrency(currencyValue);
       refresh();
       setOpen(false);
     } catch (error) {
@@ -2791,10 +2793,12 @@ function BillingButton({ node }: { node: NodeDetail }) {
                 {t("admin.nodeTable.currencyTips")}
               </label>
             </label>
-            <TextField.Root
+            <SelectOrInput
+              options={["¥", "$", "€", "£", "₽", "₣", "₹", "₫", "฿", "CAD"]}
               name="currency"
-              defaultValue={currency}
-              onChange={(e) => setCurrency(e.target.value)}
+              value={currency}
+              onChange={(value) => setCurrency(value)}
+              allowCustomInput
             />
 
             <label className="font-bold flex items-center gap-1">
