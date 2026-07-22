@@ -83,6 +83,10 @@ import {
   SettingCardSwitch,
 } from "@/components/admin/SettingCard";
 import { useSettings } from "@/lib/api";
+import {
+  dateInputToISOString,
+  timestampToDateInput,
+} from "@/lib/dateInput";
 import { SelectOrInput } from "@/components/ui/select-or-input";
 
 
@@ -2734,9 +2738,7 @@ function BillingButton({ node }: { node: NodeDetail }) {
         (formData.get("billingCycle") as string) || "30"
       );
       const expiredAtValue = (formData.get("expiredAt") as string) || "";
-      const expiredAt = expiredAtValue
-        ? new Date(`${expiredAtValue}T00:00:00`).toISOString()
-        : null;
+      const expiredAt = dateInputToISOString(expiredAtValue);
       const currencyValue = (formData.get("currency") as string) || "$";
 
       await fetch(`/api/admin/client/${node.uuid}/edit`, {
@@ -2824,7 +2826,7 @@ function BillingButton({ node }: { node: NodeDetail }) {
               name="expiredAt"
               defaultValue={
                 node.expired_at
-                  ? new Date(node.expired_at).toISOString().slice(0, 10)
+                  ? timestampToDateInput(node.expired_at)
                   : "0001-01-01"
               }
               type="date"
@@ -2840,7 +2842,7 @@ function BillingButton({ node }: { node: NodeDetail }) {
                     if (dateInput) {
                       const futureDate = new Date();
                       futureDate.setFullYear(futureDate.getFullYear() + 200);
-                      dateInput.value = futureDate.toISOString().slice(0, 10);
+                      dateInput.value = timestampToDateInput(futureDate);
                     }
                   }}
                 >
