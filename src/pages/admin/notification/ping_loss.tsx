@@ -58,7 +58,7 @@ type AlertTarget = {
   key: string;
   client: string;
   clientName: string;
-  serverWeight: number;
+  serverOrder: number;
   taskId: number;
   task: PingTask;
   rule?: PingLossNotification;
@@ -97,7 +97,9 @@ const buildAlertTargets = (
   nodes: NodeDetail[],
   rules: PingLossNotification[],
 ) => {
-  const nodesById = new Map(nodes.map((node) => [node.uuid, node]));
+  const nodesById = new Map(
+    nodes.map((node, index) => [node.uuid, { node, order: index }])
+  );
   const tasksById = new Map(
     tasks
       .filter((task) => typeof task.id === "number")
@@ -114,15 +116,15 @@ const buildAlertTargets = (
   for (const task of tasks) {
     if (typeof task.id !== "number") continue;
     for (const client of new Set(task.clients || [])) {
-      const node = nodesById.get(client);
-      if (!node) continue;
+      const nodeEntry = nodesById.get(client);
+      if (!nodeEntry) continue;
       const key = targetKey(client, task.id);
       seen.add(key);
       targets.push({
         key,
         client,
-        clientName: node.name || client,
-        serverWeight: node.weight ?? 0,
+        clientName: nodeEntry.node.name || client,
+        serverOrder: nodeEntry.order,
         taskId: task.id,
         task,
         rule: rulesByTarget.get(key),
@@ -133,7 +135,7 @@ const buildAlertTargets = (
   for (const rule of rules) {
     const key = targetKey(rule.client, rule.task_id);
     if (seen.has(key)) continue;
-    const node = nodesById.get(rule.client);
+    const nodeEntry = nodesById.get(rule.client);
     const task = tasksById.get(rule.task_id) || rule.task || {
       id: rule.task_id,
       name: `#${rule.task_id}`,
@@ -141,8 +143,8 @@ const buildAlertTargets = (
     targets.push({
       key,
       client: rule.client,
-      clientName: node?.name || rule.client,
-      serverWeight: node?.weight ?? Number.MAX_SAFE_INTEGER,
+      clientName: nodeEntry?.node.name || rule.client,
+      serverOrder: nodeEntry?.order ?? Number.MAX_SAFE_INTEGER,
       taskId: rule.task_id,
       task,
       rule,
@@ -161,13 +163,13 @@ const sortTargets = (targets: AlertTarget[], view: ViewMode) => {
       if (taskWeight !== 0) return taskWeight;
       const taskName = compareText(a.task.name || "", b.task.name || "");
       if (taskName !== 0) return taskName;
-      if (a.serverWeight !== b.serverWeight) {
-        return a.serverWeight - b.serverWeight;
+      if (a.serverOrder !== b.serverOrder) {
+        return a.serverOrder - b.serverOrder;
       }
       return compareText(a.clientName, b.clientName);
     }
-    if (a.serverWeight !== b.serverWeight) {
-      return a.serverWeight - b.serverWeight;
+    if (a.serverOrder !== b.serverOrder) {
+      return a.serverOrder - b.serverOrder;
     }
     const serverName = compareText(a.clientName, b.clientName);
     if (serverName !== 0) return serverName;

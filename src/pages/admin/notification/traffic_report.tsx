@@ -540,9 +540,9 @@ const TrafficReportTable = ({
   const { nodeDetail } = useNodeDetails();
   const { t } = useTranslation();
 
-  const filtered = [...nodeDetail]
-    .sort((a, b) => a.weight - b.weight)
-    .filter((node) => node.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = nodeDetail.filter((node) =>
+    node.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="overflow-x-auto">

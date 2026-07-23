@@ -105,11 +105,9 @@ const Layout = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
   const filteredNodes = Array.isArray(nodeDetail)
-    ? nodeDetail
-        .filter((node) =>
-          node.name.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-        .sort((a, b) => a.weight - b.weight)
+    ? nodeDetail.filter((node) =>
+        node.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
     : [];
 
   useEffect(() => {
