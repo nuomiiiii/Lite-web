@@ -7,11 +7,13 @@ import {
 } from "../src/lib/currency.ts";
 
 test("displays stored CAD as the Canadian dollar symbol", () => {
-  assert.equal(currencyForDisplay("CAD"), "CA$");
-  assert.equal(currencyForDisplay("cad"), "CA$");
+  assert.equal(currencyForDisplay("CAD"), "C$");
+  assert.equal(currencyForDisplay("cad"), "C$");
+  assert.equal(currencyForDisplay("CA$"), "C$");
 });
 
 test("stores Canadian dollar display values as CAD", () => {
+  assert.equal(currencyForStorage("C$"), "CAD");
   assert.equal(currencyForStorage("CA$"), "CAD");
   assert.equal(currencyForStorage(" cad "), "CAD");
 });

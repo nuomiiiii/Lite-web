@@ -2797,7 +2797,7 @@ function BillingButton({ node }: { node: NodeDetail }) {
               </label>
             </label>
             <SelectOrInput
-              options={["¥", "$", "€", "£", "₽", "₣", "₹", "₫", "฿", "CA$"]}
+              options={["¥", "$", "€", "£", "₽", "₣", "₹", "₫", "฿", "C$"]}
               name="currency"
               value={currency}
               onChange={(value) => setCurrency(value)}
