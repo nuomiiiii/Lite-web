@@ -30,6 +30,7 @@ export const schema = z.object({
   token: z.string().optional(),
   remark: z.string().optional(),
   public_remark: z.string().optional(),
+  remote_control_protected: z.boolean().optional(),
   traffic_reset_day: z.number().min(0).max(31).nullable().optional(),
 });
 

@@ -1,639 +1,193 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import type { CSSProperties } from "react";
-import { Terminal } from "@xterm/xterm";
-import type { ITerminalOptions } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
-import { WebLinksAddon } from "@xterm/addon-web-links";
-import { SearchAddon } from "@xterm/addon-search";
-import "@xterm/xterm/css/xterm.css";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button, Dialog, IconButton, Select, Theme } from "@radix-ui/themes";
+import { Plus, Server, X } from "lucide-react";
+import { Toaster, toast } from "sonner";
+import type { LiveDataResponse, Record as LiveRecord } from "@/types/LiveData";
+import RemoteSession, { type RemoteNode } from "./RemoteSession";
 import "./Terminal.css";
-import {
-  Button,
-  Callout,
-  Dialog,
-  Flex,
-  IconButton,
-  TextField,
-  Theme,
-} from "@radix-ui/themes";
 
-
-import { useTranslation } from "react-i18next";
-import { Cross1Icon } from "@radix-ui/react-icons";
-import { TablerAlertTriangleFilled } from "../../components/Icones/Tabler";
-import CommandClipboardPanel from "@/pages/terminal/CommandClipboard";
-import { Toaster } from "@/components/ui/sonner";
-import { TerminalContext } from "@/contexts/TerminalContext";
-import {
-  isTransparentBackground,
-  defaultXtermjsSettings,
-  type XtermjsSettings,
-  useXtermjsSettings,
-} from "@/hooks/useXtermjsSettings";
-import { motion } from "framer-motion";
-import throttle from "lodash/throttle";
-interface TerminalAreaProps {
-  terminalRef: React.RefObject<HTMLDivElement | null>;
-  toggleClipboard: () => void;
-  width: number | string;
-  isOpen: boolean;
-  appearance: CSSProperties;
-}
-const TerminalArea: React.FC<TerminalAreaProps> = ({
-  terminalRef,
-  toggleClipboard,
-  width,
-  isOpen,
-  appearance,
-}) => (
-  <div
-    className="terminal-page relative flex justify-center flex-col h-full min-w-128"
-    style={{ width, ...appearance }}
-  >
-    <div className="terminal-xterm-host m-0 w-full h-full">
-      <div ref={terminalRef} className="h-full w-full" />
-    </div>
-    <div
-      className="absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center justify-center bg-accent-4 hover:bg-accent-6 text-white cursor-pointer rounded-l-full w-6 h-12 z-20"
-      onClick={toggleClipboard}
-    >
-      {isOpen ? ">" : "<"}
-    </div>
-  </div>
-);
-
-const Divider: React.FC<{
-  onMouseDown: (e: React.MouseEvent | React.TouchEvent) => void;
-}> = ({ onMouseDown }) => (
-  <div
-    className="h-full bg-accent-2 cursor-col-resize hover:bg-accent-4"
-    style={{ width: 8 }}
-    onMouseDown={onMouseDown}
-    onTouchStart={onMouseDown}
-  />
-);
-
-const ClipboardPanel: React.FC = () => (
-  <div className="h-screen p-2 min-w-64" style={{ flex: 1 }}>
-    <CommandClipboardPanel className="h-full w-full" />
-  </div>
-);
-
-const TerminalPage = () => {
-  const {
-    settings,
-    loading: settingsLoading,
-    error: settingsError,
-  } = useXtermjsSettings();
-  const terminalRef = useRef<HTMLDivElement>(null);
-  const terminalInstance = useRef<Terminal | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const resolvedSettingsRef = useRef<XtermjsSettings>(defaultXtermjsSettings);
-  const initializedUuidRef = useRef<string | null>(null);
-  const params = new URLSearchParams(window.location.search);
-  const uuid = params.get("uuid");
-  const [t] = useTranslation();
-  const disconnectMessageRef = useRef(t("terminal.disconnect"));
-  const firstBinary = useRef(false);
-  const [isClipboardOpen, setIsClipboardOpen] = useState(false);
-  const [leftWidth, setLeftWidth] = useState<number>(window.innerWidth * 0.7);
-  const draggingRef = useRef(false);
-  const fitAddonRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [callout, setCallout] = useState(
-    window.location.protocol !== "https:"
-  );
-  const [settingsResolved, setSettingsResolved] = useState(false);
-  const [settingsResolutionError, setSettingsResolutionError] =
-    useState<Error | null>(null);
-  const [appearance, setAppearance] = useState<CSSProperties>({});
-  const [twoFaEnabled, setTwoFaEnabled] = useState(false);
-  const [twoFaResolved, setTwoFaResolved] = useState(false);
-  const [otpCode, setOtpCode] = useState<string | null>(null);
-  const [otpDialogOpen, setOtpDialogOpen] = useState(false);
-  const [otpInput, setOtpInput] = useState("");
-
-
-  useEffect(() => {
-    fetch("/api/me")
-      .then((response) => response.json())
-      .then((data) => {
-        setTwoFaEnabled(Boolean(data?.["2fa_enabled"]));
-      })
-      .catch(() => {
-        setTwoFaEnabled(false);
-      })
-      .finally(() => {
-        setTwoFaResolved(true);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (settingsLoading || settingsResolved) {
-      return;
-    }
-
-    const resolvedSettings = settingsError
-      ? defaultXtermjsSettings
-      : settings;
-
-    resolvedSettingsRef.current = resolvedSettings;
-    setAppearance({
-      "--xterm-padding": `${resolvedSettings.terminalPadding}px`,
-    } as CSSProperties);
-    setSettingsResolutionError(settingsError);
-    setSettingsResolved(true);
-  }, [settings, settingsError, settingsLoading, settingsResolved]);
-
-  useEffect(() => {
-    disconnectMessageRef.current = t("terminal.disconnect");
-  }, [t]);
-
-  // 使用 useCallback 确保 resizeTerminal 引用稳定
-  const resizeTerminal = useCallback(() => {
-    fitAddonRef.current?.fit();
-    const term = terminalInstance.current;
-    const ws = wsRef.current;
-    if (term && ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(
-        JSON.stringify({
-          type: "resize",
-          cols: term.cols,
-          rows: term.rows,
-        })
-      );
-    }
-  }, []);
-
-  const startDragging = useCallback(
-    (e: React.MouseEvent | React.TouchEvent) => {
-      e.preventDefault();
-      draggingRef.current = true;
-      document.body.style.userSelect = "none";
-    },
-    []
-  );
-
-  const stopDragging = useCallback(() => {
-    if (draggingRef.current) {
-      draggingRef.current = false;
-      document.body.style.userSelect = "";
-      resizeTerminal();
-    }
-  }, [resizeTerminal]);
-
-  // 限制resize onMouseMove 调用频率
-  const onMouseMove = useMemo(
-    () =>
-      throttle((e: MouseEvent | TouchEvent) => {
-        if (!draggingRef.current || !containerRef.current) return;
-
-        const containerRect = containerRef.current.getBoundingClientRect();
-        let clientX: number;
-
-        if (e instanceof MouseEvent) {
-          clientX = e.clientX;
-        } else {
-          clientX = e.touches[0].clientX;
-        }
-
-        const newLeftWidth = clientX - containerRect.left;
-        const minWidth = 300;
-        const maxWidth = containerRect.width - 300;
-
-        if (newLeftWidth >= minWidth && newLeftWidth <= maxWidth) {
-          setLeftWidth(newLeftWidth);
-        }
-      }, 1000 / 60), // （60fps）
-    []
-  );
-
-  useEffect(() => {
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", stopDragging);
-    document.addEventListener("touchmove", onMouseMove);
-    document.addEventListener("touchend", stopDragging);
-
-    return () => {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", stopDragging);
-      document.removeEventListener("touchmove", onMouseMove);
-      document.removeEventListener("touchend", stopDragging);
-      onMouseMove.cancel(); // 清理 throttle
-    };
-  }, [onMouseMove, stopDragging]);
-
-  useEffect(() => {
-    if (uuid === null) {
-      window.location.href = "/";
-      return;
-    }
-    fetch("./api/admin/client/list")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.length === 0) {
-          alert(t("terminal.no_active_connection"));
-        }
-        const client = data.find(
-          (item: { uuid: string }) => item.uuid === uuid
-        );
-        document.title = `${t("terminal.title")} - ${
-          client?.name || t("terminal.title")
-        }`;
-      });
-  }, [t, uuid]);
-
-  // Trigger OTP dialog when 2FA is enabled
-  useEffect(() => {
-    if (!settingsResolved || !twoFaResolved) return;
-    if (twoFaEnabled && otpCode === null) {
-      setOtpDialogOpen(true);
-    }
-  }, [settingsResolved, twoFaResolved, twoFaEnabled, otpCode]);
-
-  // Connection effect - waits for OTP if 2FA is enabled
-  useEffect(() => {
-    if (!settingsResolved || !twoFaResolved || uuid === null || !terminalRef.current) return;
-    if (initializedUuidRef.current === uuid) return;
-    if (twoFaEnabled && otpCode === null) return; // Wait for OTP
-
-    initializedUuidRef.current = uuid;
-    firstBinary.current = false;
-    const otpQuery = twoFaEnabled && otpCode ? `?2fa_code=${encodeURIComponent(otpCode)}` : "";
-
-
-    const snapshot = resolvedSettingsRef.current;
-    const terminalOptions: Partial<ITerminalOptions> = {
-      cursorBlink: snapshot.terminalOptions.cursorBlink,
-      convertEol: snapshot.terminalOptions.convertEol,
-      fontFamily: snapshot.terminalOptions.fontFamily,
-      fontSize: snapshot.terminalOptions.fontSize,
-      macOptionIsMeta: snapshot.terminalOptions.macOptionIsMeta,
-      scrollback: snapshot.terminalOptions.scrollback,
-    };
-
-    if (snapshot.terminalOptions.theme !== undefined) {
-      terminalOptions.theme = snapshot.terminalOptions.theme;
-    }
-    if (
-      snapshot.transparentBackground ||
-      isTransparentBackground(snapshot.terminalOptions.theme?.background)
-    ) {
-      terminalOptions.allowTransparency = true;
-    }
-
-    const term = new Terminal(terminalOptions);
-    const fitAddon = new FitAddon();
-    fitAddonRef.current = fitAddon;
-    const webLinksAddon = new WebLinksAddon();
-    const searchAddon = new SearchAddon();
-
-    term.loadAddon(fitAddon);
-    term.loadAddon(webLinksAddon);
-    term.loadAddon(searchAddon);
-
-    term.open(terminalRef.current);
-    terminalInstance.current = term;
-
-    const customCssStyle = document.createElement("style");
-    customCssStyle.id = "xtermjs-custom-css";
-    customCssStyle.textContent = snapshot.customCss;
-    document.head.appendChild(customCssStyle);
-
-    const resizeObserver =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => {
-            resizeTerminal();
-          })
-        : null;
-
-    if (resizeObserver && terminalRef.current) {
-      resizeObserver.observe(terminalRef.current);
-    }
-
-    let isMounted = true;
-    let disposed = false;
-    let firstBinaryTimeout: ReturnType<typeof setTimeout> | null = null;
-
-    document.fonts?.ready?.then(() => {
-      if (isMounted && !disposed) {
-        resizeTerminal();
-      }
-    });
-
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.host;
-    const baseUrl = `${protocol}//${host}`;
-    const ws = new WebSocket(`${baseUrl}/api/admin/client/${uuid}/terminal${otpQuery}`);
-    ws.binaryType = "arraybuffer";
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      if (disposed) {
-        return;
-      }
-      resizeTerminal();
-      startHeartbeat();
-    };
-
-    const startHeartbeat = () => {
-      if (disposed) {
-        return;
-      }
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
-        heartbeatIntervalRef.current = null;
-      }
-      heartbeatIntervalRef.current = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(
-            JSON.stringify({
-              type: "heartbeat",
-              timestamp: new Date().toISOString(),
-            })
-          );
-        }
-      }, 10000);
-    };
-
-    const stopHeartbeat = () => {
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
-        heartbeatIntervalRef.current = null;
-      }
-    };
-
-    ws.onmessage = (event) => {
-      if (disposed) {
-        return;
-      }
-      if (event.data instanceof ArrayBuffer) {
-        const uint8Array = new Uint8Array(event.data);
-        term.write(uint8Array);
-      } else {
-        term.write(event.data);
-      }
-      if (!firstBinary.current && event.data instanceof ArrayBuffer) {
-        firstBinary.current = true;
-        firstBinaryTimeout = setTimeout(() => {
-          if (disposed) return;
-          const term = terminalInstance.current;
-          if (term) {
-            term.resize(term.cols - 1, term.rows);
-          }
-          resizeTerminal();
-        }, 200);
-      }
-    };
-
-    ws.onclose = () => {
-      if (disposed) {
-        return;
-      }
-      stopHeartbeat();
-      term.write(`\n ${disconnectMessageRef.current}`);
-    };
-
-    const termDataDisposable = term.onData((data) => {
-      if (disposed) {
-        return;
-      }
-      if (ws.readyState === WebSocket.OPEN) {
-        const encoder = new TextEncoder();
-        const uint8Array = encoder.encode(data);
-        ws.send(uint8Array);
-      }
-    });
-
-    const handleResize = () => {
-      resizeTerminal();
-    };
-    window.addEventListener("resize", handleResize);
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey) {
-        if (e.key === "f" || e.key === "d") {
-          searchAddon.findNext("");
-          e.preventDefault();
-        }
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-
-    const handleContextMenu = (e: MouseEvent) => {
-      if (e.ctrlKey || ws.readyState !== WebSocket.OPEN) {
-        return;
-      }
-      const selection = window.getSelection();
-      const hasSelection = selection && selection.toString().length > 0;
-      if (hasSelection) {
-        e.preventDefault();
-        const selectedText = selection.toString();
-        navigator.clipboard.writeText(selectedText).finally(() => {
-          if (disposed) {
-            return;
-          }
-          term.focus();
-          term.clearSelection();
-        });
-      } else {
-        e.preventDefault();
-        term.focus();
-        navigator.clipboard.readText().then((text) => {
-          if (disposed || ws.readyState !== WebSocket.OPEN) {
-            return;
-          }
-          const encoder = new TextEncoder();
-          const uint8Array = encoder.encode(text.replace(/\r?\n/g, "\r"));
-          ws.send(uint8Array);
-        });
-      }
-    };
-
-    document.addEventListener("contextmenu", handleContextMenu);
-
-    return () => {
-      disposed = true;
-      isMounted = false;
-      stopHeartbeat();
-      ws.onopen = null;
-      ws.onmessage = null;
-      ws.onclose = null;
-      ws.onerror = null;
-      resizeObserver?.disconnect();
-      if (firstBinaryTimeout !== null) {
-        clearTimeout(firstBinaryTimeout);
-      }
-      termDataDisposable.dispose();
-      term.dispose();
-      if (customCssStyle.parentNode) {
-        customCssStyle.parentNode.removeChild(customCssStyle);
-      }
-      if (
-        ws.readyState === WebSocket.OPEN ||
-        ws.readyState === WebSocket.CONNECTING
-      ) {
-        ws.close();
-      }
-      if (initializedUuidRef.current === uuid) {
-        initializedUuidRef.current = null;
-      }
-      terminalInstance.current = null;
-      wsRef.current = null;
-      fitAddonRef.current = null;
-      window.removeEventListener("resize", handleResize);
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("contextmenu", handleContextMenu);
-    };
-  }, [settingsResolved, twoFaEnabled, twoFaResolved, otpCode, uuid, resizeTerminal, t]);
-
-  const submitOtp = useCallback(() => {
-    if (!otpInput) return;
-    setOtpCode(otpInput);
-    setOtpDialogOpen(false);
-  }, [otpInput]);
-
-
-  // 移除对 leftWidth 的直接依赖，改用防抖
-  useEffect(() => {
-    if (!fitAddonRef.current) return;
-    const debouncedResize = setTimeout(() => {
-      resizeTerminal();
-    }, 100);
-    return () => clearTimeout(debouncedResize);
-  }, [isClipboardOpen, resizeTerminal]);
-
-  const sendCommand = useCallback((cmd: string) => {
-    const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      const encoder = new TextEncoder();
-      ws.send(encoder.encode(cmd + "\r"));
-    }
-  }, []);
-
-  return (
-    <TerminalContext.Provider
-      value={{ terminal: terminalInstance.current, sendCommand }}
-    >
-      <Theme appearance="dark">
-        <Toaster theme="dark" />
-        {settingsResolutionError ? (
-          <div className="absolute left-4 top-4 z-30 max-w-[32rem]">
-            <Callout.Root
-              color="red"
-              size="2"
-              className="bg-red-50 backdrop-blur-sm border-2 border-red-800 rounded-lg"
-            >
-              <Callout.Icon>
-                <TablerAlertTriangleFilled className="text-red-700" />
-              </Callout.Icon>
-              <Callout.Text className="text-red-400 font-medium">
-                <Flex align="center" justify="between" gap="3">
-                  <span>
-                    xterm settings fallback: {settingsResolutionError.message}
-                  </span>
-                </Flex>
-              </Callout.Text>
-            </Callout.Root>
-          </div>
-        ) : null}
-        <div className="absolute inset-x-0 top-4 flex justify-center items-center z-30">
-          <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            hidden={!callout}
-          >
-            <Callout.Root
-              color="red"
-              size="2"
-              className="bg-red-50 backdrop-blur-sm border-2 border-red-800 rounded-lg"
-            >
-              <Callout.Icon>
-                <TablerAlertTriangleFilled className="text-red-700" />
-              </Callout.Icon>
-              <Callout.Text className="text-red-400 font-medium">
-                <Flex align="center" justify="between" gap="3">
-                  <span>{t("warn_https")}</span>
-                  <IconButton
-                    variant="soft"
-                    color="red"
-                    size="1"
-                    className="hover:bg-red-200/50 transition-colors"
-                    onClick={() => setCallout(false)}
-                  >
-                    <Cross1Icon />
-                  </IconButton>
-                </Flex>
-              </Callout.Text>
-            </Callout.Root>
-          </motion.div>
-        </div>
-        <Flex className="h-screen w-screen" direction="row" ref={containerRef}>
-          <TerminalArea
-            terminalRef={terminalRef}
-            toggleClipboard={() => setIsClipboardOpen(!isClipboardOpen)}
-            width={isClipboardOpen ? `${leftWidth}px` : "100%"}
-            isOpen={isClipboardOpen}
-            appearance={appearance}
-          />
-          {isClipboardOpen && <Divider onMouseDown={startDragging} />}
-          {isClipboardOpen && <ClipboardPanel />}
-        </Flex>
-        <Dialog.Root
-          open={otpDialogOpen}
-          onOpenChange={(open) => {
-            // 阻止在未输入验证码时关闭
-            if (!open && otpCode === null) {
-              return;
-            }
-            setOtpDialogOpen(open);
-          }}
-        >
-          <Dialog.Content maxWidth="400px">
-            <Dialog.Title>{t("login.two_factor")}</Dialog.Title>
-            <Dialog.Description size="2" mb="3">
-              {t("account.2fa_otp_input_prompt")}
-            </Dialog.Description>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                submitOtp();
-              }}
-            >
-              <Flex direction="column" gap="3">
-                <TextField.Root
-                  type="number"
-                  autoFocus
-                  value={otpInput}
-                  placeholder="123456"
-                  onChange={(e) => setOtpInput(e.target.value)}
-                />
-                <Flex gap="3" justify="end">
-                  <Button
-                    variant="soft"
-                    color="gray"
-                    type="button"
-                    onClick={() => {
-                      window.location.href = "/";
-                    }}
-                  >
-                    {t("common.cancel")}
-                  </Button>
-                  <Button type="submit" disabled={!otpInput}>
-                    {t("common.confirm")}
-                  </Button>
-                </Flex>
-              </Flex>
-            </form>
-          </Dialog.Content>
-        </Dialog.Root>
-      </Theme>
-
-    </TerminalContext.Provider>
-  );
+type RemoteTab = {
+  id: string;
+  uuid: string;
 };
 
-export default TerminalPage;
+const maxTabs = 16;
+
+export default function TerminalWorkspace() {
+  const initialUUID = useMemo(() => new URLSearchParams(window.location.search).get("uuid"), []);
+  const [nodes, setNodes] = useState<RemoteNode[]>([]);
+  const [tabs, setTabs] = useState<RemoteTab[]>([]);
+  const [activeID, setActiveID] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerUUID, setPickerUUID] = useState("");
+  const [live, setLive] = useState<Record<string, LiveRecord>>({});
+  const [online, setOnline] = useState<Set<string>>(new Set());
+  const initialized = useRef(false);
+
+  const addTab = useCallback((uuid: string) => {
+    if (!uuid) return;
+    setTabs((current) => {
+      if (current.length >= maxTabs) {
+        toast.error(`最多同时打开 ${maxTabs} 个远程标签`);
+        return current;
+      }
+      const tab = { id: crypto.randomUUID(), uuid };
+      setActiveID(tab.id);
+      return [...current, tab];
+    });
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/admin/client/list")
+      .then((response) => response.json())
+      .then((payload) => {
+        const data = Array.isArray(payload) ? payload : payload?.data;
+        const list = Array.isArray(data) ? data : [];
+        setNodes(list);
+        if (!initialized.current) {
+          initialized.current = true;
+          const requested = list.find((node: RemoteNode) => node.uuid === initialUUID && !node.remote_control_protected);
+          const firstUUID = requested?.uuid || list.find((node: RemoteNode) => !node.remote_control_protected)?.uuid;
+          if (firstUUID) addTab(firstUUID);
+        }
+      })
+      .catch(() => toast.error("无法加载服务器列表"));
+  }, [addTab, initialUUID]);
+
+  useEffect(() => {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(`${protocol}//${window.location.host}/api/clients`);
+    let interval: number | undefined;
+    const request = () => {
+      if (ws.readyState === WebSocket.OPEN) ws.send("get");
+    };
+    ws.onopen = () => {
+      request();
+      interval = window.setInterval(request, 3000);
+    };
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data) as LiveDataResponse;
+        setLive(payload.data?.data || {});
+        setOnline(new Set(payload.data?.online || []));
+      } catch {
+        // Ignore malformed live frames; the next poll replaces them.
+      }
+    };
+    return () => {
+      if (interval) window.clearInterval(interval);
+      ws.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    const active = tabs.find((tab) => tab.id === activeID);
+    if (!active) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("uuid", active.uuid);
+    window.history.replaceState(null, "", url);
+    const node = nodes.find((item) => item.uuid === active.uuid);
+    document.title = `${node?.name || "服务器"} - 远程终端`;
+  }, [activeID, nodes, tabs]);
+
+  const nodeMap = useMemo(() => new Map(nodes.map((node) => [node.uuid, node])), [nodes]);
+  const labels = useMemo(() => {
+    const counts = new Map<string, number>();
+    return tabs.map((tab) => {
+      const count = (counts.get(tab.uuid) || 0) + 1;
+      counts.set(tab.uuid, count);
+      const name = nodeMap.get(tab.uuid)?.name || tab.uuid.slice(0, 8);
+      return count === 1 ? name : `${name} (${count})`;
+    });
+  }, [nodeMap, tabs]);
+
+  const closeTab = (id: string) => {
+    setTabs((current) => {
+      const index = current.findIndex((tab) => tab.id === id);
+      const next = current.filter((tab) => tab.id !== id);
+      if (activeID === id) {
+        const fallback = next[Math.min(index, next.length - 1)];
+        setActiveID(fallback?.id || "");
+      }
+      return next;
+    });
+  };
+
+  const openPicker = () => {
+    setPickerUUID(
+      nodes.find((node) => online.has(node.uuid) && !node.remote_control_protected)?.uuid ||
+      nodes.find((node) => !node.remote_control_protected)?.uuid ||
+      "",
+    );
+    setPickerOpen(true);
+  };
+
+  return (
+    <Theme appearance="dark" accentColor="cyan" grayColor="slate" radius="small">
+      <Toaster theme="dark" />
+      <div className="remote-workspace">
+        <nav className="remote-tabbar" aria-label="远程服务器标签">
+          <div className="remote-brand"><Server size={17} /><span>Komari 远程管理</span></div>
+          <div className="remote-tabs">
+            {tabs.map((tab, index) => (
+              <button key={tab.id} type="button" className={`remote-tab ${activeID === tab.id ? "is-active" : ""}`} onClick={() => setActiveID(tab.id)}>
+                <i className={online.has(tab.uuid) ? "is-online" : ""} />
+                <span title={labels[index]}>{labels[index]}</span>
+                <IconButton asChild size="1" variant="ghost" color="gray">
+                  <span role="button" tabIndex={0} title="关闭标签" onClick={(event) => { event.stopPropagation(); closeTab(tab.id); }} onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") { event.stopPropagation(); closeTab(tab.id); }
+                  }}><X size={13} /></span>
+                </IconButton>
+              </button>
+            ))}
+          </div>
+          <IconButton size="2" variant="ghost" title="打开服务器" onClick={openPicker}><Plus size={17} /></IconButton>
+        </nav>
+
+        <div className="remote-content">
+          {tabs.map((tab) => {
+            const node = nodeMap.get(tab.uuid) || { uuid: tab.uuid, name: tab.uuid.slice(0, 8) };
+            return (
+              <RemoteSession
+                key={tab.id}
+                node={node}
+                live={live[tab.uuid]}
+                online={online.has(tab.uuid)}
+                active={activeID === tab.id}
+                onDuplicate={() => addTab(tab.uuid)}
+              />
+            );
+          })}
+          {tabs.length === 0 && (
+            <div className="remote-empty-workspace">
+              <Server size={28} />
+              <strong>尚未打开远程服务器</strong>
+              <Button onClick={openPicker}><Plus size={15} />打开服务器</Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Dialog.Root open={pickerOpen} onOpenChange={setPickerOpen}>
+        <Dialog.Content maxWidth="420px">
+          <Dialog.Title>打开远程服务器</Dialog.Title>
+          <Dialog.Description>可重复选择同一台服务器，每个标签都会建立独立的终端与文件会话。</Dialog.Description>
+          <Select.Root value={pickerUUID} onValueChange={setPickerUUID}>
+            <Select.Trigger className="w-full" placeholder="选择服务器" />
+            <Select.Content>
+              {nodes.map((node) => (
+                <Select.Item key={node.uuid} value={node.uuid} disabled={node.remote_control_protected}>
+                  {online.has(node.uuid) ? "●" : "○"} {node.name}{node.remote_control_protected ? " - Komari Server（已保护）" : ""}
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Root>
+          <div className="remote-dialog-actions">
+            <Button variant="soft" onClick={() => setPickerOpen(false)}>取消</Button>
+            <Button disabled={!pickerUUID} onClick={() => { addTab(pickerUUID); setPickerOpen(false); }}>打开</Button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Root>
+    </Theme>
+  );
+}
