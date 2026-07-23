@@ -87,6 +87,7 @@ import {
   dateInputToISOString,
   timestampToDateInput,
 } from "@/lib/dateInput";
+import { currencyForDisplay, currencyForStorage } from "@/lib/currency";
 import { SelectOrInput } from "@/components/ui/select-or-input";
 
 
@@ -2719,7 +2720,9 @@ function BillingButton({ node }: { node: NodeDetail }) {
   const [autoRenewal, setAutoRenewal] = React.useState<boolean>(
     node.auto_renewal || false
   );
-  const [currency, setCurrency] = React.useState<string>(node.currency || "$");
+  const [currency, setCurrency] = React.useState<string>(
+    currencyForDisplay(node.currency || "$")
+  );
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2739,8 +2742,8 @@ function BillingButton({ node }: { node: NodeDetail }) {
       );
       const expiredAtValue = (formData.get("expiredAt") as string) || "";
       const expiredAt = dateInputToISOString(expiredAtValue);
-      const rawCurrency = ((formData.get("currency") as string) || "$").trim();
-      const currencyValue = rawCurrency.toUpperCase() === "CAD" ? "CAD" : rawCurrency;
+      const rawCurrency = (formData.get("currency") as string) || "$";
+      const currencyValue = currencyForStorage(rawCurrency);
 
       await fetch(`/api/admin/client/${node.uuid}/edit`, {
         method: "POST",
@@ -2755,7 +2758,7 @@ function BillingButton({ node }: { node: NodeDetail }) {
           "Content-Type": "application/json",
         },
       });
-      setCurrency(currencyValue);
+      setCurrency(currencyForDisplay(currencyValue));
       refresh();
       setOpen(false);
     } catch (error) {
@@ -2794,7 +2797,7 @@ function BillingButton({ node }: { node: NodeDetail }) {
               </label>
             </label>
             <SelectOrInput
-              options={["¥", "$", "€", "£", "₽", "₣", "₹", "₫", "฿", "CAD"]}
+              options={["¥", "$", "€", "£", "₽", "₣", "₹", "₫", "฿", "CA$"]}
               name="currency"
               value={currency}
               onChange={(value) => setCurrency(value)}
