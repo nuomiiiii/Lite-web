@@ -99,6 +99,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
   const socket = useRef<WebSocket | null>(null);
   const fileManager = useRef<FileManagerHandle>(null);
   const activeRef = useRef(active);
+  const onProtectedRef = useRef(onProtected);
   const [terminalReady, setTerminalReady] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
   const [connectionError, setConnectionError] = useState("");
@@ -116,6 +117,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
   const dragging = useRef(false);
 
   activeRef.current = active;
+  onProtectedRef.current = onProtected;
 
   const resizeTerminal = useCallback(() => {
     if (!activeRef.current) return;
@@ -298,7 +300,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
           }
           if (response.status === 403 && String(payload?.message || "").includes("Komari Server")) {
             setConnectionState("error");
-            onProtected();
+            onProtectedRef.current();
             return;
           }
           throw new Error(payload?.message || "无法创建远程会话");
@@ -333,6 +335,9 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
               setRemoteReady(true);
               fileManager.current?.initialize(message.roots || [], message.home || message.roots?.[0], message.separator || "/");
               resizeTerminal();
+              if (activeRef.current) {
+                window.requestAnimationFrame(() => terminal.current?.focus());
+              }
             } else if (message.type === "remote.status") {
               setConnectionState(message.status === "waiting" ? "waiting" : "connecting");
             } else if (message.type === "remote.error") {
@@ -375,7 +380,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
       if (ws?.readyState === WebSocket.OPEN || ws?.readyState === WebSocket.CONNECTING) ws.close();
       if (socket.current === ws) socket.current = null;
     };
-  }, [node.uuid, onProtected, otpCode, reconnectKey, resizeTerminal, terminalReady]);
+  }, [node.uuid, otpCode, reconnectKey, resizeTerminal, terminalReady]);
 
   useEffect(() => {
     if (!active) return;

@@ -30,6 +30,7 @@ import {
   Pencil,
   Plus,
   Radar,
+  RotateCw,
   Settings,
   Terminal,
   Trash2Icon,
@@ -1337,6 +1338,7 @@ const ActionButtons = ({ node, settings }: { node: NodeDetail, settings: any }) 
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-4">
+      <RotateTokenButton node={node} />
       <GenerateCommandButton node={node} settings={settings} />
       <IconButton
         title={t("terminal.title")}
@@ -1353,6 +1355,118 @@ const ActionButtons = ({ node, settings }: { node: NodeDetail, settings: any }) 
     </div>
   );
 };
+
+function RotateTokenButton({ node }: { node: NodeDetail }) {
+  const { t } = useTranslation();
+  const { refresh } = useNodeDetails();
+  const [open, setOpen] = React.useState(false);
+  const [twoFactorCode, setTwoFactorCode] = React.useState("");
+  const [error, setError] = React.useState("");
+  const [rotating, setRotating] = React.useState(false);
+
+  const rotateToken = async () => {
+    setRotating(true);
+    setError("");
+    try {
+      const response = await fetch("/api/admin/client/token/rotate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uuid: node.uuid,
+          ...(twoFactorCode ? { "2fa_code": twoFactorCode } : {}),
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error(
+            payload?.message === "Invalid 2FA code"
+              ? "动态口令无效"
+              : "请输入动态口令",
+          );
+        }
+        throw new Error(payload?.message || "Token 轮换失败");
+      }
+      if (!(payload?.data?.token || payload?.token)) {
+        throw new Error("Server 未返回新 Token");
+      }
+      setTwoFactorCode("");
+      setOpen(false);
+      toast.success("Token 已轮换，请使用新指令更新 Agent；新 Token 连接后旧 Token 自动失效");
+      refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Token 轮换失败");
+    } finally {
+      setRotating(false);
+    }
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Button
+        type="button"
+        size="1"
+        variant="soft"
+        color="orange"
+        title={t("admin.nodeTable.rotateToken", "轮换 Token")}
+        onClick={() => setOpen(true)}
+      >
+        <RotateCw size={14} />
+        {t("admin.nodeTable.rotateToken", "轮换 Token")}
+      </Button>
+      <Dialog.Content maxWidth="440px">
+        <Dialog.Title>
+          {t("admin.nodeTable.rotateToken", "轮换 Token")}
+        </Dialog.Title>
+        <Dialog.Description>
+          {t(
+            "admin.nodeTable.rotateTokenDescription",
+            "生成新 Token 后，旧 Token 最多保留 24 小时；新 Token 首次成功连接后旧 Token 会立即失效。",
+          )}
+          <br />
+          {t(
+            "admin.nodeTable.rotateTokenInstructions",
+            "轮换后在节点上重新执行更新后的部署指令即可，无需手动卸载；自动更新只替换程序文件，不会修改 Token。",
+          )}
+        </Dialog.Description>
+        <Flex direction="column" gap="2">
+          <label className="text-sm font-normal">
+            {t(
+              "admin.nodeTable.twoFactorCode",
+              "动态口令（未开启 2FA 可留空）",
+            )}
+          </label>
+          <TextField.Root
+            value={twoFactorCode}
+            inputMode="numeric"
+            autoFocus
+            onChange={(event) =>
+              setTwoFactorCode(event.target.value.replace(/\D/g, ""))
+            }
+            onKeyDown={(event) =>
+              event.key === "Enter" && !rotating && void rotateToken()
+            }
+          />
+          {error && <p className="text-sm text-red-500">{error}</p>}
+        </Flex>
+        <Flex gap="2" justify="end" mt="4">
+          <Button variant="soft" onClick={() => setOpen(false)}>
+            {t("common.cancel", "取消")}
+          </Button>
+          <Button
+            color="orange"
+            disabled={rotating}
+            onClick={() => void rotateToken()}
+          >
+            {rotating
+              ? t("common.loading", "处理中...")
+              : t("admin.nodeTable.confirmRotateToken", "确认轮换")}
+          </Button>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
 
 export default NodeDetailsPage;
 function DeleteButton({ node }: { node: NodeDetail }) {

@@ -49,19 +49,25 @@
 }
 
 .remote-add-tab.rt-IconButton {
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  flex: 0 0 34px;
+  box-sizing: border-box;
+  width: 190px;
+  height: 36px;
+  min-width: 132px;
+  max-width: 220px;
+  flex: 0 1 190px;
   align-self: flex-end;
-  margin-bottom: 1px;
+  margin: 0;
   border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 5px 5px 0 0;
+  background: #20242a;
+  padding: 0;
   color: #aeb6bf;
 }
 
 .remote-add-tab.rt-IconButton:hover {
   border-color: #363c44;
-  background: #242930;
+  background: #2a3038;
   color: #ffffff;
 }
 
@@ -247,10 +253,14 @@
   width: 100%;
   height: 100%;
   background: var(--xterm-container-bg, #000000);
+}
+
+.terminal-page .xterm {
+  box-sizing: border-box;
+  height: 100%;
   padding: var(--xterm-padding, 16px);
 }
 
-.terminal-page .xterm,
 .terminal-page .xterm-screen {
   height: 100%;
 }

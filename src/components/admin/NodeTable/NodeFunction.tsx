@@ -164,6 +164,17 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
 
   return (
     <div className="flex gap-3 justify-center">
+      <Button
+        type="button"
+        size="1"
+        variant="soft"
+        color="orange"
+        title={t("admin.nodeTable.rotateToken", "轮换 Token")}
+        onClick={() => setRotateTokenOpen(true)}
+      >
+        <RotateCw size={14} />
+        {t("admin.nodeTable.rotateToken", "轮换 Token")}
+      </Button>
       <Dialog.Root>
         <Dialog.Trigger>
           <IconButton variant="ghost">
