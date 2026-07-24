@@ -372,7 +372,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
         damping: 30,
       },
     },
-  };
+  } as const;
 
   // 内容区域动画变体
   const contentVariants = {

@@ -2,11 +2,12 @@ import * as React from "react";
 import { z } from "zod";
 import { schema } from "@/components/admin/NodeTable/schema/node";
 import { DataTableRefreshContext } from "@/components/admin/NodeTable/schema/DataTableRefreshContext";
-import { Terminal, Trash2, Copy, Download, DollarSign } from "lucide-react";
+import { Terminal, Trash2, Copy, Download, DollarSign, RotateCw } from "lucide-react";
 import { t } from "i18next";
 import type { Row } from "@tanstack/react-table";
 import { EditDialog } from "./NodeEditDialog";
 import { quotePowerShellArg, quoteShellArgs } from "@/utils/shellQuote";
+import { openRemoteTerminal } from "@/utils/remoteLaunch";
 import {
   Button,
   Checkbox,
@@ -41,6 +42,11 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
   const [removing, setRemoving] = React.useState(false);
   const [selectedPlatform, setSelectedPlatform] =
     React.useState<Platform>("linux");
+  const [activeToken, setActiveToken] = React.useState(row.original.token ?? "");
+  const [rotateTokenOpen, setRotateTokenOpen] = React.useState(false);
+  const [rotateTokenCode, setRotateTokenCode] = React.useState("");
+  const [rotateTokenError, setRotateTokenError] = React.useState("");
+  const [rotatingToken, setRotatingToken] = React.useState(false);
   const [installOptions, setInstallOptions] = React.useState<InstallOptions>({
     disableWebSsh: false,
     disableAutoUpdate: false,
@@ -52,7 +58,7 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
 
   const generateCommand = () => {
     const host = window.location.origin;
-    const token = row.original.token ?? "";
+    const token = activeToken;
     const args: string[] = ["-e", host, "-t", token];
     // 根据安装选项生成参数
     if (installOptions.disableWebSsh) {
@@ -123,6 +129,39 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
     }
   };
 
+  const rotateToken = async () => {
+    setRotatingToken(true);
+    setRotateTokenError("");
+    try {
+      const response = await fetch("/api/admin/client/token/rotate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uuid: row.original.uuid,
+          ...(rotateTokenCode ? { "2fa_code": rotateTokenCode } : {}),
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error(payload?.message === "Invalid 2FA code" ? "动态口令无效" : "请输入动态口令");
+        }
+        throw new Error(payload?.message || "Token 轮换失败");
+      }
+      const token = payload?.data?.token || payload?.token;
+      if (!token) throw new Error("Server 未返回新 Token");
+      setActiveToken(token);
+      setRotateTokenCode("");
+      setRotateTokenOpen(false);
+      toast.success("Token 已轮换，请使用新指令更新 Agent；新 Token 连接后旧 Token 自动失效");
+      refreshTable?.();
+    } catch (error) {
+      setRotateTokenError(error instanceof Error ? error.message : "Token 轮换失败");
+    } finally {
+      setRotatingToken(false);
+    }
+  };
+
   return (
     <div className="flex gap-3 justify-center">
       <Dialog.Root>
@@ -146,6 +185,19 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
               </SegmentedControl.Item>
               <SegmentedControl.Item value="macos">macOS</SegmentedControl.Item>
             </SegmentedControl.Root>
+
+            <Flex direction="column" gap="2">
+              <label className="text-sm font-normal">
+                {t("admin.nodeTable.token", "节点 Token")}
+              </label>
+              <Flex gap="2">
+                <TextField.Root className="flex-1" value={activeToken} readOnly />
+                <Button type="button" variant="soft" color="orange" onClick={() => setRotateTokenOpen(true)}>
+                  <RotateCw size={15} />
+                  {t("admin.nodeTable.rotateToken", "轮换 Token")}
+                </Button>
+              </Flex>
+            </Flex>
 
             <Flex direction="column" gap="2">
               <label className="text-base font-bold">
@@ -292,11 +344,43 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
           </div>
         </Dialog.Content>
       </Dialog.Root>
-      <a href={`/terminal?uuid=${row.original.uuid}`} target="_blank">
-        <IconButton variant="ghost">
-          <Terminal className="p-1" />
-        </IconButton>
-      </a>
+      <Dialog.Root open={rotateTokenOpen} onOpenChange={setRotateTokenOpen}>
+        <Dialog.Content maxWidth="440px">
+          <Dialog.Title>{t("admin.nodeTable.rotateToken", "轮换 Token")}</Dialog.Title>
+          <Dialog.Description>
+            {t("admin.nodeTable.rotateTokenDescription", "生成新 Token 后，旧 Token 最多保留 24 小时；新 Token 首次成功连接后旧 Token 会立即失效。")}
+            <br />
+            {t("admin.nodeTable.rotateTokenInstructions", "轮换后在节点上重新执行更新后的部署指令即可，无需手动卸载；自动更新只替换程序文件，不会修改 Token。")}
+          </Dialog.Description>
+          <Flex direction="column" gap="2">
+            <label className="text-sm font-normal">
+              {t("admin.nodeTable.twoFactorCode", "动态口令（未开启 2FA 可留空）")}
+            </label>
+            <TextField.Root
+              value={rotateTokenCode}
+              inputMode="numeric"
+              autoFocus
+              onChange={(event) => setRotateTokenCode(event.target.value.replace(/\D/g, ""))}
+              onKeyDown={(event) => event.key === "Enter" && !rotatingToken && void rotateToken()}
+            />
+            {rotateTokenError && <p className="text-sm text-red-500">{rotateTokenError}</p>}
+          </Flex>
+          <Flex gap="2" justify="end" mt="4">
+            <Button variant="soft" onClick={() => setRotateTokenOpen(false)}>{t("common.cancel", "取消")}</Button>
+            <Button color="orange" disabled={rotatingToken} onClick={() => void rotateToken()}>
+              {rotatingToken ? t("common.loading", "处理中...") : t("admin.nodeTable.confirmRotateToken", "确认轮换")}
+            </Button>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
+      <IconButton
+        variant="ghost"
+        onClick={() => {
+          if (!openRemoteTerminal(row.original.uuid)) toast.error("浏览器阻止了远程管理窗口");
+        }}
+      >
+        <Terminal className="p-1" />
+      </IconButton>
       {/** Edit Button */}
       <EditDialog item={row.original} />
       {/** Edit Money */}

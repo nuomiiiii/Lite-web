@@ -88,6 +88,7 @@ import {
   timestampToDateInput,
 } from "@/lib/dateInput";
 import { currencyForDisplay, currencyForStorage } from "@/lib/currency";
+import { openRemoteTerminal } from "@/utils/remoteLaunch";
 import { SelectOrInput } from "@/components/ui/select-or-input";
 
 
@@ -1341,7 +1342,7 @@ const ActionButtons = ({ node, settings }: { node: NodeDetail, settings: any }) 
         title={t("terminal.title")}
         variant="ghost"
         onClick={() => {
-          window.open(`/terminal?uuid=${node.uuid}`, "_blank");
+          if (!openRemoteTerminal(node.uuid)) toast.error("浏览器阻止了远程管理窗口");
         }}
       >
         <Terminal size="18" />

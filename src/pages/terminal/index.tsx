@@ -4,6 +4,7 @@ import { Plus, Server, ShieldAlert, X } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import type { LiveDataResponse, Record as LiveRecord } from "@/types/LiveData";
 import RemoteSession, { type RemoteNode } from "./RemoteSession";
+import { consumeRemoteLaunchTarget } from "@/utils/remoteLaunch";
 import "./Terminal.css";
 
 type RemoteTab = {
@@ -15,7 +16,7 @@ const maxTabs = 16;
 type AuthorizationState = "checking" | "required" | "authorized" | "error" | "blocked";
 
 export default function TerminalWorkspace() {
-  const initialUUID = useMemo(() => new URLSearchParams(window.location.search).get("uuid"), []);
+  const initialUUID = useMemo(() => consumeRemoteLaunchTarget(), []);
   const [nodes, setNodes] = useState<RemoteNode[]>([]);
   const [tabs, setTabs] = useState<RemoteTab[]>([]);
   const [activeID, setActiveID] = useState("");
@@ -134,9 +135,6 @@ export default function TerminalWorkspace() {
   useEffect(() => {
     const active = tabs.find((tab) => tab.id === activeID);
     if (!active) return;
-    const url = new URL(window.location.href);
-    url.searchParams.set("uuid", active.uuid);
-    window.history.replaceState(null, "", url);
     const node = nodes.find((item) => item.uuid === active.uuid);
     document.title = `${node?.name || "服务器"} - 远程终端`;
   }, [activeID, nodes, tabs]);

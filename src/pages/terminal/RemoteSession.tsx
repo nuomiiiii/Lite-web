@@ -284,10 +284,10 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
       remoteReadyRef.current = false;
       setRemoteReady(false);
       try {
-        const response = await fetch(`/api/admin/client/${node.uuid}/remote/session`, {
+        const response = await fetch("/api/admin/client/remote/session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(otpCode ? { "2fa_code": otpCode } : {}),
+          body: JSON.stringify({ uuid: node.uuid, ...(otpCode ? { "2fa_code": otpCode } : {}) }),
         });
         const payload = await response.json();
         if (!response.ok) {
@@ -308,11 +308,11 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
         const sessionID = payload.data.session_id;
         const browserTicket = payload.data.browser_ticket;
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        ws = new WebSocket(`${protocol}//${window.location.host}/api/admin/client/${node.uuid}/remote?id=${encodeURIComponent(sessionID)}`);
+        ws = new WebSocket(`${protocol}//${window.location.host}/api/admin/client/remote`);
         ws.binaryType = "arraybuffer";
         socket.current = ws;
         ws.onopen = () => {
-          ws?.send(JSON.stringify({ type: "auth", ticket: browserTicket }));
+          ws?.send(JSON.stringify({ type: "auth", session_id: sessionID, ticket: browserTicket }));
           setConnectionState("waiting");
           heartbeat = window.setInterval(() => {
             if (ws?.readyState === WebSocket.OPEN) {
