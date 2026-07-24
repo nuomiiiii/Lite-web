@@ -55,6 +55,10 @@ type ConnectionState = "connecting" | "waiting" | "connected" | "disconnected" |
 type SidePanel = "files" | "commands" | null;
 type ContextMenuState = { x: number; y: number } | null;
 
+const compactTerminalQuery = "(max-width: 900px)";
+const compactTerminalFontSize = 14;
+const compactTerminalPadding = 8;
+
 function percentage(used = 0, total = 0) {
   if (!total) return "0.0%";
   return `${Math.min(100, Math.max(0, (used / total) * 100)).toFixed(1)}%`;
@@ -194,11 +198,20 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
   useEffect(() => {
     if (settingsLoading || !terminalHost.current || terminal.current) return;
     const resolved = settingsError ? defaultXtermjsSettings : settings;
+    const compactLayout = window.matchMedia(compactTerminalQuery);
+    const configuredFontSize = resolved.terminalOptions.fontSize ?? compactTerminalFontSize;
+    const configuredPadding = resolved.terminalPadding;
+    const terminalFontSize = () => compactLayout.matches
+      ? Math.min(configuredFontSize, compactTerminalFontSize)
+      : configuredFontSize;
+    const terminalPadding = () => compactLayout.matches
+      ? Math.min(configuredPadding, compactTerminalPadding)
+      : configuredPadding;
     const options: Partial<ITerminalOptions> = {
       cursorBlink: resolved.terminalOptions.cursorBlink,
       convertEol: resolved.terminalOptions.convertEol,
       fontFamily: resolved.terminalOptions.fontFamily,
-      fontSize: resolved.terminalOptions.fontSize,
+      fontSize: terminalFontSize(),
       macOptionIsMeta: resolved.terminalOptions.macOptionIsMeta,
       scrollback: resolved.terminalOptions.scrollback,
       theme: resolved.terminalOptions.theme,
@@ -213,7 +226,14 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
     instance.open(terminalHost.current);
     terminal.current = instance;
     fitAddon.current = fit;
-    terminalHost.current.style.setProperty("--xterm-padding", `${resolved.terminalPadding}px`);
+    terminalHost.current.style.setProperty("--xterm-padding", `${terminalPadding()}px`);
+
+    const updateTerminalDensity = () => {
+      instance.options.fontSize = terminalFontSize();
+      terminalHost.current?.style.setProperty("--xterm-padding", `${terminalPadding()}px`);
+      resizeTerminal();
+    };
+    compactLayout.addEventListener("change", updateTerminalDensity);
 
     const style = document.createElement("style");
     style.dataset.remoteTerminal = node.uuid;
@@ -267,6 +287,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
     host.addEventListener("contextmenu", contextMenu);
     setTerminalReady(true);
     return () => {
+      compactLayout.removeEventListener("change", updateTerminalDensity);
       resizeObserver.disconnect();
       inputDisposable.dispose();
       host.removeEventListener("paste", paste, true);

@@ -8,6 +8,8 @@
   background: #0a0c0f;
   color: #f1f3f5;
   font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .remote-tabbar {
@@ -734,7 +736,7 @@
     background: #0d1014;
     padding: 0 10px;
     color: #f1f3f5;
-    font: 14px/1.2 Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+    font: 16px/1.2 Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
   }
 
   .remote-mobile-command input:focus {
