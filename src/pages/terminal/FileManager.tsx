@@ -554,7 +554,6 @@ const FileManager = forwardRef<FileManagerHandle, Props>(({ send, connected }, r
       base: event.ctrlKey || event.metaKey ? new Set(selected) : new Set<string>(),
       moved: false,
     };
-    wrap.setPointerCapture(event.pointerId);
   };
 
   const moveSelectionDrag = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -562,6 +561,7 @@ const FileManager = forwardRef<FileManagerHandle, Props>(({ send, connected }, r
     const wrap = tableWrapRef.current;
     if (!drag || drag.pointerId !== event.pointerId || !wrap) return;
     if (!drag.moved && Math.hypot(event.clientX - drag.startClientX, event.clientY - drag.startClientY) < 5) return;
+    if (!drag.moved) wrap.setPointerCapture(event.pointerId);
     drag.moved = true;
     event.preventDefault();
     lastDirectoryClick.current = null;

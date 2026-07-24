@@ -154,10 +154,10 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
       setActiveToken(token);
       setRotateTokenCode("");
       setRotateTokenOpen(false);
-      toast.success("Token 已轮换，请使用新指令更新 Agent；新 Token 连接后旧 Token 自动失效");
+      toast.success("Token 已重置，请使用新指令更新 Agent；新 Token 连接后旧 Token 自动失效");
       refreshTable?.();
     } catch (error) {
-      setRotateTokenError(error instanceof Error ? error.message : "Token 轮换失败");
+      setRotateTokenError(error instanceof Error ? error.message : "Token 重置失败");
     } finally {
       setRotatingToken(false);
     }
@@ -165,17 +165,17 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
 
   return (
     <div className="flex gap-3 justify-center">
-      <Button
+      <IconButton
         type="button"
         size="1"
         variant="soft"
         color="orange"
-        title={t("admin.nodeTable.rotateToken", "轮换 Token")}
+        title={t("admin.nodeTable.rotateToken", "重置 Token")}
+        aria-label={t("admin.nodeTable.rotateToken", "重置 Token")}
         onClick={() => setRotateTokenOpen(true)}
       >
         <RotateCw size={14} />
-        {t("admin.nodeTable.rotateToken", "轮换 Token")}
-      </Button>
+      </IconButton>
       <Dialog.Root>
         <Dialog.Trigger>
           <IconButton variant="ghost">
@@ -206,7 +206,7 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
                 <TextField.Root className="flex-1" value={activeToken} readOnly />
                 <Button type="button" variant="soft" color="orange" onClick={() => setRotateTokenOpen(true)}>
                   <RotateCw size={15} />
-                  {t("admin.nodeTable.rotateToken", "轮换 Token")}
+                  {t("admin.nodeTable.rotateToken", "重置 Token")}
                 </Button>
               </Flex>
             </Flex>
@@ -358,11 +358,11 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
       </Dialog.Root>
       <Dialog.Root open={rotateTokenOpen} onOpenChange={setRotateTokenOpen}>
         <Dialog.Content maxWidth="440px">
-          <Dialog.Title>{t("admin.nodeTable.rotateToken", "轮换 Token")}</Dialog.Title>
+          <Dialog.Title>{t("admin.nodeTable.rotateToken", "重置 Token")}</Dialog.Title>
           <Dialog.Description>
             {t("admin.nodeTable.rotateTokenDescription", "生成新 Token 后，旧 Token 最多保留 24 小时；新 Token 首次成功连接后旧 Token 会立即失效。")}
             <br />
-            {t("admin.nodeTable.rotateTokenInstructions", "轮换后在节点上重新执行更新后的部署指令即可，无需手动卸载；自动更新只替换程序文件，不会修改 Token。")}
+            {t("admin.nodeTable.rotateTokenInstructions", "重置后在节点上重新执行更新后的部署指令即可，无需手动卸载；自动更新只替换程序文件，不会修改 Token。")}
           </Dialog.Description>
           <Flex direction="column" gap="2">
             <label className="text-sm font-normal">
@@ -380,7 +380,7 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
           <Flex gap="2" justify="end" mt="4">
             <Button variant="soft" onClick={() => setRotateTokenOpen(false)}>{t("common.cancel", "取消")}</Button>
             <Button color="orange" disabled={rotatingToken} onClick={() => void rotateToken()}>
-              {rotatingToken ? t("common.loading", "处理中...") : t("admin.nodeTable.confirmRotateToken", "确认轮换")}
+              {rotatingToken ? t("common.loading", "处理中...") : t("admin.nodeTable.confirmRotateToken", "确认重置")}
             </Button>
           </Flex>
         </Dialog.Content>

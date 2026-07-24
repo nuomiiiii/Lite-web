@@ -1394,10 +1394,10 @@ function RotateTokenButton({ node }: { node: NodeDetail }) {
       }
       setTwoFactorCode("");
       setOpen(false);
-      toast.success("Token 已轮换，请使用新指令更新 Agent；新 Token 连接后旧 Token 自动失效");
+      toast.success("Token 已重置，请使用新指令更新 Agent；新 Token 连接后旧 Token 自动失效");
       refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Token 轮换失败");
+      setError(reason instanceof Error ? reason.message : "Token 重置失败");
     } finally {
       setRotating(false);
     }
@@ -1405,20 +1405,20 @@ function RotateTokenButton({ node }: { node: NodeDetail }) {
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Button
+      <IconButton
         type="button"
         size="1"
         variant="soft"
         color="orange"
-        title={t("admin.nodeTable.rotateToken", "轮换 Token")}
+        title={t("admin.nodeTable.rotateToken", "重置 Token")}
+        aria-label={t("admin.nodeTable.rotateToken", "重置 Token")}
         onClick={() => setOpen(true)}
       >
         <RotateCw size={14} />
-        {t("admin.nodeTable.rotateToken", "轮换 Token")}
-      </Button>
+      </IconButton>
       <Dialog.Content maxWidth="440px">
         <Dialog.Title>
-          {t("admin.nodeTable.rotateToken", "轮换 Token")}
+          {t("admin.nodeTable.rotateToken", "重置 Token")}
         </Dialog.Title>
         <Dialog.Description>
           {t(
@@ -1428,7 +1428,7 @@ function RotateTokenButton({ node }: { node: NodeDetail }) {
           <br />
           {t(
             "admin.nodeTable.rotateTokenInstructions",
-            "轮换后在节点上重新执行更新后的部署指令即可，无需手动卸载；自动更新只替换程序文件，不会修改 Token。",
+            "重置后在节点上重新执行更新后的部署指令即可，无需手动卸载；自动更新只替换程序文件，不会修改 Token。",
           )}
         </Dialog.Description>
         <Flex direction="column" gap="2">
@@ -1462,7 +1462,7 @@ function RotateTokenButton({ node }: { node: NodeDetail }) {
           >
             {rotating
               ? t("common.loading", "处理中...")
-              : t("admin.nodeTable.confirmRotateToken", "确认轮换")}
+              : t("admin.nodeTable.confirmRotateToken", "确认重置")}
           </Button>
         </Flex>
       </Dialog.Content>

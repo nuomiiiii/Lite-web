@@ -109,6 +109,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
   const fileManager = useRef<FileManagerHandle>(null);
   const mobileCommandInput = useRef<HTMLInputElement>(null);
   const mobileComposing = useRef(false);
+  const terminalTouch = useRef<{ pointerId: number; startX: number; startY: number; moved: boolean } | null>(null);
   const activeRef = useRef(active);
   const onProtectedRef = useRef(onProtected);
   const [terminalReady, setTerminalReady] = useState(false);
@@ -281,8 +282,9 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
     const viewport = window.visualViewport;
     if (!viewport) return;
     const update = () => {
-      setMobileKeyboardInset(Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop));
-      resizeTerminal();
+      const pageZoomed = Math.abs(viewport.scale - 1) > 0.01;
+      setMobileKeyboardInset(pageZoomed ? 0 : Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop));
+      if (!pageZoomed) resizeTerminal();
     };
     update();
     viewport.addEventListener("resize", update);
@@ -505,10 +507,26 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
               className="terminal-page terminal-xterm-host"
               style={{ "--xterm-padding": "16px" } as CSSProperties}
               onPointerDown={(event) => {
-                if (event.pointerType !== "mouse" && window.matchMedia("(pointer: coarse)").matches) {
-                  window.requestAnimationFrame(() => mobileCommandInput.current?.focus({ preventScroll: true }));
-                }
+                if (event.pointerType === "mouse" || !event.isPrimary || !window.matchMedia("(pointer: coarse)").matches) return;
+                terminalTouch.current = {
+                  pointerId: event.pointerId,
+                  startX: event.clientX,
+                  startY: event.clientY,
+                  moved: false,
+                };
               }}
+              onPointerMove={(event) => {
+                const touch = terminalTouch.current;
+                if (!touch || touch.pointerId !== event.pointerId || touch.moved) return;
+                if (Math.hypot(event.clientX - touch.startX, event.clientY - touch.startY) >= 8) touch.moved = true;
+              }}
+              onPointerUp={(event) => {
+                const touch = terminalTouch.current;
+                if (!touch || touch.pointerId !== event.pointerId) return;
+                terminalTouch.current = null;
+                if (!touch.moved) window.requestAnimationFrame(() => mobileCommandInput.current?.focus({ preventScroll: true }));
+              }}
+              onPointerCancel={() => { terminalTouch.current = null; }}
             />
             <form
               className="remote-mobile-command"
