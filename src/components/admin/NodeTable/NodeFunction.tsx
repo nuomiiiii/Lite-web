@@ -8,6 +8,7 @@ import type { Row } from "@tanstack/react-table";
 import { EditDialog } from "./NodeEditDialog";
 import { quotePowerShellArg, quoteShellArgs } from "@/utils/shellQuote";
 import { openRemoteTerminal } from "@/utils/remoteLaunch";
+import { localizeTokenRotationError } from "@/utils/tokenRotation";
 import {
   Button,
   Checkbox,
@@ -146,7 +147,7 @@ export function ActionsCell({ row }: { row: Row<z.infer<typeof schema>> }) {
         if (response.status === 401) {
           throw new Error(payload?.message === "Invalid 2FA code" ? "动态口令无效" : "请输入动态口令");
         }
-        throw new Error(payload?.message || "Token 轮换失败");
+        throw new Error(localizeTokenRotationError(payload?.message));
       }
       const token = payload?.data?.token || payload?.token;
       if (!token) throw new Error("Server 未返回新 Token");

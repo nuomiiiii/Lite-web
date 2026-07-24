@@ -2,6 +2,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Dialog, IconButton, Select, TextField, Theme } from "@radix-ui/themes";
 import { Plus, Server, ShieldAlert, X } from "lucide-react";
 import { Toaster, toast } from "sonner";
+import {
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { LiveDataResponse, Record as LiveRecord } from "@/types/LiveData";
 import RemoteSession, { type RemoteNode } from "./RemoteSession";
 import { consumeRemoteLaunchTarget } from "@/utils/remoteLaunch";
@@ -14,6 +31,48 @@ type RemoteTab = {
 
 const maxTabs = 16;
 type AuthorizationState = "checking" | "required" | "authorized" | "error" | "blocked";
+
+type SortableRemoteTabProps = {
+  tab: RemoteTab;
+  label: string;
+  active: boolean;
+  online: boolean;
+  onActivate: () => void;
+  onClose: () => void;
+};
+
+function SortableRemoteTab({ tab, label, active, online, onActivate, onClose }: SortableRemoteTabProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tab.id });
+  return (
+    <button
+      ref={setNodeRef}
+      type="button"
+      className={`remote-tab${active ? " is-active" : ""}${isDragging ? " is-dragging" : ""}`}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      onClick={onActivate}
+      {...attributes}
+      {...listeners}
+    >
+      <i className={online ? "is-online" : ""} />
+      <span title={label}>{label}</span>
+      <IconButton asChild size="1" variant="ghost" color="gray">
+        <span
+          role="button"
+          tabIndex={0}
+          title="关闭标签"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => { event.stopPropagation(); onClose(); }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.stopPropagation();
+              onClose();
+            }
+          }}
+        ><X size={13} /></span>
+      </IconButton>
+    </button>
+  );
+}
 
 export default function TerminalWorkspace() {
   const initialUUID = useMemo(() => consumeRemoteLaunchTarget(), []);
@@ -31,6 +90,11 @@ export default function TerminalWorkspace() {
   const [protectedNode, setProtectedNode] = useState<RemoteNode | null>(null);
   const initialized = useRef(false);
   const authorizationStarted = useRef(false);
+  const tabSensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 6 } }),
+    useSensor(KeyboardSensor, {}),
+  );
 
   const addTab = useCallback((uuid: string) => {
     if (!uuid) return;
@@ -160,6 +224,16 @@ export default function TerminalWorkspace() {
     }
   }, [activeID, tabs]);
 
+  const reorderTabs = useCallback(({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    setTabs((current) => {
+      const oldIndex = current.findIndex((tab) => tab.id === active.id);
+      const newIndex = current.findIndex((tab) => tab.id === over.id);
+      if (oldIndex < 0 || newIndex < 0) return current;
+      return arrayMove(current, oldIndex, newIndex);
+    });
+  }, []);
+
   const openNode = useCallback((uuid: string) => {
     const node = nodes.find((item) => item.uuid === uuid);
     if (!node) {
@@ -193,20 +267,24 @@ export default function TerminalWorkspace() {
       <div className="remote-workspace">
         <nav className="remote-tabbar" aria-label="远程服务器标签">
           <div className="remote-brand"><Server size={17} /><span>Komari 远程管理</span></div>
-          <div className="remote-tabs">
-            {tabs.map((tab, index) => (
-              <button key={tab.id} type="button" className={`remote-tab ${activeID === tab.id ? "is-active" : ""}`} onClick={() => setActiveID(tab.id)}>
-                <i className={online.has(tab.uuid) ? "is-online" : ""} />
-                <span title={labels[index]}>{labels[index]}</span>
-                <IconButton asChild size="1" variant="ghost" color="gray">
-                  <span role="button" tabIndex={0} title="关闭标签" onClick={(event) => { event.stopPropagation(); closeTab(tab.id); }} onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") { event.stopPropagation(); closeTab(tab.id); }
-                  }}><X size={13} /></span>
-                </IconButton>
-              </button>
-            ))}
-            <IconButton className="remote-add-tab" size="2" variant="ghost" title="打开服务器" aria-label="打开服务器" disabled={authorization !== "authorized"} onClick={openPicker}><Plus size={17} /></IconButton>
-          </div>
+          <DndContext sensors={tabSensors} collisionDetection={closestCenter} onDragEnd={reorderTabs}>
+            <div className="remote-tabs">
+              <SortableContext items={tabs.map((tab) => tab.id)} strategy={horizontalListSortingStrategy}>
+                {tabs.map((tab, index) => (
+                  <SortableRemoteTab
+                    key={tab.id}
+                    tab={tab}
+                    label={labels[index]}
+                    active={activeID === tab.id}
+                    online={online.has(tab.uuid)}
+                    onActivate={() => setActiveID(tab.id)}
+                    onClose={() => closeTab(tab.id)}
+                  />
+                ))}
+              </SortableContext>
+              <IconButton className="remote-add-tab" size="2" variant="ghost" title="打开服务器" aria-label="打开服务器" disabled={authorization !== "authorized"} onClick={openPicker}><Plus size={17} /></IconButton>
+            </div>
+          </DndContext>
         </nav>
 
         <div className="remote-content">

@@ -96,6 +96,14 @@
   color: #e9ecef;
 }
 
+.remote-tab.is-dragging {
+  z-index: 3;
+  border-color: #4b555f;
+  background: #242a31;
+  cursor: grabbing;
+  opacity: 0.82;
+}
+
 .remote-tab.is-active {
   border-color: #30353d;
   background: #0a0c0f;
@@ -246,6 +254,10 @@
   position: relative;
   flex: 1;
   background: var(--xterm-container-bg, #000000);
+}
+
+.remote-mobile-command {
+  display: none;
 }
 
 .terminal-page.terminal-xterm-host {
@@ -447,9 +459,22 @@
 }
 
 .remote-file-table-wrap {
+  position: relative;
   min-height: 0;
   flex: 1;
   overflow: auto;
+}
+
+.remote-file-table-wrap.is-selecting {
+  cursor: crosshair;
+}
+
+.remote-file-selection-box {
+  position: absolute;
+  z-index: 4;
+  border: 1px solid #56bfc0;
+  background: rgb(79 209 197 / 16%);
+  pointer-events: none;
 }
 
 .remote-file-table tbody tr {
@@ -514,6 +539,15 @@
   background: #171c22;
 }
 
+.remote-file-table tbody tr.is-selected {
+  background: #173239;
+  box-shadow: inset 2px 0 #4fd1c5;
+}
+
+.remote-file-table tbody tr.is-selected:hover {
+  background: #1b3b43;
+}
+
 .remote-file-table td:nth-child(2) {
   display: flex;
   align-items: center;
@@ -574,7 +608,8 @@
   color: #ffca80;
 }
 
-.remote-terminal-context-menu {
+.remote-terminal-context-menu,
+.remote-file-context-menu {
   position: fixed;
   z-index: 1000;
   width: 168px;
@@ -585,7 +620,8 @@
   padding: 4px;
 }
 
-.remote-terminal-context-menu button {
+.remote-terminal-context-menu button,
+.remote-file-context-menu button {
   display: flex;
   width: 100%;
   height: 32px;
@@ -602,13 +638,25 @@
   text-align: left;
 }
 
-.remote-terminal-context-menu button:hover:not(:disabled) {
+.remote-terminal-context-menu button:hover:not(:disabled),
+.remote-file-context-menu button:hover:not(:disabled) {
   background: #2b333b;
 }
 
-.remote-terminal-context-menu button:disabled {
+.remote-terminal-context-menu button:disabled,
+.remote-file-context-menu button:disabled {
   color: #68717b;
   cursor: default;
+}
+
+.remote-file-context-menu button.is-danger:not(:disabled) {
+  color: #ff8f8f;
+}
+
+.remote-file-context-separator {
+  height: 1px;
+  margin: 4px 5px;
+  background: #343b43;
 }
 
 .remote-spin {
@@ -672,6 +720,44 @@
 
   .remote-divider {
     display: none;
+  }
+
+  .remote-mobile-command {
+    position: absolute;
+    z-index: 4;
+    right: 8px;
+    bottom: calc(var(--mobile-keyboard-inset, 0px) + 8px);
+    left: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid #3b424b;
+    border-radius: 5px;
+    background: #171b20;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 42%);
+  }
+
+  .remote-mobile-command input {
+    box-sizing: border-box;
+    min-width: 0;
+    height: 34px;
+    flex: 1;
+    border: 1px solid #3a424c;
+    border-radius: 4px;
+    outline: none;
+    background: #0d1014;
+    padding: 0 10px;
+    color: #f1f3f5;
+    font: 14px/1.2 Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+
+  .remote-mobile-command input:focus {
+    border-color: #4fd1c5;
+  }
+
+  .terminal-page.terminal-xterm-host {
+    padding-bottom: calc(var(--mobile-keyboard-inset, 0px) + 60px);
   }
 }
 

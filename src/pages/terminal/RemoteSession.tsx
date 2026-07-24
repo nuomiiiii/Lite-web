@@ -17,6 +17,7 @@ import {
   ClipboardList,
   ClipboardPaste,
   Copy,
+  CornerDownLeft,
   Files,
   PanelRightClose,
   RotateCw,
@@ -91,6 +92,14 @@ function stateLabel(state: ConnectionState) {
   }
 }
 
+function isEditableElement(element: Element | null) {
+  return element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLSelectElement ||
+    (element instanceof HTMLElement && element.isContentEditable) ||
+    Boolean(element?.closest('[role="dialog"]'));
+}
+
 export default function RemoteSession({ node, live, online, active, onDuplicate, onProtected }: Props) {
   const { settings, loading: settingsLoading, error: settingsError } = useXtermjsSettings();
   const terminalHost = useRef<HTMLDivElement>(null);
@@ -98,6 +107,8 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
   const fitAddon = useRef<FitAddon | null>(null);
   const socket = useRef<WebSocket | null>(null);
   const fileManager = useRef<FileManagerHandle>(null);
+  const mobileCommandInput = useRef<HTMLInputElement>(null);
+  const mobileComposing = useRef(false);
   const activeRef = useRef(active);
   const onProtectedRef = useRef(onProtected);
   const [terminalReady, setTerminalReady] = useState(false);
@@ -113,6 +124,8 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const [manualPasteOpen, setManualPasteOpen] = useState(false);
   const [manualPasteText, setManualPasteText] = useState("");
+  const [mobileCommand, setMobileCommand] = useState("");
+  const [mobileKeyboardInset, setMobileKeyboardInset] = useState(0);
   const remoteReadyRef = useRef(false);
   const dragging = useRef(false);
 
@@ -168,6 +181,14 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
       instance?.focus();
     }
   }, [sendTerminalText]);
+
+  const submitMobileCommand = useCallback(() => {
+    if (mobileComposing.current || !mobileCommand) return;
+    if (sendTerminalText(`${mobileCommand}\r`)) {
+      setMobileCommand("");
+      window.requestAnimationFrame(() => mobileCommandInput.current?.focus({ preventScroll: true }));
+    }
+  }, [mobileCommand, sendTerminalText]);
 
   useEffect(() => {
     if (settingsLoading || !terminalHost.current || terminal.current) return;
@@ -257,6 +278,22 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
   }, [copyTerminalSelection, node.uuid, resizeTerminal, sendTerminalText, settings, settingsError, settingsLoading]);
 
   useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const update = () => {
+      setMobileKeyboardInset(Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop));
+      resizeTerminal();
+    };
+    update();
+    viewport.addEventListener("resize", update);
+    viewport.addEventListener("scroll", update);
+    return () => {
+      viewport.removeEventListener("resize", update);
+      viewport.removeEventListener("scroll", update);
+    };
+  }, [resizeTerminal]);
+
+  useEffect(() => {
     if (!contextMenu) return;
     const close = () => setContextMenu(null);
     const keydown = (event: KeyboardEvent) => {
@@ -335,7 +372,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
               setRemoteReady(true);
               fileManager.current?.initialize(message.roots || [], message.home || message.roots?.[0], message.separator || "/");
               resizeTerminal();
-              if (activeRef.current) {
+              if (activeRef.current && !isEditableElement(document.activeElement)) {
                 window.requestAnimationFrame(() => terminal.current?.focus());
               }
             } else if (message.type === "remote.status") {
@@ -386,7 +423,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
     if (!active) return;
     const timer = window.setTimeout(() => {
       resizeTerminal();
-      terminal.current?.focus();
+      if (!isEditableElement(document.activeElement)) terminal.current?.focus();
     }, 50);
     return () => window.clearTimeout(timer);
   }, [active, sidePanel, sideWidth, resizeTerminal]);
@@ -459,8 +496,51 @@ export default function RemoteSession({ node, live, online, active, onDuplicate,
         </header>
 
         <main className="remote-session-body">
-          <div className="remote-terminal-pane">
-            <div ref={terminalHost} className="terminal-page terminal-xterm-host" style={{ "--xterm-padding": "16px" } as CSSProperties} />
+          <div
+            className="remote-terminal-pane"
+            style={{ "--mobile-keyboard-inset": `${mobileKeyboardInset}px` } as CSSProperties}
+          >
+            <div
+              ref={terminalHost}
+              className="terminal-page terminal-xterm-host"
+              style={{ "--xterm-padding": "16px" } as CSSProperties}
+              onPointerDown={(event) => {
+                if (event.pointerType !== "mouse" && window.matchMedia("(pointer: coarse)").matches) {
+                  window.requestAnimationFrame(() => mobileCommandInput.current?.focus({ preventScroll: true }));
+                }
+              }}
+            />
+            <form
+              className="remote-mobile-command"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submitMobileCommand();
+              }}
+            >
+              <input
+                ref={mobileCommandInput}
+                type="text"
+                value={mobileCommand}
+                placeholder="输入命令"
+                aria-label="输入终端命令"
+                enterKeyHint="send"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                disabled={!remoteReady}
+                onChange={(event) => setMobileCommand(event.target.value)}
+                onCompositionStart={() => { mobileComposing.current = true; }}
+                onCompositionEnd={() => { mobileComposing.current = false; }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && (event.nativeEvent.isComposing || mobileComposing.current || event.keyCode === 229)) {
+                    event.stopPropagation();
+                  }
+                }}
+              />
+              <IconButton type="submit" size="2" aria-label="发送命令" disabled={!remoteReady || !mobileCommand}>
+                <CornerDownLeft size={16} />
+              </IconButton>
+            </form>
             {(connectionState === "error" || connectionState === "disconnected") && (
               <div className="remote-reconnect">
                 <span>{connectionError || "连接已断开"}</span>

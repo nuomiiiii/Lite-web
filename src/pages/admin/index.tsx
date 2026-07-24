@@ -90,6 +90,7 @@ import {
 } from "@/lib/dateInput";
 import { currencyForDisplay, currencyForStorage } from "@/lib/currency";
 import { openRemoteTerminal } from "@/utils/remoteLaunch";
+import { localizeTokenRotationError } from "@/utils/tokenRotation";
 import { SelectOrInput } from "@/components/ui/select-or-input";
 
 
@@ -1385,7 +1386,7 @@ function RotateTokenButton({ node }: { node: NodeDetail }) {
               : "请输入动态口令",
           );
         }
-        throw new Error(payload?.message || "Token 轮换失败");
+        throw new Error(localizeTokenRotationError(payload?.message));
       }
       if (!(payload?.data?.token || payload?.token)) {
         throw new Error("Server 未返回新 Token");
