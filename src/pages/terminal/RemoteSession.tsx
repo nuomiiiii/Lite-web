@@ -9,6 +9,7 @@ import {
   Button,
   Dialog,
   IconButton,
+  TextArea,
   TextField,
 } from "@radix-ui/themes";
 import {
@@ -46,10 +47,12 @@ type Props = {
   online: boolean;
   active: boolean;
   onDuplicate: () => void;
+  onProtected: () => void;
 };
 
 type ConnectionState = "connecting" | "waiting" | "connected" | "disconnected" | "error";
 type SidePanel = "files" | "commands" | null;
+type ContextMenuState = { x: number; y: number } | null;
 
 function percentage(used = 0, total = 0) {
   if (!total) return "0.0%";
@@ -88,7 +91,7 @@ function stateLabel(state: ConnectionState) {
   }
 }
 
-export default function RemoteSession({ node, live, online, active, onDuplicate }: Props) {
+export default function RemoteSession({ node, live, online, active, onDuplicate, onProtected }: Props) {
   const { settings, loading: settingsLoading, error: settingsError } = useXtermjsSettings();
   const terminalHost = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
@@ -106,6 +109,9 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
   const [otpInput, setOtpInput] = useState("");
   const [otpCode, setOtpCode] = useState<string | undefined>();
   const [remoteReady, setRemoteReady] = useState(false);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
+  const [manualPasteOpen, setManualPasteOpen] = useState(false);
+  const [manualPasteText, setManualPasteText] = useState("");
   const remoteReadyRef = useRef(false);
   const dragging = useRef(false);
 
@@ -140,21 +146,26 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
     }
   }, []);
 
+  const sendTerminalText = useCallback((text: string) => {
+    const ws = socket.current;
+    if (!text || ws?.readyState !== WebSocket.OPEN) return false;
+    ws.send(new TextEncoder().encode(text.replace(/\r?\n/g, "\r")));
+    return true;
+  }, []);
+
   const pasteTerminalClipboard = useCallback(async () => {
     const instance = terminal.current;
     try {
       if (!navigator.clipboard?.readText) throw new Error("clipboard unavailable");
       const text = await navigator.clipboard.readText();
-      const ws = socket.current;
-      if (text && ws?.readyState === WebSocket.OPEN) {
-        ws.send(new TextEncoder().encode(text.replace(/\r?\n/g, "\r")));
-      }
+      sendTerminalText(text);
     } catch {
-      toast.error("浏览器未授权读取剪贴板");
+      setManualPasteText("");
+      setManualPasteOpen(true);
     } finally {
       instance?.focus();
     }
-  }, []);
+  }, [sendTerminalText]);
 
   useEffect(() => {
     if (settingsLoading || !terminalHost.current || terminal.current) return;
@@ -204,33 +215,62 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
         void copyTerminalSelection();
         return false;
       }
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && key === "v") {
+        // Let the browser emit a ClipboardEvent. Its clipboardData works on
+        // HTTP deployments where navigator.clipboard.readText is unavailable.
+        return false;
+      }
       return true;
     });
     const resizeObserver = new ResizeObserver(() => resizeTerminal());
     resizeObserver.observe(terminalHost.current);
     const host = terminalHost.current;
-    const contextMenu = (event: MouseEvent) => {
-      if (event.ctrlKey) return;
-      if (instance.hasSelection()) {
-        event.preventDefault();
-        void copyTerminalSelection();
-      } else if (navigator.clipboard) {
-        event.preventDefault();
-        void pasteTerminalClipboard();
-      }
+    const paste = (event: ClipboardEvent) => {
+      const text = event.clipboardData?.getData("text/plain") || "";
+      if (!text) return;
+      event.preventDefault();
+      event.stopPropagation();
+      sendTerminalText(text);
     };
+    const contextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+      setContextMenu({
+        x: Math.min(event.clientX, window.innerWidth - 176),
+        y: Math.min(event.clientY, window.innerHeight - 132),
+      });
+    };
+    host.addEventListener("paste", paste, true);
     host.addEventListener("contextmenu", contextMenu);
     setTerminalReady(true);
     return () => {
       resizeObserver.disconnect();
       inputDisposable.dispose();
+      host.removeEventListener("paste", paste, true);
       host.removeEventListener("contextmenu", contextMenu);
       instance.dispose();
       style.remove();
       terminal.current = null;
       fitAddon.current = null;
     };
-  }, [copyTerminalSelection, node.uuid, pasteTerminalClipboard, resizeTerminal, settings, settingsError, settingsLoading]);
+  }, [copyTerminalSelection, node.uuid, resizeTerminal, sendTerminalText, settings, settingsError, settingsLoading]);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    window.addEventListener("pointerdown", close);
+    window.addEventListener("blur", close);
+    window.addEventListener("resize", close);
+    window.addEventListener("keydown", keydown);
+    return () => {
+      window.removeEventListener("pointerdown", close);
+      window.removeEventListener("blur", close);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("keydown", keydown);
+    };
+  }, [contextMenu]);
 
   useEffect(() => {
     if (!terminalReady) return;
@@ -254,6 +294,11 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
           if (response.status === 401) {
             setOtpOpen(true);
             setConnectionState("waiting");
+            return;
+          }
+          if (response.status === 403 && String(payload?.message || "").includes("Komari Server")) {
+            setConnectionState("error");
+            onProtected();
             return;
           }
           throw new Error(payload?.message || "无法创建远程会话");
@@ -330,7 +375,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
       if (ws?.readyState === WebSocket.OPEN || ws?.readyState === WebSocket.CONNECTING) ws.close();
       if (socket.current === ws) socket.current = null;
     };
-  }, [node.uuid, otpCode, reconnectKey, resizeTerminal, terminalReady]);
+  }, [node.uuid, onProtected, otpCode, reconnectKey, resizeTerminal, terminalReady]);
 
   useEffect(() => {
     if (!active) return;
@@ -431,12 +476,51 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
           <Dialog.Content maxWidth="400px">
             <Dialog.Title>双重身份验证</Dialog.Title>
             <Dialog.Description>请输入身份验证应用生成的动态口令。本次验证在 10 分钟内有效。</Dialog.Description>
-            <TextField.Root type="text" inputMode="numeric" autoFocus value={otpInput} placeholder="123456" onChange={(event) => setOtpInput(event.target.value)} onKeyDown={(event) => {
+            <TextField.Root type="text" inputMode="numeric" autoFocus value={otpInput} onChange={(event) => setOtpInput(event.target.value.replace(/\D/g, ""))} onKeyDown={(event) => {
               if (event.key === "Enter" && otpInput) { setOtpCode(otpInput); setOtpOpen(false); }
             }} />
             <div className="remote-dialog-actions"><Button variant="soft" onClick={() => setOtpOpen(false)}>取消</Button><Button disabled={!otpInput} onClick={() => { setOtpCode(otpInput); setOtpOpen(false); }}>连接</Button></div>
           </Dialog.Content>
         </Dialog.Root>
+
+        <Dialog.Root open={manualPasteOpen} onOpenChange={setManualPasteOpen}>
+          <Dialog.Content maxWidth="440px">
+            <Dialog.Title>粘贴到终端</Dialog.Title>
+            <TextArea autoFocus value={manualPasteText} onChange={(event) => setManualPasteText(event.target.value)} rows={7} />
+            <div className="remote-dialog-actions">
+              <Button variant="soft" onClick={() => setManualPasteOpen(false)}>取消</Button>
+              <Button disabled={!manualPasteText} onClick={() => {
+                if (sendTerminalText(manualPasteText)) {
+                  setManualPasteOpen(false);
+                  setManualPasteText("");
+                  terminal.current?.focus();
+                }
+              }}>插入终端</Button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Root>
+
+        {contextMenu && (
+          <div
+            className="remote-terminal-context-menu"
+            role="menu"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <button type="button" role="menuitem" disabled={!terminal.current?.hasSelection()} onClick={() => {
+              setContextMenu(null);
+              void copyTerminalSelection();
+            }}><ClipboardCopy size={15} />复制</button>
+            <button type="button" role="menuitem" disabled={!remoteReady} onClick={() => {
+              setContextMenu(null);
+              void pasteTerminalClipboard();
+            }}><ClipboardPaste size={15} />粘贴</button>
+            <button type="button" role="menuitem" onClick={() => {
+              terminal.current?.selectAll();
+              setContextMenu(null);
+            }}>全选</button>
+          </div>
+        )}
 
         {!online && connectionState !== "connected" && <span className="sr-only">节点当前离线</span>}
       </div>

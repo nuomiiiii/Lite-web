@@ -122,7 +122,11 @@ const FileManager = forwardRef<FileManagerHandle, Props>(({ send, connected }, r
   const [renameName, setRenameName] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [transferLabel, setTransferLabel] = useState("");
+  const [dropActive, setDropActive] = useState(false);
+  const [pendingOverwriteFiles, setPendingOverwriteFiles] = useState<File[] | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dragDepth = useRef(0);
+  const lastDirectoryClick = useRef<{ path: string; time: number } | null>(null);
 
   const request = (type: string, payload: Record<string, unknown> = {}) => {
     const id = crypto.randomUUID();
@@ -300,15 +304,15 @@ const FileManager = forwardRef<FileManagerHandle, Props>(({ send, connected }, r
     }
   };
 
-  const uploadFiles = async (files: FileList | null) => {
-    if (!files?.length) return;
+  const uploadFiles = async (files: File[], allowOverwrite: boolean) => {
+    if (!files.length) return;
     try {
-      for (const file of Array.from(files)) {
+      for (const file of files) {
         setTransferLabel(`正在上传 ${file.name} 0%`);
         const start = await request("file.upload.start", {
           path: joinRemotePath(currentPath, file.name, separator),
           size: file.size,
-          overwrite,
+          overwrite: allowOverwrite,
         });
         const uploadID = start.upload_id;
         let sent = 0;
@@ -333,8 +337,78 @@ const FileManager = forwardRef<FileManagerHandle, Props>(({ send, connected }, r
     }
   };
 
+  const queueUpload = (files: File[]) => {
+    if (!connected || !currentPath || !files.length) return;
+    const existing = new Set(entries.map((entry) => entry.name.toLocaleLowerCase()));
+    const hasConflict = files.some((file) => existing.has(file.name.toLocaleLowerCase()));
+    if (hasConflict && !overwrite) {
+      setPendingOverwriteFiles(files);
+      return;
+    }
+    void uploadFiles(files, overwrite);
+  };
+
+  const hasDraggedDirectory = (items: DataTransferItemList) => Array.from(items).some((item) => {
+    const entry = (item as DataTransferItem & { webkitGetAsEntry?: () => { isDirectory?: boolean } | null }).webkitGetAsEntry?.();
+    return entry?.isDirectory === true;
+  });
+
+  const handleDragEnter = (event: React.DragEvent<HTMLElement>) => {
+    if (!event.dataTransfer.types.includes("Files")) return;
+    event.preventDefault();
+    dragDepth.current += 1;
+    setDropActive(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLElement>) => {
+    if (!event.dataTransfer.types.includes("Files")) return;
+    event.preventDefault();
+    dragDepth.current = Math.max(0, dragDepth.current - 1);
+    if (dragDepth.current === 0) setDropActive(false);
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    dragDepth.current = 0;
+    setDropActive(false);
+    if (!connected) return;
+    if (hasDraggedDirectory(event.dataTransfer.items)) {
+      toast.error("暂不支持拖拽上传文件夹");
+      return;
+    }
+    queueUpload(Array.from(event.dataTransfer.files));
+  };
+
+  const handleDirectoryClick = (entry: FileEntry, event: React.MouseEvent<HTMLTableRowElement>) => {
+    if (!entry.directory || (event.target as HTMLElement).closest("input, button")) return;
+
+    event.currentTarget.focus({ preventScroll: true });
+    const now = window.performance.now();
+    const previous = lastDirectoryClick.current;
+    if (previous?.path === entry.path && now - previous.time <= 500) {
+      lastDirectoryClick.current = null;
+      event.preventDefault();
+      event.stopPropagation();
+      void load(entry.path);
+      return;
+    }
+
+    lastDirectoryClick.current = { path: entry.path, time: now };
+  };
+
   return (
-    <section className="remote-files" aria-label="文件管理">
+    <section
+      className={`remote-files${dropActive ? " is-drop-active" : ""}`}
+      aria-label="文件管理"
+      onDragEnter={handleDragEnter}
+      onDragOver={(event) => {
+        if (!event.dataTransfer.types.includes("Files")) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = connected ? "copy" : "none";
+      }}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <div className="remote-files-title">
         <div>
           <strong>文件管理</strong>
@@ -363,7 +437,7 @@ const FileManager = forwardRef<FileManagerHandle, Props>(({ send, connected }, r
       </div>
 
       <div className="remote-file-toolbar">
-        <input ref={inputRef} type="file" multiple hidden onChange={(event) => void uploadFiles(event.target.files)} />
+        <input ref={inputRef} type="file" multiple hidden onChange={(event) => queueUpload(Array.from(event.target.files || []))} />
         <Button size="1" variant="soft" onClick={() => inputRef.current?.click()} disabled={!connected}>
           <Upload size={14} /> 上传
         </Button>
@@ -384,14 +458,37 @@ const FileManager = forwardRef<FileManagerHandle, Props>(({ send, connected }, r
 
       {transferLabel && <div className="remote-transfer-status">{transferLabel}</div>}
 
+      {dropActive && connected && (
+        <div className="remote-file-drop-overlay" aria-hidden="true">
+          <Upload size={24} />
+          <strong>释放以上传到当前目录</strong>
+        </div>
+      )}
+
       <div className="remote-file-table-wrap">
         <table className="remote-file-table">
           <thead><tr><th aria-label="选择" /><th>名称</th><th>大小</th><th>修改时间</th></tr></thead>
           <tbody>
             {visibleEntries.map((entry) => (
-              <tr key={entry.path} className={entry.protected ? "is-protected" : ""} onDoubleClick={() => entry.directory && void load(entry.path)}>
-                <td><input type="checkbox" checked={selected.has(entry.path)} disabled={entry.protected} onChange={() => toggleSelected(entry)} /></td>
-                <td title={entry.protected ? "SQLite 数据库已受保护" : entry.path}>
+              <tr
+                key={entry.path}
+                className={`${entry.protected ? "is-protected" : ""}${entry.directory ? " is-directory" : ""}`}
+                tabIndex={entry.directory ? 0 : undefined}
+                onMouseDown={(event) => {
+                  if (entry.directory && !(event.target as HTMLElement).closest("input, button")) {
+                    event.preventDefault();
+                  }
+                }}
+                onClick={(event) => handleDirectoryClick(entry, event)}
+                onKeyDown={(event) => {
+                  if (entry.directory && event.key === "Enter") {
+                    event.preventDefault();
+                    void load(entry.path);
+                  }
+                }}
+              >
+                <td><input type="checkbox" checked={selected.has(entry.path)} disabled={entry.protected} onDoubleClick={(event) => event.stopPropagation()} onChange={() => toggleSelected(entry)} /></td>
+                <td title={entry.protected ? "SQLite 数据库已受保护" : undefined}>
                   {entry.protected ? <LockKeyhole size={15} /> : entry.directory ? <Folder size={15} /> : <FileIcon size={15} />}
                   <span>{entry.name}</span>
                 </td>
@@ -425,6 +522,21 @@ const FileManager = forwardRef<FileManagerHandle, Props>(({ send, connected }, r
           <Dialog.Title>删除所选项目</Dialog.Title>
           <Dialog.Description>将永久删除 {actionableEntries.length} 个项目，文件夹会连同内容一起删除。</Dialog.Description>
           <div className="remote-dialog-actions"><Button variant="soft" onClick={() => setDeleteOpen(false)}>取消</Button><Button color="red" onClick={() => void removeSelected()}>删除</Button></div>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      <Dialog.Root open={pendingOverwriteFiles !== null} onOpenChange={(open) => !open && setPendingOverwriteFiles(null)}>
+        <Dialog.Content maxWidth="430px">
+          <Dialog.Title>覆盖同名文件</Dialog.Title>
+          <Dialog.Description>所选文件中存在与当前目录同名的文件。继续后将覆盖同名文件，其余文件正常上传。</Dialog.Description>
+          <div className="remote-dialog-actions">
+            <Button variant="soft" onClick={() => setPendingOverwriteFiles(null)}>取消</Button>
+            <Button onClick={() => {
+              const files = pendingOverwriteFiles || [];
+              setPendingOverwriteFiles(null);
+              void uploadFiles(files, true);
+            }}>覆盖并上传</Button>
+          </div>
         </Dialog.Content>
       </Dialog.Root>
     </section>

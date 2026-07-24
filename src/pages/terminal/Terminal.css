@@ -48,6 +48,23 @@
   scrollbar-width: thin;
 }
 
+.remote-add-tab.rt-IconButton {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  flex: 0 0 34px;
+  align-self: flex-end;
+  margin-bottom: 1px;
+  border: 1px solid transparent;
+  color: #aeb6bf;
+}
+
+.remote-add-tab.rt-IconButton:hover {
+  border-color: #363c44;
+  background: #242930;
+  color: #ffffff;
+}
+
 .remote-tab {
   display: flex;
   height: 36px;
@@ -305,11 +322,17 @@
 
 .remote-files {
   display: flex;
+  position: relative;
   box-sizing: border-box;
   height: 100%;
   min-height: 0;
   flex-direction: column;
   color: #d8dce1;
+}
+
+.remote-files.is-drop-active {
+  outline: 1px solid #4fd1c5;
+  outline-offset: -1px;
 }
 
 .remote-files-title,
@@ -392,10 +415,44 @@
   font-size: 11px;
 }
 
+.remote-file-drop-overlay {
+  position: absolute;
+  z-index: 20;
+  inset: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px dashed #57d6cb;
+  border-radius: 5px;
+  background: rgb(10 17 20 / 94%);
+  color: #dffdfa;
+  pointer-events: none;
+}
+
+.remote-file-drop-overlay strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .remote-file-table-wrap {
   min-height: 0;
   flex: 1;
   overflow: auto;
+}
+
+.remote-file-table tbody tr {
+  user-select: none;
+}
+
+.remote-file-table tbody tr.is-directory {
+  cursor: pointer;
+}
+
+.remote-file-table tbody tr.is-directory:focus-visible {
+  outline: 1px solid #4fd1c5;
+  outline-offset: -1px;
 }
 
 .remote-file-table {
@@ -492,6 +549,56 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 18px;
+}
+
+.remote-dialog-error {
+  margin: 8px 0 0;
+  color: #ff8f8f;
+  font-size: 12px;
+}
+
+.remote-protected-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffca80;
+}
+
+.remote-terminal-context-menu {
+  position: fixed;
+  z-index: 1000;
+  width: 168px;
+  border: 1px solid #3b424b;
+  border-radius: 4px;
+  background: #1b1f24;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 42%);
+  padding: 4px;
+}
+
+.remote-terminal-context-menu button {
+  display: flex;
+  width: 100%;
+  height: 32px;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  padding: 0 9px;
+  color: #e4e7eb;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+
+.remote-terminal-context-menu button:hover:not(:disabled) {
+  background: #2b333b;
+}
+
+.remote-terminal-context-menu button:disabled {
+  color: #68717b;
+  cursor: default;
 }
 
 .remote-spin {

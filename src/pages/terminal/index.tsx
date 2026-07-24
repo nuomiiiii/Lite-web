@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Dialog, IconButton, Select, Theme } from "@radix-ui/themes";
-import { Plus, Server, X } from "lucide-react";
+import { Button, Dialog, IconButton, Select, TextField, Theme } from "@radix-ui/themes";
+import { Plus, Server, ShieldAlert, X } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import type { LiveDataResponse, Record as LiveRecord } from "@/types/LiveData";
 import RemoteSession, { type RemoteNode } from "./RemoteSession";
@@ -12,6 +12,7 @@ type RemoteTab = {
 };
 
 const maxTabs = 16;
+type AuthorizationState = "checking" | "required" | "authorized" | "error" | "blocked";
 
 export default function TerminalWorkspace() {
   const initialUUID = useMemo(() => new URLSearchParams(window.location.search).get("uuid"), []);
@@ -22,20 +23,24 @@ export default function TerminalWorkspace() {
   const [pickerUUID, setPickerUUID] = useState("");
   const [live, setLive] = useState<Record<string, LiveRecord>>({});
   const [online, setOnline] = useState<Set<string>>(new Set());
+  const [nodesLoaded, setNodesLoaded] = useState(false);
+  const [authorization, setAuthorization] = useState<AuthorizationState>("checking");
+  const [otpInput, setOtpInput] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [protectedNode, setProtectedNode] = useState<RemoteNode | null>(null);
   const initialized = useRef(false);
+  const authorizationStarted = useRef(false);
 
   const addTab = useCallback((uuid: string) => {
     if (!uuid) return;
-    setTabs((current) => {
-      if (current.length >= maxTabs) {
-        toast.error(`最多同时打开 ${maxTabs} 个远程标签`);
-        return current;
-      }
-      const tab = { id: crypto.randomUUID(), uuid };
-      setActiveID(tab.id);
-      return [...current, tab];
-    });
-  }, []);
+    if (tabs.length >= maxTabs) {
+      toast.error(`最多同时打开 ${maxTabs} 个远程标签`);
+      return;
+    }
+    const tab = { id: crypto.randomUUID(), uuid };
+    setTabs((current) => [...current, tab]);
+    setActiveID(tab.id);
+  }, [tabs.length]);
 
   useEffect(() => {
     fetch("/api/admin/client/list")
@@ -44,15 +49,61 @@ export default function TerminalWorkspace() {
         const data = Array.isArray(payload) ? payload : payload?.data;
         const list = Array.isArray(data) ? data : [];
         setNodes(list);
-        if (!initialized.current) {
-          initialized.current = true;
-          const requested = list.find((node: RemoteNode) => node.uuid === initialUUID && !node.remote_control_protected);
-          const firstUUID = requested?.uuid || list.find((node: RemoteNode) => !node.remote_control_protected)?.uuid;
-          if (firstUUID) addTab(firstUUID);
-        }
+        setNodesLoaded(true);
       })
       .catch(() => toast.error("无法加载服务器列表"));
-  }, [addTab, initialUUID]);
+  }, []);
+
+  const authorizeRemote = useCallback(async (code?: string) => {
+    setOtpError("");
+    try {
+      const response = await fetch("/api/admin/client/remote/authorize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(code ? { "2fa_code": code } : {}),
+      });
+      const payload = await response.json();
+      if (response.ok) {
+        setAuthorization("authorized");
+        setOtpInput("");
+        return;
+      }
+      if (response.status === 401) {
+        setAuthorization("required");
+        if (code) setOtpError(payload?.message === "Invalid 2FA code" ? "动态口令无效，请重新输入" : (payload?.message || "验证失败"));
+        return;
+      }
+      throw new Error(payload?.message || "无法验证远程管理权限");
+    } catch (error) {
+      setAuthorization("error");
+      setOtpError(error instanceof Error ? error.message : "无法验证远程管理权限");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!nodesLoaded || authorizationStarted.current) return;
+    authorizationStarted.current = true;
+    const requested = initialUUID ? nodes.find((node) => node.uuid === initialUUID) : undefined;
+    if (requested?.remote_control_protected) {
+      initialized.current = true;
+      setProtectedNode(requested);
+      setAuthorization("blocked");
+      return;
+    }
+    void authorizeRemote();
+  }, [authorizeRemote, initialUUID, nodes, nodesLoaded]);
+
+  useEffect(() => {
+    if (!nodesLoaded || authorization !== "authorized" || initialized.current) return;
+    initialized.current = true;
+    if (!initialUUID) return;
+    const requested = nodes.find((node) => node.uuid === initialUUID);
+    if (!requested) {
+      toast.error("指定的服务器不存在");
+      return;
+    }
+    addTab(requested.uuid);
+  }, [addTab, authorization, initialUUID, nodes, nodesLoaded]);
 
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -101,17 +152,33 @@ export default function TerminalWorkspace() {
     });
   }, [nodeMap, tabs]);
 
-  const closeTab = (id: string) => {
-    setTabs((current) => {
-      const index = current.findIndex((tab) => tab.id === id);
-      const next = current.filter((tab) => tab.id !== id);
-      if (activeID === id) {
-        const fallback = next[Math.min(index, next.length - 1)];
-        setActiveID(fallback?.id || "");
-      }
-      return next;
-    });
-  };
+  const closeTab = useCallback((id: string) => {
+    const index = tabs.findIndex((tab) => tab.id === id);
+    if (index === -1) return;
+    const next = tabs.filter((tab) => tab.id !== id);
+    setTabs(next);
+    if (activeID === id) {
+      setActiveID(next[Math.min(index, next.length - 1)]?.id || "");
+    }
+  }, [activeID, tabs]);
+
+  const openNode = useCallback((uuid: string) => {
+    const node = nodes.find((item) => item.uuid === uuid);
+    if (!node) {
+      toast.error("指定的服务器不存在");
+      return;
+    }
+    if (node.remote_control_protected) {
+      setProtectedNode(node);
+      return;
+    }
+    addTab(uuid);
+  }, [addTab, nodes]);
+
+  const handleProtected = useCallback((tabID: string, node: RemoteNode) => {
+    closeTab(tabID);
+    setProtectedNode(node);
+  }, [closeTab]);
 
   const openPicker = () => {
     setPickerUUID(
@@ -140,8 +207,8 @@ export default function TerminalWorkspace() {
                 </IconButton>
               </button>
             ))}
+            <IconButton className="remote-add-tab" size="2" variant="ghost" title="打开服务器" aria-label="打开服务器" disabled={authorization !== "authorized"} onClick={openPicker}><Plus size={17} /></IconButton>
           </div>
-          <IconButton size="2" variant="ghost" title="打开服务器" onClick={openPicker}><Plus size={17} /></IconButton>
         </nav>
 
         <div className="remote-content">
@@ -154,7 +221,8 @@ export default function TerminalWorkspace() {
                 live={live[tab.uuid]}
                 online={online.has(tab.uuid)}
                 active={activeID === tab.id}
-                onDuplicate={() => addTab(tab.uuid)}
+                onDuplicate={() => openNode(tab.uuid)}
+                onProtected={() => handleProtected(tab.id, node)}
               />
             );
           })}
@@ -162,7 +230,7 @@ export default function TerminalWorkspace() {
             <div className="remote-empty-workspace">
               <Server size={28} />
               <strong>尚未打开远程服务器</strong>
-              <Button onClick={openPicker}><Plus size={15} />打开服务器</Button>
+              <Button disabled={authorization !== "authorized"} onClick={openPicker}><Plus size={15} />打开服务器</Button>
             </div>
           )}
         </div>
@@ -184,8 +252,61 @@ export default function TerminalWorkspace() {
           </Select.Root>
           <div className="remote-dialog-actions">
             <Button variant="soft" onClick={() => setPickerOpen(false)}>取消</Button>
-            <Button disabled={!pickerUUID} onClick={() => { addTab(pickerUUID); setPickerOpen(false); }}>打开</Button>
+            <Button disabled={!pickerUUID} onClick={() => { openNode(pickerUUID); setPickerOpen(false); }}>打开</Button>
           </div>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      <Dialog.Root open={authorization === "required"}>
+        <Dialog.Content maxWidth="400px">
+          <Dialog.Title>双重身份验证</Dialog.Title>
+          <Dialog.Description>请输入身份验证应用生成的动态口令。本次验证在 10 分钟内有效。</Dialog.Description>
+          <TextField.Root
+            type="text"
+            inputMode="numeric"
+            autoFocus
+            value={otpInput}
+            color={otpError ? "red" : undefined}
+            onChange={(event) => setOtpInput(event.target.value.replace(/\D/g, ""))}
+            onKeyDown={(event) => event.key === "Enter" && otpInput && void authorizeRemote(otpInput)}
+          />
+          {otpError && <p className="remote-dialog-error">{otpError}</p>}
+          <div className="remote-dialog-actions">
+            <Button variant="soft" onClick={() => {
+              window.close();
+              window.setTimeout(() => { if (!window.closed) window.location.assign("/admin"); }, 100);
+            }}>取消</Button>
+            <Button disabled={!otpInput} onClick={() => void authorizeRemote(otpInput)}>验证并进入</Button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      <Dialog.Root open={authorization === "error"}>
+        <Dialog.Content maxWidth="400px">
+          <Dialog.Title>无法进入远程管理</Dialog.Title>
+          <Dialog.Description>{otpError || "远程管理权限验证失败"}</Dialog.Description>
+          <div className="remote-dialog-actions"><Button onClick={() => {
+            setAuthorization("checking");
+            void authorizeRemote();
+          }}>重试</Button></div>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      <Dialog.Root open={protectedNode !== null} onOpenChange={(open) => {
+        if (!open && authorization !== "blocked") setProtectedNode(null);
+      }}>
+        <Dialog.Content maxWidth="460px">
+          <Dialog.Title><span className="remote-protected-title"><ShieldAlert size={20} />已阻止远程连接</span></Dialog.Title>
+          <Dialog.Description>
+            “{protectedNode?.name}”已被识别为 Komari Server 所在节点。为防止绕过保护策略，本次终端和文件管理操作已中断。该限制不会影响 SSH、RDP、Xshell 等其他远程方式。
+          </Dialog.Description>
+          <div className="remote-dialog-actions"><Button onClick={() => {
+            setProtectedNode(null);
+            if (authorization === "blocked") {
+              window.close();
+              window.setTimeout(() => { if (!window.closed) window.location.assign("/admin"); }, 100);
+            }
+          }}>我知道了</Button></div>
         </Dialog.Content>
       </Dialog.Root>
     </Theme>
