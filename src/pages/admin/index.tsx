@@ -3,6 +3,7 @@ import {
   quoteShellArg,
   quoteShellArgs,
 } from "@/utils/shellQuote";
+import { publicVersion } from "@/utils/version";
 import React, { useEffect, useState } from "react";
 import {
   NodeDetailsProvider,
@@ -1141,7 +1142,7 @@ const SortableRow = ({
           )}
         </Flex>
       </TableCell>
-      <TableCell>{node.version}</TableCell>
+      <TableCell>{publicVersion(node.version)}</TableCell>
       <TableCell>
         <Text
           size="2"
@@ -2665,7 +2666,7 @@ function DetailView({ node }: { node: NodeDetail }) {
                   id="detail-version"
                   className="bg-muted px-3 py-2 rounded border select-text"
                 >
-                  {node.version || (
+                  {publicVersion(node.version) || (
                     <span className="text-muted-foreground">-</span>
                   )}
                 </span>
