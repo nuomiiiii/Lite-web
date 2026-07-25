@@ -637,10 +637,12 @@
       },
       "confirm_description": "資料庫維護可能鎖定資料庫並暫時阻塞 Komari，請確認以下操作。",
       "confirm_title": "確認資料庫維護",
+      "database_file": "資料庫檔案",
+      "disk_usage": "實際磁碟佔用",
       "invalid_response": "伺服器返回了無效的資料庫資訊",
       "load_error": "讀取資料庫資訊失敗",
       "local_total": "本機資料庫合計",
-      "local_total_description": "主資料庫與儲存在本機的監控資料庫佔用",
+      "local_total_description": "實際佔用包含資料庫檔案和會自動波動的 WAL/SHM 執行階段暫存檔案",
       "locations": {
         "external": "外部",
         "local": "本機"
@@ -655,6 +657,10 @@
       "maintenance_title": "資料庫維護",
       "monitoring": "監控資料庫",
       "operation_failed": "操作失敗",
+      "runtime_files": "執行階段暫存檔案",
+      "runtime_files_detail": "WAL {{wal}} · SHM {{shm}}，會隨寫入與檢查點自動波動",
+      "runtime_total": "執行階段暫存檔案合計",
+      "stored_data_total": "資料庫檔案合計",
       "title": "資料庫"
     },
     "general": {

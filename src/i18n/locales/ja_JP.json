@@ -637,10 +637,12 @@
       },
       "confirm_description": "データベースのメンテナンス中はデータベースがロックされ、Komari が一時的に停止する場合があります。以下の操作を確認してください。",
       "confirm_title": "データベースメンテナンスの確認",
+      "database_file": "データベースファイル",
+      "disk_usage": "実際のディスク使用量",
       "invalid_response": "サーバーから無効なデータベース情報が返されました",
       "load_error": "データベース情報の読み込みに失敗しました",
       "local_total": "ローカルデータベース合計",
-      "local_total_description": "メインデータベースとローカル保存の監視データベース",
+      "local_total_description": "実際の使用量には、データベースファイルと自動的に変動する WAL/SHM ランタイムファイルが含まれます",
       "locations": {
         "external": "外部",
         "local": "ローカル"
@@ -655,6 +657,10 @@
       "maintenance_title": "データベースメンテナンス",
       "monitoring": "監視データベース",
       "operation_failed": "操作に失敗しました",
+      "runtime_files": "ランタイムファイル",
+      "runtime_files_detail": "WAL {{wal}} · SHM {{shm}}。書き込みとチェックポイントに応じて自動的に変動します",
+      "runtime_total": "ランタイムファイル合計",
+      "stored_data_total": "データベースファイル合計",
       "title": "データベース"
     },
     "general": {

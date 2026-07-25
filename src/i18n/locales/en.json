@@ -652,10 +652,12 @@
       },
       "confirm_description": "Database maintenance may lock the databases and temporarily block Komari. Confirm the operations below.",
       "confirm_title": "Confirm Database Maintenance",
+      "database_file": "Database file",
+      "disk_usage": "Actual disk usage",
       "invalid_response": "The server returned invalid database information",
       "load_error": "Failed to load database information",
       "local_total": "Local Database Total",
-      "local_total_description": "Main database and locally stored monitoring database",
+      "local_total_description": "Actual usage includes database files and WAL/SHM runtime files that fluctuate automatically",
       "locations": {
         "external": "External",
         "local": "Local"
@@ -670,6 +672,10 @@
       "maintenance_title": "Database Maintenance",
       "monitoring": "Monitoring Database",
       "operation_failed": "Operation failed",
+      "runtime_files": "Runtime files",
+      "runtime_files_detail": "WAL {{wal}} · SHM {{shm}}; changes automatically during writes and checkpoints",
+      "runtime_total": "Runtime files total",
+      "stored_data_total": "Database files total",
       "title": "Database"
     },
     "general": {

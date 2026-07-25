@@ -736,10 +736,12 @@
       },
       "confirm_description": "数据库维护可能锁定数据库并暂时阻塞 Komari，请确认以下操作。",
       "confirm_title": "确认数据库维护",
+      "database_file": "数据库文件",
+      "disk_usage": "实际磁盘占用",
       "invalid_response": "服务端返回了无效的数据库信息",
       "load_error": "读取数据库信息失败",
       "local_total": "本机数据库合计",
-      "local_total_description": "主数据库与存储在本机的监控数据库占用",
+      "local_total_description": "实际占用包含数据库文件和会自动波动的 WAL/SHM 运行临时文件",
       "locations": {
         "external": "外部",
         "local": "本机"
@@ -754,6 +756,10 @@
       "maintenance_title": "数据库维护",
       "monitoring": "监控数据库",
       "operation_failed": "操作失败",
+      "runtime_files": "运行临时文件",
+      "runtime_files_detail": "WAL {{wal}} · SHM {{shm}}，会随写入与检查点自动波动",
+      "runtime_total": "运行临时文件合计",
+      "stored_data_total": "数据库文件合计",
       "title": "数据库"
     },
     "general": {
