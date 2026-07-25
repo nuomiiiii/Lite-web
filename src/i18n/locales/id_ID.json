@@ -641,7 +641,7 @@
       "disk_usage": "Penggunaan disk aktual",
       "invalid_response": "Server mengembalikan informasi basis data yang tidak valid",
       "load_error": "Gagal memuat informasi basis data",
-      "local_total": "Total Basis Data Lokal",
+      "local_total": "Total",
       "local_total_description": "Penggunaan aktual mencakup file basis data dan file runtime WAL/SHM yang berubah secara otomatis",
       "locations": {
         "external": "Eksternal",
@@ -661,7 +661,8 @@
       "runtime_files_detail": "WAL {{wal}} · SHM {{shm}}; berubah otomatis selama penulisan dan checkpoint",
       "runtime_total": "Total file runtime",
       "stored_data_total": "Total file basis data",
-      "title": "Basis Data"
+      "title": "Basis Data",
+      "total_usage": "Total penggunaan"
     },
     "general": {
       "auto_discovery": "Penemuan Otomatis",

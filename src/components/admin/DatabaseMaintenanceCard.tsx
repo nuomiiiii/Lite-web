@@ -51,12 +51,6 @@ type DatabaseOverview = z.infer<typeof databaseOverviewSchema>;
 type DatabaseMaintenanceResult = z.infer<typeof maintenanceResultSchema>;
 type TranslationFunction = ReturnType<typeof useTranslation>["t"];
 
-type LocalFileTotals = {
-  database: number;
-  wal: number;
-  shm: number;
-};
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -106,36 +100,14 @@ function driverLabel(driver: string): string {
   }
 }
 
-function localFileTotals(overview: DatabaseOverview): LocalFileTotals | null {
-  if (overview.local_total === null) return null;
-
-  const localDatabases = [overview.main, overview.monitoring].filter(
-    (info) => info.location === "local",
-  );
-  if (
-    localDatabases.length === 0 ||
-    localDatabases.some((info) => !info.files)
-  ) {
-    return null;
-  }
-
-  return localDatabases.reduce<LocalFileTotals>(
-    (total, info) => ({
-      database: total.database + (info.files?.database ?? 0),
-      wal: total.wal + (info.files?.wal ?? 0),
-      shm: total.shm + (info.files?.shm ?? 0),
-    }),
-    { database: 0, wal: 0, shm: 0 },
-  );
-}
-
 function DatabaseSummaryRow({ label, info }: { label: string; info: DatabaseInfo }) {
   const { t } = useTranslation();
   const runtimeSize = info.files ? info.files.wal + info.files.shm : null;
+  const unavailable = "—";
 
   return (
-    <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-1 border-b border-[var(--gray-a5)] py-3">
-      <div className="min-w-0">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 border-b border-[var(--gray-a5)] py-3 last:border-b-0 sm:grid-cols-[minmax(160px,1.4fr)_repeat(3,minmax(96px,1fr))] sm:items-center">
+      <div className="col-span-2 min-w-0 sm:col-span-1">
         <Text as="div" size="2" weight="medium">
           {label}
         </Text>
@@ -148,94 +120,86 @@ function DatabaseSummaryRow({ label, info }: { label: string; info: DatabaseInfo
           </Text>
         ) : null}
       </div>
-      <div className="text-right">
-        {info.files ? (
-          <Text as="div" size="1" color="gray">
-            {t("settings.database.disk_usage")}
-          </Text>
-        ) : null}
-        <Text as="div" size="2" weight="medium" className="whitespace-nowrap">
+
+      <div className="contents sm:block sm:text-right">
+        <Text as="span" size="1" color="gray" className="sm:hidden">
+          {t("settings.database.database_file")}
+        </Text>
+        <Text as="span" size="2" className="whitespace-nowrap sm:block">
+          {info.files ? formatBytes(info.files.database) : unavailable}
+        </Text>
+      </div>
+
+      <div className="contents sm:block sm:text-right">
+        <Text as="span" size="1" color="gray" className="sm:hidden">
+          {t("settings.database.runtime_files")}
+        </Text>
+        <Text as="span" size="2" className="whitespace-nowrap sm:block">
+          {runtimeSize === null ? unavailable : formatBytes(runtimeSize)}
+        </Text>
+      </div>
+
+      <div className="contents sm:block sm:text-right">
+        <Text as="span" size="1" color="gray" className="sm:hidden">
+          {t("settings.database.total_usage")}
+        </Text>
+        <Text
+          as="span"
+          size="2"
+          weight="medium"
+          className="whitespace-nowrap sm:block"
+        >
           {info.size === null ? t("common.unknown") : formatBytes(info.size)}
         </Text>
       </div>
+
       {info.files ? (
-        <div className="col-span-2 mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 border-t border-[var(--gray-a4)] pt-2">
-          <Text size="1" color="gray">
-            {t("settings.database.database_file")}
-          </Text>
-          <Text size="1" weight="medium" className="whitespace-nowrap">
-            {formatBytes(info.files.database)}
-          </Text>
-          <Text size="1" color="gray">
-            {t("settings.database.runtime_files")}
-          </Text>
-          <Text size="1" weight="medium" className="whitespace-nowrap">
-            {formatBytes(runtimeSize ?? 0)}
-          </Text>
-          <Text as="div" size="1" color="gray" className="col-span-2 break-words">
-            {t("settings.database.runtime_files_detail", {
-              wal: formatBytes(info.files.wal),
-              shm: formatBytes(info.files.shm),
-            })}
-          </Text>
-        </div>
+        <Text
+          as="div"
+          size="1"
+          color="gray"
+          className="col-span-2 mt-1 break-words sm:col-span-4"
+        >
+          {t("settings.database.runtime_files_detail", {
+            wal: formatBytes(info.files.wal),
+            shm: formatBytes(info.files.shm),
+          })}
+        </Text>
       ) : null}
     </div>
   );
 }
 
-function LocalDatabaseTotalRow({
-  size,
-  files,
-}: {
-  size: number;
-  files: LocalFileTotals | null;
-}) {
+function DatabaseUsageTable({ overview }: { overview: DatabaseOverview }) {
   const { t } = useTranslation();
-  const runtimeSize = files ? files.wal + files.shm : null;
 
   return (
-    <div className="w-full py-3">
-      <Text as="div" size="2" weight="medium">
-        {t("settings.database.local_total")}
-      </Text>
-      <Text as="div" size="1" color="gray" className="mb-2">
-        {t("settings.database.local_total_description")}
-      </Text>
-      {files ? (
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1">
-          <Text size="1" color="gray">
-            {t("settings.database.stored_data_total")}
-          </Text>
-          <Text size="1" weight="medium" className="whitespace-nowrap">
-            {formatBytes(files.database)}
-          </Text>
-          <Text size="1" color="gray">
-            {t("settings.database.runtime_total")}
-          </Text>
-          <Text size="1" weight="medium" className="whitespace-nowrap">
-            {formatBytes(runtimeSize ?? 0)}
-          </Text>
-          <Text
-            size="2"
-            weight="bold"
-            className="mt-1 border-t border-[var(--gray-a5)] pt-2"
-          >
-            {t("settings.database.disk_usage")}
-          </Text>
-          <Text
-            size="2"
-            weight="bold"
-            className="mt-1 whitespace-nowrap border-t border-[var(--gray-a5)] pt-2"
-          >
-            {formatBytes(size)}
-          </Text>
-        </div>
-      ) : (
-        <Text as="div" size="2" weight="bold" className="text-right">
-          {formatBytes(size)}
+    <div className="w-full" role="table" aria-label={t("settings.database.maintenance_title")}>
+      <div
+        role="row"
+        className="hidden grid-cols-[minmax(160px,1.4fr)_repeat(3,minmax(96px,1fr))] gap-x-4 border-b border-[var(--gray-a5)] py-2 sm:grid"
+      >
+        <Text role="columnheader" size="1" color="gray">
+          {t("settings.database.title")}
         </Text>
-      )}
+        <Text role="columnheader" size="1" color="gray" className="text-right">
+          {t("settings.database.database_file")}
+        </Text>
+        <Text role="columnheader" size="1" color="gray" className="text-right">
+          {t("settings.database.runtime_files")}
+        </Text>
+        <Text role="columnheader" size="1" color="gray" className="text-right">
+          {t("settings.database.total_usage")}
+        </Text>
+      </div>
+      <DatabaseSummaryRow
+        label={t("settings.database.main")}
+        info={overview.main}
+      />
+      <DatabaseSummaryRow
+        label={t("settings.database.monitoring")}
+        info={overview.monitoring}
+      />
     </div>
   );
 }
@@ -371,28 +335,27 @@ export function DatabaseMaintenanceCard() {
   };
 
   const actionDisabled = loading || maintaining;
-  const files = overview ? localFileTotals(overview) : null;
 
   return (
     <SettingCard
       title={t("settings.database.maintenance_title")}
       description={t("settings.database.maintenance_description")}
     >
+      {overview?.local_total !== null && overview?.local_total !== undefined ? (
+        <SettingCard.Action>
+          <Flex direction="column" align="end" className="shrink-0 pl-4">
+            <Text size="1" color="gray">
+              {t("settings.database.local_total")}
+            </Text>
+            <Text size="2" weight="medium" className="whitespace-nowrap">
+              {formatBytes(overview.local_total)}
+            </Text>
+          </Flex>
+        </SettingCard.Action>
+      ) : null}
       <Flex direction="column" className="w-full pt-2" gap="0">
         {overview ? (
-          <>
-            <DatabaseSummaryRow
-              label={t("settings.database.main")}
-              info={overview.main}
-            />
-            <DatabaseSummaryRow
-              label={t("settings.database.monitoring")}
-              info={overview.monitoring}
-            />
-            {overview.local_total !== null ? (
-              <LocalDatabaseTotalRow size={overview.local_total} files={files} />
-            ) : null}
-          </>
+          <DatabaseUsageTable overview={overview} />
         ) : loading ? (
           <Text size="2" color="gray" className="py-3">
             {t("loading")}

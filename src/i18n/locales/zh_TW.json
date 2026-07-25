@@ -641,7 +641,7 @@
       "disk_usage": "實際磁碟佔用",
       "invalid_response": "伺服器返回了無效的資料庫資訊",
       "load_error": "讀取資料庫資訊失敗",
-      "local_total": "本機資料庫合計",
+      "local_total": "合計",
       "local_total_description": "實際佔用包含資料庫檔案和會自動波動的 WAL/SHM 執行階段暫存檔案",
       "locations": {
         "external": "外部",
@@ -661,7 +661,8 @@
       "runtime_files_detail": "WAL {{wal}} · SHM {{shm}}，會隨寫入與檢查點自動波動",
       "runtime_total": "執行階段暫存檔案合計",
       "stored_data_total": "資料庫檔案合計",
-      "title": "資料庫"
+      "title": "資料庫",
+      "total_usage": "總佔用"
     },
     "general": {
       "auto_discovery": "自動發現",
