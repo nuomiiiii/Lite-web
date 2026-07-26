@@ -659,6 +659,28 @@
       "operation_failed": "操作に失敗しました",
       "runtime_files": "ランタイムファイル",
       "runtime_files_detail": "WAL {{wal}} · SHM {{shm}}。書き込みとチェックポイントに応じて自動的に変動します",
+      "runtime_status": {
+        "checkpoint": "チェックポイント",
+        "compaction_progress": "メトリクス圧縮の進行状況",
+        "current_metric": "現在のメトリクス",
+        "cycle_written": "このサイクルで {{count}} 個の集約バケットを書き込みました",
+        "health": {
+          "attention": "確認が必要",
+          "healthy": "正常に稼働中",
+          "idle": "初回実行を待機中",
+          "pending": "切り詰めを待機中"
+        },
+        "last_checkpoint": "最後に成功した切り詰め",
+        "last_error": "最新のエラー：{{error}}",
+        "next_checkpoint": "次回の切り詰め予定",
+        "not_applicable": "外部データベースには適用されません",
+        "not_started": "初回実行を待機中",
+        "runtime_file_breakdown": "WAL {{wal}} · SHM {{shm}}",
+        "title": "実行状態",
+        "unavailable": "記録はまだありません",
+        "wal_normal": "サイクル内の正常な増加",
+        "wal_waiting": "切り詰めは未完了で、次のステップで自動的に再試行されます"
+      },
       "runtime_total": "ランタイムファイル合計",
       "stored_data_total": "データベースファイル合計",
       "title": "データベース",

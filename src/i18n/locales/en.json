@@ -674,6 +674,28 @@
       "operation_failed": "Operation failed",
       "runtime_files": "Runtime files",
       "runtime_files_detail": "WAL {{wal}} · SHM {{shm}}; changes automatically during writes and checkpoints",
+      "runtime_status": {
+        "checkpoint": "Checkpoint",
+        "compaction_progress": "Metric compaction progress",
+        "current_metric": "Current metric",
+        "cycle_written": "{{count}} rollup buckets written this cycle",
+        "health": {
+          "attention": "Needs attention",
+          "healthy": "Running normally",
+          "idle": "Waiting for first run",
+          "pending": "Waiting to truncate"
+        },
+        "last_checkpoint": "Last successful truncation",
+        "last_error": "Latest error: {{error}}",
+        "next_checkpoint": "Estimated next truncation",
+        "not_applicable": "Not applicable to external databases",
+        "not_started": "Waiting for first run",
+        "runtime_file_breakdown": "WAL {{wal}} · SHM {{shm}}",
+        "title": "Runtime status",
+        "unavailable": "No record yet",
+        "wal_normal": "Normal growth within the cycle",
+        "wal_waiting": "Truncation is pending and will retry on the next step"
+      },
       "runtime_total": "Runtime files total",
       "stored_data_total": "Database files total",
       "title": "Database",

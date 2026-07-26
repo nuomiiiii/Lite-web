@@ -659,6 +659,28 @@
       "operation_failed": "Operasi gagal",
       "runtime_files": "File runtime",
       "runtime_files_detail": "WAL {{wal}} · SHM {{shm}}; berubah otomatis selama penulisan dan checkpoint",
+      "runtime_status": {
+        "checkpoint": "Checkpoint",
+        "compaction_progress": "Progres pemadatan metrik",
+        "current_metric": "Metrik saat ini",
+        "cycle_written": "{{count}} bucket agregasi ditulis pada siklus ini",
+        "health": {
+          "attention": "Perlu perhatian",
+          "healthy": "Berjalan normal",
+          "idle": "Menunggu proses pertama",
+          "pending": "Menunggu pemotongan"
+        },
+        "last_checkpoint": "Pemotongan terakhir yang berhasil",
+        "last_error": "Kesalahan terbaru: {{error}}",
+        "next_checkpoint": "Perkiraan pemotongan berikutnya",
+        "not_applicable": "Tidak berlaku untuk basis data eksternal",
+        "not_started": "Menunggu proses pertama",
+        "runtime_file_breakdown": "WAL {{wal}} · SHM {{shm}}",
+        "title": "Status proses",
+        "unavailable": "Belum ada catatan",
+        "wal_normal": "Pertumbuhan normal dalam siklus",
+        "wal_waiting": "Pemotongan tertunda dan akan dicoba lagi pada langkah berikutnya"
+      },
       "runtime_total": "Total file runtime",
       "stored_data_total": "Total file basis data",
       "title": "Basis Data",

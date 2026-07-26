@@ -758,6 +758,28 @@
       "operation_failed": "操作失败",
       "runtime_files": "运行临时文件",
       "runtime_files_detail": "WAL {{wal}} · SHM {{shm}}，会随写入与检查点自动波动",
+      "runtime_status": {
+        "checkpoint": "检查点",
+        "compaction_progress": "指标压缩进度",
+        "current_metric": "当前指标",
+        "cycle_written": "本轮已写入 {{count}} 个汇总桶",
+        "health": {
+          "attention": "需要关注",
+          "healthy": "正常",
+          "idle": "等待首次运行",
+          "pending": "等待截断"
+        },
+        "last_checkpoint": "最近截断成功",
+        "last_error": "最近错误：{{error}}",
+        "next_checkpoint": "预计下次截断",
+        "not_applicable": "外置数据库不适用",
+        "not_started": "等待首次运行",
+        "runtime_file_breakdown": "WAL {{wal}} · SHM {{shm}}",
+        "title": "运行状态",
+        "unavailable": "尚无记录",
+        "wal_normal": "周期内正常增长",
+        "wal_waiting": "截断暂未完成，将在下一步自动重试"
+      },
       "runtime_total": "运行临时文件合计",
       "stored_data_total": "数据库文件合计",
       "title": "数据库",

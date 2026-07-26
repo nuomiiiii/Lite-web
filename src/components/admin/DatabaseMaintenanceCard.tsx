@@ -1,6 +1,7 @@
 import { formatBytes } from "@/utils/unitHelper";
-import { Button, Dialog, Flex, Text } from "@radix-ui/themes";
-import { DatabaseZap, RefreshCw } from "lucide-react";
+import { getDatabaseRuntimeHealth } from "@/lib/databaseRuntime";
+import { Badge, Button, Dialog, Flex, Progress, Text } from "@radix-ui/themes";
+import { Activity, DatabaseZap, RefreshCw } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -18,11 +19,31 @@ const databaseFilesSchema = z.object({
   wal: z.number().finite().nonnegative(),
   shm: z.number().finite().nonnegative(),
 });
+const nullableTimestampSchema = z.string().datetime().nullable();
+const databaseRuntimeStatusSchema = z.object({
+  compacting: z.boolean(),
+  current_metric: z.string(),
+  progress: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative(),
+  cycle_written: z.number().int().nonnegative(),
+  cycle_started_at: nullableTimestampSchema,
+  last_step_at: nullableTimestampSchema,
+  last_cycle_completed_at: nullableTimestampSchema,
+  checkpoint_applicable: z.boolean(),
+  last_checkpoint_attempt_at: nullableTimestampSchema,
+  last_checkpoint_success_at: nullableTimestampSchema,
+  next_checkpoint_at: nullableTimestampSchema,
+  checkpoint_pending: z.boolean(),
+  consecutive_checkpoint_failures: z.number().int().nonnegative(),
+  consecutive_cycle_failures: z.number().int().nonnegative(),
+  last_error: z.string().optional(),
+});
 const databaseInfoSchema = z.object({
   driver: z.string().trim().min(1),
   location: z.enum(["local", "external"]),
   size: nullableSizeSchema,
   files: databaseFilesSchema.optional(),
+  runtime: databaseRuntimeStatusSchema.optional(),
   action: maintenanceActionSchema,
   error: z.string().optional(),
 });
@@ -204,6 +225,149 @@ function DatabaseUsageTable({ overview }: { overview: DatabaseOverview }) {
   );
 }
 
+function formatRuntimeTime(value: string | null, fallback: string): string {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
+function RuntimeValue({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div className="min-w-0 border-l-2 border-[var(--gray-a5)] pl-3">
+      <Text as="div" size="1" color="gray">
+        {label}
+      </Text>
+      <Text as="div" size="2" weight="medium" className="mt-1 break-words">
+        {value}
+      </Text>
+      {hint ? (
+        <Text as="div" size="1" color="gray" className="mt-0.5 break-words">
+          {hint}
+        </Text>
+      ) : null}
+    </div>
+  );
+}
+
+function DatabaseRuntimePanel({ info }: { info: DatabaseInfo }) {
+  const { t } = useTranslation();
+  const runtime = info.runtime;
+  if (!runtime) return null;
+
+  const health = getDatabaseRuntimeHealth(runtime);
+  const healthColor = {
+    healthy: "green",
+    pending: "orange",
+    attention: "red",
+    idle: "gray",
+  } as const;
+  const progress =
+    runtime.total > 0
+      ? Math.min(100, (runtime.progress / runtime.total) * 100)
+      : 0;
+  const unavailable = t("settings.database.runtime_status.unavailable");
+  const checkpointHint = runtime.checkpoint_pending
+    ? t("settings.database.runtime_status.wal_waiting")
+    : t("settings.database.runtime_status.wal_normal");
+  const runtimeFileSize = info.files ? info.files.wal + info.files.shm : null;
+  const runtimeFileHint = info.files
+    ? `${t("settings.database.runtime_status.runtime_file_breakdown", {
+        wal: formatBytes(info.files.wal),
+        shm: formatBytes(info.files.shm),
+      })} · ${checkpointHint}`
+    : checkpointHint;
+
+  return (
+    <section className="mt-4 border-t border-[var(--gray-a5)] pt-4">
+      <Flex align="center" justify="between" gap="3" wrap="wrap">
+        <Flex align="center" gap="2">
+          <Activity size={17} aria-hidden="true" />
+          <Text as="div" size="2" weight="bold">
+            {t("settings.database.runtime_status.title")}
+          </Text>
+        </Flex>
+        <Badge color={healthColor[health]} variant="soft">
+          {t(`settings.database.runtime_status.health.${health}`)}
+        </Badge>
+      </Flex>
+
+      <div className="mt-3">
+        <Flex justify="between" align="center" gap="3">
+          <Text size="1" color="gray">
+            {t("settings.database.runtime_status.compaction_progress")}
+          </Text>
+          <Text size="1" weight="medium" className="whitespace-nowrap">
+            {runtime.total > 0
+              ? `${runtime.progress} / ${runtime.total}`
+              : t("settings.database.runtime_status.not_started")}
+          </Text>
+        </Flex>
+        <Progress value={progress} size="2" color={healthColor[health]} className="mt-2" />
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
+        <RuntimeValue
+          label={t("settings.database.runtime_status.current_metric")}
+          value={runtime.current_metric || unavailable}
+          hint={t("settings.database.runtime_status.cycle_written", {
+            count: runtime.cycle_written,
+          })}
+        />
+        {runtime.checkpoint_applicable ? (
+          <RuntimeValue
+            label={t("settings.database.runtime_files")}
+            value={runtimeFileSize === null ? unavailable : formatBytes(runtimeFileSize)}
+            hint={runtimeFileHint}
+          />
+        ) : (
+          <RuntimeValue
+            label={t("settings.database.runtime_status.checkpoint")}
+            value={t("settings.database.runtime_status.not_applicable")}
+          />
+        )}
+        <RuntimeValue
+          label={t("settings.database.runtime_status.last_checkpoint")}
+          value={
+            runtime.checkpoint_applicable
+              ? formatRuntimeTime(runtime.last_checkpoint_success_at, unavailable)
+              : t("settings.database.runtime_status.not_applicable")
+          }
+        />
+        <RuntimeValue
+          label={t("settings.database.runtime_status.next_checkpoint")}
+          value={
+            runtime.checkpoint_applicable
+              ? formatRuntimeTime(runtime.next_checkpoint_at, unavailable)
+              : t("settings.database.runtime_status.not_applicable")
+          }
+        />
+      </div>
+
+      {runtime.last_error ? (
+        <Text as="div" size="1" color="red" className="mt-3 break-words">
+          {t("settings.database.runtime_status.last_error", {
+            error: runtime.last_error,
+          })}
+        </Text>
+      ) : null}
+    </section>
+  );
+}
+
 function MaintenanceActionRow({
   label,
   info,
@@ -264,9 +428,11 @@ export function DatabaseMaintenanceCard() {
   const [maintaining, setMaintaining] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
 
-  const fetchOverview = React.useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
+  const fetchOverview = React.useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setLoadError(null);
+    }
     const fallbackMessage = t("settings.database.load_error");
 
     try {
@@ -283,19 +449,23 @@ export function DatabaseMaintenanceCard() {
       setLoadError(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setOverview(null);
+      if (!silent) setOverview(null);
       setLoadError(
         message === fallbackMessage
           ? fallbackMessage
           : `${fallbackMessage}: ${message}`,
       );
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [t]);
 
   React.useEffect(() => {
     void fetchOverview();
+    const timer = window.setInterval(() => {
+      void fetchOverview(true);
+    }, 10_000);
+    return () => window.clearInterval(timer);
   }, [fetchOverview]);
 
   const handleMaintenance = async () => {
@@ -355,7 +525,10 @@ export function DatabaseMaintenanceCard() {
       ) : null}
       <Flex direction="column" className="w-full pt-2" gap="0">
         {overview ? (
-          <DatabaseUsageTable overview={overview} />
+          <>
+            <DatabaseUsageTable overview={overview} />
+            <DatabaseRuntimePanel info={overview.monitoring} />
+          </>
         ) : loading ? (
           <Text size="2" color="gray" className="py-3">
             {t("loading")}

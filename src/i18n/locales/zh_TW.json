@@ -659,6 +659,28 @@
       "operation_failed": "操作失敗",
       "runtime_files": "執行階段暫存檔案",
       "runtime_files_detail": "WAL {{wal}} · SHM {{shm}}，會隨寫入與檢查點自動波動",
+      "runtime_status": {
+        "checkpoint": "檢查點",
+        "compaction_progress": "指標壓縮進度",
+        "current_metric": "目前指標",
+        "cycle_written": "本輪已寫入 {{count}} 個彙總桶",
+        "health": {
+          "attention": "需要關注",
+          "healthy": "正常",
+          "idle": "等待首次執行",
+          "pending": "等待截斷"
+        },
+        "last_checkpoint": "最近截斷成功",
+        "last_error": "最近錯誤：{{error}}",
+        "next_checkpoint": "預計下次截斷",
+        "not_applicable": "外部資料庫不適用",
+        "not_started": "等待首次執行",
+        "runtime_file_breakdown": "WAL {{wal}} · SHM {{shm}}",
+        "title": "執行狀態",
+        "unavailable": "尚無記錄",
+        "wal_normal": "週期內正常增長",
+        "wal_waiting": "截斷暫未完成，將在下一步自動重試"
+      },
       "runtime_total": "執行階段暫存檔案合計",
       "stored_data_total": "資料庫檔案合計",
       "title": "資料庫",
