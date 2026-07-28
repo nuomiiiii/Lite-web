@@ -664,6 +664,9 @@
         "compaction_progress": "Progres pemadatan metrik",
         "current_metric": "Metrik saat ini",
         "cycle_written": "{{count}} bucket agregasi ditulis pada siklus ini",
+        "digest_handoff_hint": "Data asli dipertahankan; status ini tidak dihitung sebagai kegagalan pemadatan",
+        "digest_handoff_item": "{{metric}} · {{time}}",
+        "digest_handoff_title": "Serah-terima digest ditunda ({{count}})",
         "health": {
           "attention": "Perlu perhatian",
           "healthy": "Berjalan normal",
