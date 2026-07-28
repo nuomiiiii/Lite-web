@@ -543,6 +543,7 @@
     "default_on": "Default on for new servers",
     "default_on_description": "When enabled, newly added servers will automatically start running this monitor. Existing servers are unaffected.",
     "default_on_short": "Default on",
+    "description": "Configure node latency probes and continuously track network delay and reachability.",
     "interval": "Interval",
     "server_view": "Server View",
     "target": "Target",

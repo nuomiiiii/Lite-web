@@ -87,7 +87,7 @@ type RouteEvent = {
   expected_line?: string;
 };
 
-type TaskPage = { tasks: Task[]; statuses: Status[]; total: number; page: number; page_size: number };
+type TaskPage = { tasks: Task[]; statuses: Status[]; probing_task_ids: number[]; total: number; page: number; page_size: number };
 type RecordPage = { events: RouteEvent[]; total: number; page: number; page_size: number };
 type SummaryData = { tasks: number; healthy: number; switched: number; recent_events: number };
 
@@ -182,6 +182,10 @@ function RouteTaskDialog({
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!form.name.trim() || !form.client.trim() || !form.target.trim() || !form.expected_line.trim()) {
+      toast.error("任务名称、客户端、探测目标和预期线路为必填项");
+      return;
+    }
     setSaving(true);
     try {
       const result = await request(task?.id ? "/edit" : "/add", form);
@@ -195,7 +199,12 @@ function RouteTaskDialog({
       setOpen(false);
       onSaved();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存失败");
+      const message = error instanceof Error ? error.message : "";
+      toast.error(
+        message.includes("name, client, target and expected_line are required")
+          ? "任务名称、客户端、探测目标和预期线路为必填项"
+          : message || "保存失败",
+      );
     } finally {
       setSaving(false);
     }
@@ -300,7 +309,7 @@ function ReturnRouteContent() {
   const [activeTab, setActiveTab] = useState<"tasks" | "records">("tasks");
   const [taskQuery, setTaskQuery] = useState({ page: 1, page_size: 20, keyword: "", carrier: "", state: "" });
   const [recordQuery, setRecordQuery] = useState({ page: 1, page_size: 20, keyword: "", range: "24h", kind: "", carrier: "", region: "", expected_line: "", actual_line: "" });
-  const [taskData, setTaskData] = useState<TaskPage>({ tasks: [], statuses: [], total: 0, page: 1, page_size: 20 });
+  const [taskData, setTaskData] = useState<TaskPage>({ tasks: [], statuses: [], probing_task_ids: [], total: 0, page: 1, page_size: 20 });
   const [recordData, setRecordData] = useState<RecordPage>({ events: [], total: 0, page: 1, page_size: 20 });
   const [summary, setSummary] = useState<SummaryData>({ tasks: 0, healthy: 0, switched: 0, recent_events: 0 });
   const [taskLoading, setTaskLoading] = useState(true);
@@ -320,7 +329,9 @@ function ReturnRouteContent() {
     if (!quiet) setTaskLoading(true);
     try {
       const data = await request("/tasks/query", taskQuery);
-      setTaskData({ tasks: data?.tasks || [], statuses: data?.statuses || [], total: data?.total || 0, page: data?.page || 1, page_size: data?.page_size || taskQuery.page_size });
+      const probingTaskIDs = data?.probing_task_ids || [];
+      setTaskData({ tasks: data?.tasks || [], statuses: data?.statuses || [], probing_task_ids: probingTaskIDs, total: data?.total || 0, page: data?.page || 1, page_size: data?.page_size || taskQuery.page_size });
+      setProbingTasks(new Set(probingTaskIDs));
     } catch (error) {
       if (!quiet) toast.error(error instanceof Error ? error.message : "任务加载失败");
     } finally {
@@ -375,12 +386,6 @@ function ReturnRouteContent() {
     else updateTaskQuery({ page: 1 });
   };
 
-  const refreshCurrent = () => {
-    loadSummary();
-    if (activeTab === "tasks") loadTasks();
-    else loadRecords();
-  };
-
   const runNow = async (id?: number) => {
     if (!id) return;
     try {
@@ -414,13 +419,10 @@ function ReturnRouteContent() {
   if (nodesLoading) return <Loading text="" />;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-5 p-2 sm:p-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div><h1 className="text-xl font-semibold">回程线路监测</h1><p className="mt-1 text-sm text-gray-500">识别移动、电信、联通回程线路，确认切线后告警，恢复后自动通知。</p></div>
-        <Flex gap="2">
-          <IconButton variant="soft" color="gray" title="刷新" onClick={refreshCurrent}><RefreshCw size={16} /></IconButton>
-          <RouteTaskDialog nodes={nodes} onSaved={refreshTasksAfterChange}><Button><Plus size={16} />新建任务</Button></RouteTaskDialog>
-        </Flex>
+    <div className="flex w-full min-w-0 flex-col gap-4 p-4">
+      <div>
+        <h1 className="text-2xl font-bold">回程线路监测</h1>
+        <p className="mt-1 text-sm text-gray-500">识别移动、电信、联通回程线路，确认切线后告警，恢复后自动通知。</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -439,25 +441,30 @@ function ReturnRouteContent() {
         <Box pt="4">
           <Tabs.Content value="tasks">
             <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-end gap-3">
-                <Field label="搜索任务、节点或目标">
-                  <TextField.Root className="min-w-[240px]" value={taskQuery.keyword} placeholder="输入关键词" onChange={(event) => updateTaskQuery({ keyword: event.target.value })}>
-                    <TextField.Slot><Search size={16} /></TextField.Slot>
-                  </TextField.Root>
-                </Field>
-                <Field label="运营商">
-                  <Select.Root value={taskQuery.carrier || "all"} onValueChange={(carrier) => updateTaskQuery({ carrier: carrier === "all" ? "" : carrier })}>
-                    <Select.Trigger className="min-w-[130px]" />
-                    <Select.Content><Select.Item value="all">全部</Select.Item>{Object.entries(carrierNames).map(([value, label]) => <Select.Item key={value} value={value}>{label}</Select.Item>)}</Select.Content>
-                  </Select.Root>
-                </Field>
-                <Field label="状态">
-                  <Select.Root value={taskQuery.state || "all"} onValueChange={(state) => updateTaskQuery({ state: state === "all" ? "" : state })}>
-                    <Select.Trigger className="min-w-[130px]" />
-                    <Select.Content><Select.Item value="all">全部</Select.Item><Select.Item value="healthy">线路正常</Select.Item><Select.Item value="observing">确认中</Select.Item><Select.Item value="switched">已切线</Select.Item><Select.Item value="unknown">无法识别</Select.Item><Select.Item value="pending">等待探测</Select.Item><Select.Item value="disabled">已暂停</Select.Item></Select.Content>
-                  </Select.Root>
-                </Field>
-                <Button variant="soft" color="gray" disabled={!taskQuery.keyword && !taskQuery.carrier && !taskQuery.state} onClick={() => setTaskQuery((current) => ({ ...current, page: 1, keyword: "", carrier: "", state: "" }))}>重置</Button>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div className="flex flex-wrap items-end gap-3">
+                  <Field label="搜索任务、节点或目标">
+                    <TextField.Root className="min-w-[240px]" value={taskQuery.keyword} placeholder="输入关键词" onChange={(event) => updateTaskQuery({ keyword: event.target.value })}>
+                      <TextField.Slot><Search size={16} /></TextField.Slot>
+                    </TextField.Root>
+                  </Field>
+                  <Field label="运营商">
+                    <Select.Root value={taskQuery.carrier || "all"} onValueChange={(carrier) => updateTaskQuery({ carrier: carrier === "all" ? "" : carrier })}>
+                      <Select.Trigger className="min-w-[130px]" />
+                      <Select.Content><Select.Item value="all">全部</Select.Item>{Object.entries(carrierNames).map(([value, label]) => <Select.Item key={value} value={value}>{label}</Select.Item>)}</Select.Content>
+                    </Select.Root>
+                  </Field>
+                  <Field label="状态">
+                    <Select.Root value={taskQuery.state || "all"} onValueChange={(state) => updateTaskQuery({ state: state === "all" ? "" : state })}>
+                      <Select.Trigger className="min-w-[130px]" />
+                      <Select.Content><Select.Item value="all">全部</Select.Item><Select.Item value="healthy">线路正常</Select.Item><Select.Item value="probing">探测中</Select.Item><Select.Item value="observing">确认中</Select.Item><Select.Item value="switched">已切线</Select.Item><Select.Item value="unknown">无法识别</Select.Item><Select.Item value="pending">等待探测</Select.Item><Select.Item value="disabled">已暂停</Select.Item></Select.Content>
+                    </Select.Root>
+                  </Field>
+                  <Button variant="soft" color="gray" disabled={!taskQuery.keyword && !taskQuery.carrier && !taskQuery.state} onClick={() => setTaskQuery((current) => ({ ...current, page: 1, keyword: "", carrier: "", state: "" }))}>重置</Button>
+                </div>
+                <div className="shrink-0">
+                  <RouteTaskDialog nodes={nodes} onSaved={refreshTasksAfterChange}><Button><Plus size={16} />新建任务</Button></RouteTaskDialog>
+                </div>
               </div>
 
               {taskLoading ? <Loading text="" /> : taskData.tasks.length === 0 ? (

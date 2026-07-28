@@ -627,6 +627,7 @@
     "default_on": "默认开启",
     "default_on_description": "开启后，新加入的服务器会自动启用此监测；已存在的服务器不受影响。",
     "default_on_short": "默认开启",
+    "description": "配置并管理节点延迟探测任务，持续记录网络时延与连通性。",
     "interval": "间隔",
     "server_view": "服务器视图",
     "target": "目标",

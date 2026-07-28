@@ -17,6 +17,7 @@ import {
   Flex,
   Select,
   Tabs,
+  Text,
   TextField,
 } from "@radix-ui/themes";
 import React from "react";
@@ -49,8 +50,13 @@ const InnerLayout = () => {
   }
   return (
     <Flex direction="column" gap="4" className="p-4">
-      <div className="flex justify-between items-center">
-        <label className="text-2xl font-bold">{t("ping.title")}</label>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">{t("ping.title")}</h1>
+          <Text as="p" size="2" color="gray" className="mt-1">
+            {t("ping.description")}
+          </Text>
+        </div>
         <AddButton />
       </div>
       <Tabs.Root defaultValue="task">
