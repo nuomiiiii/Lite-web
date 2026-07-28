@@ -166,8 +166,14 @@ function RouteTaskDialog({
     event.preventDefault();
     setSaving(true);
     try {
-      await request(task?.id ? "/edit" : "/add", form);
-      toast.success(task?.id ? "任务已更新" : "任务已创建");
+      const result = await request(task?.id ? "/edit" : "/add", form);
+      if (task?.id) {
+        toast.success("任务已更新");
+      } else if (result?.dispatched) {
+        toast.success("任务已创建，首次探测已下发，通常 30 秒内返回");
+      } else {
+        toast.success("任务已创建，将在节点连接后按周期探测");
+      }
       setOpen(false);
       onSaved();
     } catch (error) {
@@ -262,6 +268,7 @@ function ReturnRouteContent() {
   const nodes = Array.isArray(nodeDetail) ? nodeDetail.map((node) => ({ uuid: node.uuid, name: node.name })) : [];
   const [overview, setOverview] = useState<Overview>({ tasks: [], statuses: [], events: [] });
   const [loading, setLoading] = useState(true);
+  const [probingTasks, setProbingTasks] = useState<Set<number>>(new Set());
 
   const refresh = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -288,7 +295,19 @@ function ReturnRouteContent() {
 
   const runNow = async (id?: number) => {
     if (!id) return;
-    try { await request("/probe", { id }); toast.success("探测任务已下发"); setTimeout(() => refresh(true), 1500); }
+    try {
+      await request("/probe", { id });
+      setProbingTasks((current) => new Set(current).add(id));
+      toast.success("探测任务已下发，逐跳探测通常需要 10-30 秒");
+      setTimeout(() => refresh(true), 1500);
+      window.setTimeout(() => {
+        setProbingTasks((current) => {
+          const next = new Set(current);
+          next.delete(id);
+          return next;
+        });
+      }, 45000);
+    }
     catch (error) { toast.error(error instanceof Error ? error.message : "下发失败"); }
   };
   const remove = async (task: Task) => {
@@ -331,10 +350,10 @@ function ReturnRouteContent() {
                     <td className="p-3"><div className="font-medium">{task.name}</div><div className="mt-1 text-xs text-gray-500">{task.client_info?.name || task.client}</div></td>
                     <td className="p-3"><div>{carrierNames[task.carrier]}</div><div className="mt-1 text-xs text-gray-500">{task.region} · IPv{task.ip_version}</div></td>
                     <td className="p-3"><div><span className="text-gray-500">当前 </span><strong>{status?.current_line || "-"}</strong></div><div className="mt-1 text-xs text-gray-500">预期 {task.expected_line}</div></td>
-                    <td className="p-3">{stateBadge(status)}{status?.candidate_line && <div className="mt-1 text-xs text-amber-600">{status.candidate_line} {status.candidate_count}/{needed}</div>}{(status?.confidence ?? 0) > 0 && <div className="mt-1 text-xs text-gray-500">置信度 {((status?.confidence ?? 0) * 100).toFixed(0)}%</div>}</td>
+                    <td className="p-3">{probingTasks.has(task.id || 0) ? <Badge color="blue"><RefreshCw size={12} className="mr-1 animate-spin" />探测中</Badge> : stateBadge(status)}{status?.candidate_line && <div className="mt-1 text-xs text-amber-600">{status.candidate_line} {status.candidate_count}/{needed}</div>}{(status?.confidence ?? 0) > 0 && <div className="mt-1 text-xs text-gray-500">置信度 {((status?.confidence ?? 0) * 100).toFixed(0)}%</div>}</td>
                     <td className="max-w-[280px] p-3"><div className="flex flex-wrap gap-1">{status?.asn_path?.length ? status.asn_path.map((asn) => <Badge key={asn} color="gray" variant="soft">{asn}</Badge>) : <span className="text-gray-400">-</span>}</div>{status?.route_path?.length ? <details className="mt-2 text-xs text-gray-500"><summary className="cursor-pointer">查看完整路径</summary><div className="mt-2 max-h-48 overflow-auto whitespace-pre font-mono leading-5">{status?.route_path?.join("\n")}</div></details> : null}{status?.last_error && <div className="mt-2 max-w-xs text-xs text-red-600">{status.last_error}</div>}</td>
                     <td className="p-3 text-gray-600">{formatTime(status?.last_checked_at)}<div className="mt-1 text-xs text-gray-400">每 {Math.round(task.interval / 60)} 分钟</div></td>
-                    <td className="p-3"><Flex justify="end" gap="1"><IconButton variant="ghost" title="立即探测" onClick={() => runNow(task.id)}><Play size={16} /></IconButton><RouteTaskDialog task={task} nodes={nodes} onSaved={() => refresh()}><IconButton variant="ghost" title="编辑"><Pencil size={16} /></IconButton></RouteTaskDialog><IconButton variant="ghost" color="red" title="删除" onClick={() => remove(task)}><Trash2 size={16} /></IconButton></Flex></td>
+                    <td className="p-3"><Flex justify="end" gap="1"><IconButton variant="ghost" title={probingTasks.has(task.id || 0) ? "探测中" : "立即探测"} disabled={probingTasks.has(task.id || 0)} onClick={() => runNow(task.id)}>{probingTasks.has(task.id || 0) ? <RefreshCw size={16} className="animate-spin" /> : <Play size={16} />}</IconButton><RouteTaskDialog task={task} nodes={nodes} onSaved={() => refresh()}><IconButton variant="ghost" title="编辑"><Pencil size={16} /></IconButton></RouteTaskDialog><IconButton variant="ghost" color="red" title="删除" onClick={() => remove(task)}><Trash2 size={16} /></IconButton></Flex></td>
                   </tr>;
                 })}
               </tbody>
