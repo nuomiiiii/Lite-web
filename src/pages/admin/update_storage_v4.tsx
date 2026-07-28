@@ -29,6 +29,8 @@ type MigrationSummary = {
   layout: string;
   source_rows: number;
   legacy_blocks: number;
+  legacy_digest_blocks: number;
+  legacy_axis_blocks: number;
 };
 
 type MigrationStatus = {
@@ -37,6 +39,7 @@ type MigrationStatus = {
   current: number;
   total: number;
   preserved: number;
+  deferred: number;
   progress: number;
   elapsed_ms: number;
   summary: MigrationSummary;
@@ -206,13 +209,21 @@ export default function StorageV4Upgrade() {
                   </Text>
                 </Flex>
                 <Progress value={status?.progress ?? 0} size="3" />
-                <div className="grid min-w-0 gap-3 border-t pt-4 sm:grid-cols-3" style={{ borderColor: "var(--gray-a5)" }}>
+                <div className="grid min-w-0 gap-3 border-t pt-4 sm:grid-cols-2 lg:grid-cols-4" style={{ borderColor: "var(--gray-a5)" }}>
                   <Metric label={t(`${I18N_PREFIX}.preserved`)} value={formatNumber(status?.preserved ?? 0)} />
+                  <Metric label={t(`${I18N_PREFIX}.deferred`)} value={formatNumber(status?.deferred ?? 0)} />
                   <Metric label={t(`${I18N_PREFIX}.source_rows`)} value={formatNumber(status?.summary.source_rows ?? 0)} />
                   <Metric label={t(`${I18N_PREFIX}.elapsed`)} value={formatElapsed(status?.elapsed_ms ?? 0)} />
                 </div>
               </Flex>
             </section>
+          )}
+
+          {(status?.deferred ?? 0) > 0 && status?.state !== "failed" && (
+            <Callout.Root color="amber" variant="surface">
+              <Callout.Icon><AlertTriangle size={18} /></Callout.Icon>
+              <Callout.Text>{t(`${I18N_PREFIX}.deferred_hint`, { count: status?.deferred ?? 0 })}</Callout.Text>
+            </Callout.Root>
           )}
 
           {status?.state === "failed" && (

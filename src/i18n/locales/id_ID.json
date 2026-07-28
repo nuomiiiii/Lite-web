@@ -1120,6 +1120,8 @@
       "completed_description": "Layanan normal sedang dimulai. Anda akan segera kembali ke beranda.",
       "completed_title": "Migrasi penyimpanan selesai",
       "elapsed": "Waktu berlalu",
+      "deferred": "Ditunda",
+      "deferred_hint": "{{count}} agregat lama tidak dapat dialihkan tanpa kehilangan data. Digest asli dipertahankan dan konversinya ditunda; migrasi lain serta layanan tetap dapat dimulai.",
       "failed_hint": "Transaksi migrasi telah dibatalkan. Periksa kesalahan lalu coba lagi tanpa mengganti basis data.",
       "failed_title": "Migrasi penyimpanan belum selesai",
       "loading": "Memuat status migrasi",

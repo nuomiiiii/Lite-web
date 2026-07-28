@@ -1120,6 +1120,8 @@
       "completed_description": "一般服務正在啟動，即將返回首頁。",
       "completed_title": "儲存遷移已完成",
       "elapsed": "已用時間",
+      "deferred": "已延後",
+      "deferred_hint": "{{count}} 項舊彙總無法無損接力，已保留原始 digest 並延後轉換；其餘遷移與服務啟動不受影響。",
       "failed_hint": "本次遷移交易已回復。請檢查錯誤後直接重試，不要替換資料庫檔案。",
       "failed_title": "儲存遷移未完成",
       "loading": "正在取得遷移狀態",

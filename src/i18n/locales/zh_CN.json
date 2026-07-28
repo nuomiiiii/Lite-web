@@ -1219,6 +1219,8 @@
       "completed_description": "普通服务正在启动，即将返回主页。",
       "completed_title": "存储迁移已完成",
       "elapsed": "已用时间",
+      "deferred": "已延后",
+      "deferred_hint": "{{count}} 项旧汇总无法无损接力，已保留原始 digest 并延后转换；其余迁移和服务启动不受影响。",
       "failed_hint": "本次迁移事务已回滚。请检查错误后直接重试，不要替换数据库文件。",
       "failed_title": "存储迁移未完成",
       "loading": "正在获取迁移状态",

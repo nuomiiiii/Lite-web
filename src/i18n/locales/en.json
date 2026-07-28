@@ -1135,6 +1135,8 @@
       "completed_description": "The normal service is starting. You will return home shortly.",
       "completed_title": "Storage migration complete",
       "elapsed": "Elapsed",
+      "deferred": "Deferred",
+      "deferred_hint": "{{count}} legacy rollups could not be handed off losslessly. Their original digests were preserved and deferred; the remaining migration and service startup can continue.",
       "failed_hint": "The migration transaction was rolled back. Check the error, then retry without replacing the database.",
       "failed_title": "Storage migration did not finish",
       "loading": "Loading migration status",
