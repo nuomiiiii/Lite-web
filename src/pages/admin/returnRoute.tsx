@@ -99,6 +99,8 @@ const lineOptions: Record<Task["carrier"], string[]> = {
   unicom: ["9929", "4837"],
 };
 
+const allLineOptions = Object.values(lineOptions).flat();
+
 const carrierNames: Record<Task["carrier"], string> = {
   mobile: "中国移动",
   telecom: "中国电信",
@@ -158,7 +160,6 @@ function RouteTaskDialog({
     setForm((current) => ({
       ...current,
       carrier,
-      expected_line: lineOptions[carrier][0],
     }));
   };
 
@@ -223,7 +224,7 @@ function RouteTaskDialog({
             <Field label="预期线路">
               <Select.Root value={form.expected_line} onValueChange={(expected_line) => setForm({ ...form, expected_line })}>
                 <Select.Trigger className="w-full" />
-                <Select.Content>{lineOptions[form.carrier].map((line) => <Select.Item key={line} value={line}>{line}</Select.Item>)}</Select.Content>
+                <Select.Content>{allLineOptions.map((line) => <Select.Item key={line} value={line}>{line}</Select.Item>)}</Select.Content>
               </Select.Root>
             </Field>
             <Field label="探测协议">
