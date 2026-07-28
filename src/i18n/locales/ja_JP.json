@@ -664,6 +664,9 @@
         "compaction_progress": "メトリクス圧縮の進行状況",
         "current_metric": "現在のメトリクス",
         "cycle_written": "このサイクルで {{count}} 個の集約バケットを書き込みました",
+        "digest_handoff_hint": "元データは保持され、この状態は圧縮失敗としてカウントされません",
+        "digest_handoff_item": "{{metric}} · {{time}}",
+        "digest_handoff_title": "ダイジェスト引き継ぎ保留（{{count}}）",
         "health": {
           "attention": "確認が必要",
           "healthy": "正常に稼働中",
