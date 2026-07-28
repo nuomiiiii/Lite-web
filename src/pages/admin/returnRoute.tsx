@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
   Box,
@@ -16,9 +16,11 @@ import {
 import {
   Activity,
   AlertTriangle,
+  BookOpen,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
+  Download,
   History,
   Pencil,
   Play,
@@ -27,6 +29,7 @@ import {
   Route,
   Search,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import Loading from "@/components/loading";
@@ -98,6 +101,32 @@ type RouteEvent = {
 type TaskPage = { tasks: Task[]; statuses: Status[]; probing_task_ids: number[]; total: number; page: number; page_size: number };
 type RecordPage = { events: RouteEvent[]; total: number; page: number; page_size: number };
 type SummaryData = { tasks: number; healthy: number; switched: number; recent_events: number };
+type RuleDocument = {
+  schema_version: number;
+  rule_version: string;
+  asn_groups: Record<string, number[]>;
+  prefix_groups: Record<string, string[]>;
+  confidence: Record<string, number>;
+};
+type RuleStatus = {
+  source: "builtin" | "external";
+  rule_version: string;
+  schema_version: number;
+  loaded_at?: string;
+  external_path: string;
+  asn_rule_count: number;
+  manual_cidr_count: number;
+  bgp_cidr_count: number;
+  cidr_rule_count: number;
+  last_error?: string;
+  watching: boolean;
+  bgp_source_url: string;
+  bgp_generated_at?: string;
+  bgp_loaded_at?: string;
+  bgp_next_refresh_at?: string;
+  bgp_last_error?: string;
+};
+type RuleView = { status: RuleStatus; rules: RuleDocument };
 
 const defaults: Task = {
   name: "",
@@ -111,7 +140,7 @@ const defaults: Task = {
   interval: 180,
   switch_confirm: 2,
   recovery_confirm: 3,
-  cooldown: 240,
+  cooldown: 1800,
   notify: true,
   notify_recovery: true,
   enabled: true,
@@ -141,8 +170,22 @@ function toTaskPayload(form: TaskForm): Task {
 const lineOptions: Record<Task["carrier"], string[]> = {
   mobile: ["CMIN2", "CMI", "CMNET"],
   telecom: ["CN2 GIA", "CN2 GT", "163"],
-  unicom: ["9929", "4837"],
+  unicom: ["10099", "9929", "4837"],
 };
+
+const ruleGroupNames: Record<string, string> = {
+  cmin2: "CMIN2",
+  cmi: "CMI",
+  cmnet: "CMNET",
+  cn2_global: "CN2 GIA 入口",
+  cn2_backbone: "CN2 骨干",
+  telecom_163: "163",
+  unicom_10099: "10099",
+  unicom_9929: "9929",
+  unicom_4837: "4837",
+};
+
+const ruleGroupOrder = ["cmin2", "cmi", "cmnet", "cn2_global", "cn2_backbone", "telecom_163", "unicom_10099", "unicom_9929", "unicom_4837"];
 
 const allLineOptions = Object.values(lineOptions).flat();
 
@@ -334,7 +377,7 @@ function FormSection({ title, children }: { title: string; children: React.React
 function ReturnRouteContent() {
   const { nodeDetail, isLoading: nodesLoading } = useNodeDetails();
   const nodes = Array.isArray(nodeDetail) ? nodeDetail.map((node) => ({ uuid: node.uuid, name: node.name })) : [];
-  const [activeTab, setActiveTab] = useState<"tasks" | "records">("tasks");
+  const [activeTab, setActiveTab] = useState<"tasks" | "records" | "rules">("tasks");
   const [taskQuery, setTaskQuery] = useState({ page: 1, page_size: 10, keyword: "", carrier: "", state: "" });
   const [recordQuery, setRecordQuery] = useState({ page: 1, page_size: 10, keyword: "", range: "24h", kind: "", carrier: "", region: "", expected_line: "", actual_line: "" });
   const [taskData, setTaskData] = useState<TaskPage>({ tasks: [], statuses: [], probing_task_ids: [], total: 0, page: 1, page_size: 10 });
@@ -343,6 +386,10 @@ function ReturnRouteContent() {
   const [taskLoading, setTaskLoading] = useState(true);
   const [recordLoading, setRecordLoading] = useState(false);
   const [probingTasks, setProbingTasks] = useState<Set<number>>(new Set());
+  const [ruleView, setRuleView] = useState<RuleView | null>(null);
+  const [rulesLoading, setRulesLoading] = useState(false);
+  const [rulesBusy, setRulesBusy] = useState<"reload" | "refresh" | "upload" | "">("");
+  const ruleFileInput = useRef<HTMLInputElement>(null);
 
   const loadSummary = useCallback(async (quiet = false) => {
     try {
@@ -380,6 +427,17 @@ function ReturnRouteContent() {
     }
   }, [recordQuery]);
 
+  const loadRules = useCallback(async (quiet = false) => {
+    if (!quiet) setRulesLoading(true);
+    try {
+      setRuleView(await request("/rules"));
+    } catch (error) {
+      if (!quiet) toast.error(error instanceof Error ? error.message : "规则库加载失败");
+    } finally {
+      if (!quiet) setRulesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadSummary();
   }, [loadSummary]);
@@ -397,13 +455,18 @@ function ReturnRouteContent() {
   }, [activeTab, loadRecords, recordQuery.keyword]);
 
   useEffect(() => {
+    if (activeTab === "rules") loadRules();
+  }, [activeTab, loadRules]);
+
+  useEffect(() => {
     const timer = window.setInterval(() => {
       loadSummary(true);
       if (activeTab === "tasks") loadTasks(true);
-      else loadRecords(true);
+      else if (activeTab === "records") loadRecords(true);
+      else loadRules(true);
     }, 10000);
     return () => window.clearInterval(timer);
-  }, [activeTab, loadRecords, loadSummary, loadTasks]);
+  }, [activeTab, loadRecords, loadRules, loadSummary, loadTasks]);
 
   const statuses = useMemo(() => new Map(taskData.statuses.map((item) => [item.task_id, item])), [taskData.statuses]);
   const updateTaskQuery = (updates: Partial<typeof taskQuery>) => setTaskQuery((current) => ({ ...current, ...updates, page: updates.page ?? 1 }));
@@ -444,6 +507,60 @@ function ReturnRouteContent() {
     }
   };
 
+  const reloadRules = async () => {
+    setRulesBusy("reload");
+    try {
+      setRuleView(await request("/rules/reload", {}));
+      toast.success("本地规则已重新加载");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "重新加载失败");
+      loadRules(true);
+    } finally {
+      setRulesBusy("");
+    }
+  };
+
+  const refreshBGPRules = async () => {
+    setRulesBusy("refresh");
+    try {
+      setRuleView(await request("/rules/refresh", {}));
+      toast.success("BGP 网段规则已更新");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "BGP 网段更新失败");
+      loadRules(true);
+    } finally {
+      setRulesBusy("");
+    }
+  };
+
+  const importRules = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setRulesBusy("upload");
+    try {
+      const rules = JSON.parse(await file.text());
+      setRuleView(await request("/rules/update", { rules }));
+      toast.success("规则文件已校验并生效");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "规则文件导入失败");
+      loadRules(true);
+    } finally {
+      setRulesBusy("");
+    }
+  };
+
+  const exportRules = () => {
+    if (!ruleView?.rules) return;
+    const blob = new Blob([`${JSON.stringify(ruleView.rules, null, 2)}\n`], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "return-route-signatures.json";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (nodesLoading) return <Loading text="" />;
 
   return (
@@ -460,10 +577,11 @@ function ReturnRouteContent() {
         <Summary label="最近事件" value={summary.recent_events} icon={<History size={20} />} />
       </div>
 
-      <Tabs.Root value={activeTab} onValueChange={(value) => setActiveTab(value as "tasks" | "records")}>
+      <Tabs.Root value={activeTab} onValueChange={(value) => setActiveTab(value as "tasks" | "records" | "rules")}>
         <Tabs.List>
           <Tabs.Trigger value="tasks"><Route size={15} />监测任务</Tabs.Trigger>
           <Tabs.Trigger value="records"><History size={15} />监测记录</Tabs.Trigger>
+          <Tabs.Trigger value="rules"><BookOpen size={15} />规则库</Tabs.Trigger>
         </Tabs.List>
 
         <Box pt="4">
@@ -577,6 +695,61 @@ function ReturnRouteContent() {
               <PageControls page={recordQuery.page} pageSize={recordQuery.page_size} total={recordData.total} onPageChange={(page) => updateRecordQuery({ page })} onPageSizeChange={(page_size) => updateRecordQuery({ page_size })} />
             </div>
           </Tabs.Content>
+
+          <Tabs.Content value="rules">
+            {rulesLoading && !ruleView ? <Loading text="" /> : ruleView ? (
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <Text size="2" weight="medium">识别方式</Text>
+                    <Text as="p" size="2" color="gray" className="mt-1">本地骨干特征库（BGPtools 定时更新） + 有序路径判断 + Cymru/RIPEstat/BGPView 按需回退</Text>
+                  </div>
+                  <Flex gap="2" wrap="wrap">
+                    <Button variant="soft" color="gray" onClick={exportRules}><Download size={16} />导出规则</Button>
+                    <input ref={ruleFileInput} type="file" accept="application/json,.json" className="hidden" onChange={importRules} />
+                    <Button variant="soft" color="gray" loading={rulesBusy === "upload"} disabled={Boolean(rulesBusy)} onClick={() => ruleFileInput.current?.click()}><Upload size={16} />导入规则</Button>
+                    <Button variant="soft" color="gray" loading={rulesBusy === "reload"} disabled={Boolean(rulesBusy)} onClick={reloadRules}><RefreshCw size={16} />重新加载</Button>
+                    <Button loading={rulesBusy === "refresh"} disabled={Boolean(rulesBusy)} onClick={refreshBGPRules}><RefreshCw size={16} />更新 BGP</Button>
+                  </Flex>
+                </div>
+
+                <section className="border-y border-gray-200 py-4 dark:border-gray-800">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-4">
+                    <RuleStat label="当前版本" value={ruleView.status.rule_version || "-"} />
+                    <RuleStat label="规则来源" value={ruleView.status.source === "external" ? "外部规则" : "内置规则"} />
+                    <RuleStat label="热加载" value={ruleView.status.watching ? "运行中" : "未运行"} />
+                    <RuleStat label="最近加载" value={formatTime(ruleView.status.loaded_at)} />
+                    <RuleStat label="ASN 规则" value={String(ruleView.status.asn_rule_count)} />
+                    <RuleStat label="人工网段" value={String(ruleView.status.manual_cidr_count)} />
+                    <RuleStat label="BGP 网段" value={String(ruleView.status.bgp_cidr_count)} />
+                    <RuleStat label="网段合计" value={String(ruleView.status.cidr_rule_count)} />
+                    <RuleStat label="BGP 生成时间" value={formatTime(ruleView.status.bgp_generated_at)} />
+                    <RuleStat label="BGP 加载时间" value={formatTime(ruleView.status.bgp_loaded_at)} />
+                    <RuleStat label="下次自动更新" value={formatTime(ruleView.status.bgp_next_refresh_at)} />
+                    <RuleStat label="本地规则文件" value={ruleView.status.external_path || "-"} mono />
+                  </div>
+                </section>
+
+                {ruleView.status.last_error ? <Callout.Root color="red"><Callout.Icon><AlertTriangle size={16} /></Callout.Icon><Callout.Text>本地规则：{ruleView.status.last_error}</Callout.Text></Callout.Root> : null}
+                {ruleView.status.bgp_last_error ? <Callout.Root color="amber"><Callout.Icon><AlertTriangle size={16} /></Callout.Icon><Callout.Text>BGP 更新：{ruleView.status.bgp_last_error}</Callout.Text></Callout.Root> : null}
+
+                <section className="overflow-hidden border border-gray-200 dark:border-gray-800">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[760px] text-left text-sm">
+                      <thead className="bg-gray-50 text-sm text-gray-500 dark:bg-gray-900"><tr><th className="p-3">线路</th><th className="p-3">ASN</th><th className="p-3">人工网段特征</th></tr></thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                        {ruleGroupOrder.map((group) => <tr key={group} className="align-top">
+                          <td className="p-3 font-medium">{ruleGroupNames[group] || group}</td>
+                          <td className="p-3"><div className="flex flex-wrap gap-1">{ruleView.rules.asn_groups[group]?.length ? ruleView.rules.asn_groups[group].map((asn) => <Badge key={asn} color="gray" variant="soft">AS{asn}</Badge>) : <span className="text-gray-400">-</span>}</div></td>
+                          <td className="p-3"><div className="flex flex-wrap gap-1">{ruleView.rules.prefix_groups[group]?.length ? ruleView.rules.prefix_groups[group].map((prefix) => <Badge key={prefix} color="blue" variant="soft">{prefix}</Badge>) : <span className="text-gray-400">-</span>}</div></td>
+                        </tr>)}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
+            ) : <Callout.Root color="gray"><Callout.Text>规则库暂不可用</Callout.Text></Callout.Root>}
+          </Tabs.Content>
         </Box>
       </Tabs.Root>
     </div>
@@ -596,6 +769,10 @@ function recordRangeStart(range: string) {
 function Summary({ label, value, icon, tone = "gray" }: { label: string; value: number; icon: React.ReactNode; tone?: "gray" | "green" | "red" }) {
   const color = tone === "green" ? "text-green-600" : tone === "red" ? "text-red-600" : "text-gray-500";
   return <div className="flex min-h-24 items-center justify-between border border-gray-200 px-5 py-4 dark:border-gray-800"><div><div className="text-sm text-gray-500">{label}</div><div className="mt-1 text-2xl font-semibold">{value}</div></div><span className={color}>{icon}</span></div>;
+}
+
+function RuleStat({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return <div className="min-w-0"><div className="text-xs text-gray-500">{label}</div><div className={`mt-1 break-words text-sm ${mono ? "font-mono" : "font-medium"}`}>{value}</div></div>;
 }
 
 export default function ReturnRoutePage() {
