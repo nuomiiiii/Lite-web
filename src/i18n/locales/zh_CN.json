@@ -763,6 +763,9 @@
         "compaction_progress": "指标压缩进度",
         "current_metric": "当前指标",
         "cycle_written": "本轮已写入 {{count}} 个汇总桶",
+        "digest_handoff_hint": "原数据已保留，此状态不计为压缩失败",
+        "digest_handoff_item": "{{metric}} · {{time}}",
+        "digest_handoff_title": "摘要接力暂缓（{{count}}）",
         "health": {
           "attention": "需要关注",
           "healthy": "正常",
