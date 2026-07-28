@@ -536,6 +536,9 @@
     "title": "Latensi",
     "type": "Tipe"
   },
+  "return_route": {
+    "title": "Pemantauan Rute Balik"
+  },
   "pwa": {
     "browser": "Mode Peramban",
     "can_install": "Dapat Diinstal",

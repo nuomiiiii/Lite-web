@@ -536,6 +536,9 @@
     "title": "遅延監視",
     "type": "タイプ"
   },
+  "return_route": {
+    "title": "リターンルート監視"
+  },
   "pwa": {
     "browser": "ブラウザモード",
     "can_install": "インストール可能",

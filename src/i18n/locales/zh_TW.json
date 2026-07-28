@@ -536,6 +536,9 @@
     "title": "延遲監測",
     "type": "類型"
   },
+  "return_route": {
+    "title": "回程線路監測"
+  },
   "pwa": {
     "browser": "瀏覽器模式",
     "can_install": "可以安裝",

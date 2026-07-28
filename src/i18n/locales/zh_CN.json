@@ -635,6 +635,9 @@
     "title": "延迟监测",
     "type": "类型"
   },
+  "return_route": {
+    "title": "回程线路监测"
+  },
   "pwa": {
     "browser": "浏览器模式",
     "can_install": "可以安装",

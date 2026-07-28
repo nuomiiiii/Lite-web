@@ -551,6 +551,9 @@
     "title": "Latency",
     "type": "Type"
   },
+  "return_route": {
+    "title": "Return Route Monitoring"
+  },
   "pwa": {
     "browser": "Browser Mode",
     "can_install": "Can Install",
