@@ -664,6 +664,9 @@
         "compaction_progress": "指標壓縮進度",
         "current_metric": "目前指標",
         "cycle_written": "本輪已寫入 {{count}} 個彙總桶",
+        "digest_handoff_hint": "原始資料已保留，此狀態不計為壓縮失敗",
+        "digest_handoff_item": "{{metric}} · {{time}}",
+        "digest_handoff_title": "摘要接力暫緩（{{count}}）",
         "health": {
           "attention": "需要關注",
           "healthy": "正常",
