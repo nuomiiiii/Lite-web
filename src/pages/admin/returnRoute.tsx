@@ -15,8 +15,10 @@ import {
 } from "@radix-ui/themes";
 import {
   Activity,
+  AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  CheckCircle2,
   History,
   Pencil,
   Play,
@@ -87,6 +89,7 @@ type RouteEvent = {
 
 type TaskPage = { tasks: Task[]; statuses: Status[]; total: number; page: number; page_size: number };
 type RecordPage = { events: RouteEvent[]; total: number; page: number; page_size: number };
+type SummaryData = { tasks: number; healthy: number; switched: number; recent_events: number };
 
 const defaults: Task = {
   name: "",
@@ -299,9 +302,19 @@ function ReturnRouteContent() {
   const [recordQuery, setRecordQuery] = useState({ page: 1, page_size: 20, keyword: "", range: "24h", kind: "", carrier: "", region: "", expected_line: "", actual_line: "" });
   const [taskData, setTaskData] = useState<TaskPage>({ tasks: [], statuses: [], total: 0, page: 1, page_size: 20 });
   const [recordData, setRecordData] = useState<RecordPage>({ events: [], total: 0, page: 1, page_size: 20 });
+  const [summary, setSummary] = useState<SummaryData>({ tasks: 0, healthy: 0, switched: 0, recent_events: 0 });
   const [taskLoading, setTaskLoading] = useState(true);
   const [recordLoading, setRecordLoading] = useState(false);
   const [probingTasks, setProbingTasks] = useState<Set<number>>(new Set());
+
+  const loadSummary = useCallback(async (quiet = false) => {
+    try {
+      const data = await request("/summary");
+      setSummary({ tasks: data?.tasks || 0, healthy: data?.healthy || 0, switched: data?.switched || 0, recent_events: data?.recent_events || 0 });
+    } catch (error) {
+      if (!quiet) toast.error(error instanceof Error ? error.message : "概览加载失败");
+    }
+  }, []);
 
   const loadTasks = useCallback(async (quiet = false) => {
     if (!quiet) setTaskLoading(true);
@@ -329,6 +342,10 @@ function ReturnRouteContent() {
   }, [recordQuery]);
 
   useEffect(() => {
+    loadSummary();
+  }, [loadSummary]);
+
+  useEffect(() => {
     if (activeTab !== "tasks") return;
     const timer = window.setTimeout(() => loadTasks(), taskQuery.keyword ? 300 : 0);
     return () => window.clearTimeout(timer);
@@ -341,14 +358,28 @@ function ReturnRouteContent() {
   }, [activeTab, loadRecords, recordQuery.keyword]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => activeTab === "tasks" ? loadTasks(true) : loadRecords(true), 10000);
+    const timer = window.setInterval(() => {
+      loadSummary(true);
+      if (activeTab === "tasks") loadTasks(true);
+      else loadRecords(true);
+    }, 10000);
     return () => window.clearInterval(timer);
-  }, [activeTab, loadRecords, loadTasks]);
+  }, [activeTab, loadRecords, loadSummary, loadTasks]);
 
   const statuses = useMemo(() => new Map(taskData.statuses.map((item) => [item.task_id, item])), [taskData.statuses]);
   const updateTaskQuery = (updates: Partial<typeof taskQuery>) => setTaskQuery((current) => ({ ...current, ...updates, page: updates.page ?? 1 }));
   const updateRecordQuery = (updates: Partial<typeof recordQuery>) => setRecordQuery((current) => ({ ...current, ...updates, page: updates.page ?? 1 }));
-  const refreshTasksAfterChange = () => taskQuery.page === 1 ? loadTasks() : updateTaskQuery({ page: 1 });
+  const refreshTasksAfterChange = () => {
+    loadSummary(true);
+    if (taskQuery.page === 1) loadTasks();
+    else updateTaskQuery({ page: 1 });
+  };
+
+  const refreshCurrent = () => {
+    loadSummary();
+    if (activeTab === "tasks") loadTasks();
+    else loadRecords();
+  };
 
   const runNow = async (id?: number) => {
     if (!id) return;
@@ -384,9 +415,19 @@ function ReturnRouteContent() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-5 p-2 sm:p-4">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">回程线路监测</h1>
-        <IconButton variant="soft" color="gray" title="刷新" onClick={() => activeTab === "tasks" ? loadTasks() : loadRecords()}><RefreshCw size={16} /></IconButton>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div><h1 className="text-xl font-semibold">回程线路监测</h1><p className="mt-1 text-sm text-gray-500">识别移动、电信、联通回程线路，确认切线后告警，恢复后自动通知。</p></div>
+        <Flex gap="2">
+          <IconButton variant="soft" color="gray" title="刷新" onClick={refreshCurrent}><RefreshCw size={16} /></IconButton>
+          <RouteTaskDialog nodes={nodes} onSaved={refreshTasksAfterChange}><Button><Plus size={16} />新建任务</Button></RouteTaskDialog>
+        </Flex>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Summary label="监测任务" value={summary.tasks} icon={<Route size={18} />} />
+        <Summary label="线路正常" value={summary.healthy} tone="green" icon={<CheckCircle2 size={18} />} />
+        <Summary label="已确认切线" value={summary.switched} tone="red" icon={<AlertTriangle size={18} />} />
+        <Summary label="最近事件" value={summary.recent_events} icon={<History size={18} />} />
       </div>
 
       <Tabs.Root value={activeTab} onValueChange={(value) => setActiveTab(value as "tasks" | "records")}>
@@ -417,7 +458,6 @@ function ReturnRouteContent() {
                   </Select.Root>
                 </Field>
                 <Button variant="soft" color="gray" disabled={!taskQuery.keyword && !taskQuery.carrier && !taskQuery.state} onClick={() => setTaskQuery((current) => ({ ...current, page: 1, keyword: "", carrier: "", state: "" }))}>重置</Button>
-                <div className="ml-auto"><RouteTaskDialog nodes={nodes} onSaved={refreshTasksAfterChange}><Button><Plus size={16} />新建任务</Button></RouteTaskDialog></div>
               </div>
 
               {taskLoading ? <Loading text="" /> : taskData.tasks.length === 0 ? (
@@ -516,6 +556,11 @@ function PageControls({ page, pageSize, total, onPageChange, onPageSizeChange }:
 function recordRangeStart(range: string) {
   const hours = range === "24h" ? 24 : range === "7d" ? 24 * 7 : range === "30d" ? 24 * 30 : 0;
   return hours ? new Date(Date.now() - hours * 60 * 60 * 1000).toISOString() : undefined;
+}
+
+function Summary({ label, value, icon, tone = "gray" }: { label: string; value: number; icon: React.ReactNode; tone?: "gray" | "green" | "red" }) {
+  const color = tone === "green" ? "text-green-600" : tone === "red" ? "text-red-600" : "text-gray-500";
+  return <div className="flex min-h-20 items-center justify-between border border-gray-200 px-4 py-3 dark:border-gray-800"><div><div className="text-xs text-gray-500">{label}</div><div className="mt-1 text-xl font-semibold">{value}</div></div><span className={color}>{icon}</span></div>;
 }
 
 export default function ReturnRoutePage() {
