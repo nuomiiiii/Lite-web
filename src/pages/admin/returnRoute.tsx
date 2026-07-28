@@ -55,10 +55,11 @@ type Task = {
   enabled: boolean;
 };
 
-type TaskForm = Omit<Task, "interval" | "switch_confirm" | "recovery_confirm"> & {
+type TaskForm = Omit<Task, "interval" | "switch_confirm" | "recovery_confirm" | "cooldown"> & {
   interval: string;
   switch_confirm: string;
   recovery_confirm: string;
+  cooldown: string;
 };
 
 type Status = {
@@ -110,7 +111,7 @@ const defaults: Task = {
   interval: 180,
   switch_confirm: 2,
   recovery_confirm: 3,
-  cooldown: 1800,
+  cooldown: 240,
   notify: true,
   notify_recovery: true,
   enabled: true,
@@ -123,6 +124,7 @@ function toTaskForm(task?: Task): TaskForm {
     interval: String(value.interval),
     switch_confirm: String(value.switch_confirm),
     recovery_confirm: String(value.recovery_confirm),
+    cooldown: String(value.cooldown),
   };
 }
 
@@ -132,6 +134,7 @@ function toTaskPayload(form: TaskForm): Task {
     interval: Number(form.interval),
     switch_confirm: Number(form.switch_confirm),
     recovery_confirm: Number(form.recovery_confirm),
+    cooldown: Number(form.cooldown),
   };
 }
 
@@ -301,7 +304,10 @@ function RouteTaskDialog({
           </FormSection>
 
           <FormSection title="通知与状态">
-            <div className="flex flex-col gap-3 sm:col-span-2">
+            <Field label="切线通知冷却时间（秒）">
+              <TextField.Root required type="number" min="0" max="604800" step="1" value={form.cooldown} onChange={(e) => setForm({ ...form, cooldown: e.target.value })} />
+            </Field>
+            <div className="flex flex-col justify-end gap-3 pb-1">
               <label className="flex items-center justify-between gap-3 text-sm"><span>发送切线通知</span><Switch checked={form.notify} onCheckedChange={(notify) => setForm({ ...form, notify })} /></label>
               <label className="flex items-center justify-between gap-3 text-sm"><span>发送恢复通知</span><Switch checked={form.notify_recovery} onCheckedChange={(notify_recovery) => setForm({ ...form, notify_recovery })} /></label>
               <label className="flex items-center justify-between gap-3 text-sm"><span>启用任务</span><Switch checked={form.enabled} onCheckedChange={(enabled) => setForm({ ...form, enabled })} /></label>
