@@ -307,10 +307,10 @@ function ReturnRouteContent() {
   const { nodeDetail, isLoading: nodesLoading } = useNodeDetails();
   const nodes = Array.isArray(nodeDetail) ? nodeDetail.map((node) => ({ uuid: node.uuid, name: node.name })) : [];
   const [activeTab, setActiveTab] = useState<"tasks" | "records">("tasks");
-  const [taskQuery, setTaskQuery] = useState({ page: 1, page_size: 20, keyword: "", carrier: "", state: "" });
-  const [recordQuery, setRecordQuery] = useState({ page: 1, page_size: 20, keyword: "", range: "24h", kind: "", carrier: "", region: "", expected_line: "", actual_line: "" });
-  const [taskData, setTaskData] = useState<TaskPage>({ tasks: [], statuses: [], probing_task_ids: [], total: 0, page: 1, page_size: 20 });
-  const [recordData, setRecordData] = useState<RecordPage>({ events: [], total: 0, page: 1, page_size: 20 });
+  const [taskQuery, setTaskQuery] = useState({ page: 1, page_size: 10, keyword: "", carrier: "", state: "" });
+  const [recordQuery, setRecordQuery] = useState({ page: 1, page_size: 10, keyword: "", range: "24h", kind: "", carrier: "", region: "", expected_line: "", actual_line: "" });
+  const [taskData, setTaskData] = useState<TaskPage>({ tasks: [], statuses: [], probing_task_ids: [], total: 0, page: 1, page_size: 10 });
+  const [recordData, setRecordData] = useState<RecordPage>({ events: [], total: 0, page: 1, page_size: 10 });
   const [summary, setSummary] = useState<SummaryData>({ tasks: 0, healthy: 0, switched: 0, recent_events: 0 });
   const [taskLoading, setTaskLoading] = useState(true);
   const [recordLoading, setRecordLoading] = useState(false);
@@ -422,14 +422,14 @@ function ReturnRouteContent() {
     <div className="flex w-full min-w-0 flex-col gap-4 p-4">
       <div>
         <h1 className="text-2xl font-bold">回程线路监测</h1>
-        <p className="mt-1 text-sm text-gray-500">识别移动、电信、联通回程线路，确认切线后告警，恢复后自动通知。</p>
+        <Text as="p" size="2" color="gray" className="mt-1">识别移动、电信、联通回程线路，确认切线后告警，恢复后自动通知。</Text>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Summary label="监测任务" value={summary.tasks} icon={<Route size={18} />} />
-        <Summary label="线路正常" value={summary.healthy} tone="green" icon={<CheckCircle2 size={18} />} />
-        <Summary label="已确认切线" value={summary.switched} tone="red" icon={<AlertTriangle size={18} />} />
-        <Summary label="最近事件" value={summary.recent_events} icon={<History size={18} />} />
+        <Summary label="监测任务" value={summary.tasks} icon={<Route size={20} />} />
+        <Summary label="线路正常" value={summary.healthy} tone="green" icon={<CheckCircle2 size={20} />} />
+        <Summary label="已确认切线" value={summary.switched} tone="red" icon={<AlertTriangle size={20} />} />
+        <Summary label="最近事件" value={summary.recent_events} icon={<History size={20} />} />
       </div>
 
       <Tabs.Root value={activeTab} onValueChange={(value) => setActiveTab(value as "tasks" | "records")}>
@@ -473,7 +473,7 @@ function ReturnRouteContent() {
                 <section className="overflow-hidden border border-gray-200 dark:border-gray-800">
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[1080px] text-left text-sm">
-                      <thead className="bg-gray-50 text-xs text-gray-500 dark:bg-gray-900"><tr><th className="p-3">任务 / 节点</th><th className="p-3">运营商 / 地区</th><th className="p-3">线路</th><th className="p-3">状态</th><th className="p-3">关键 ASN</th><th className="p-3">最后探测</th><th className="p-3 text-right">操作</th></tr></thead>
+                      <thead className="bg-gray-50 text-sm text-gray-500 dark:bg-gray-900"><tr><th className="p-3">任务 / 节点</th><th className="p-3">运营商 / 地区</th><th className="p-3">线路</th><th className="p-3">状态</th><th className="p-3">关键 ASN</th><th className="p-3">最后探测</th><th className="p-3 text-right">操作</th></tr></thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                         {taskData.tasks.map((task) => {
                           const status = statuses.get(task.id || 0);
@@ -529,13 +529,13 @@ function ReturnRouteContent() {
                 <section className="overflow-hidden border border-gray-200 dark:border-gray-800">
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[1120px] text-left text-sm">
-                      <thead className="bg-gray-50 text-xs text-gray-500 dark:bg-gray-900"><tr><th className="p-3">发生时间</th><th className="p-3">类型</th><th className="p-3">任务 / 节点</th><th className="p-3">目标</th><th className="p-3">预期线路</th><th className="p-3">线路变化</th><th className="p-3">关键 ASN</th><th className="p-3">路径</th></tr></thead>
+                      <thead className="bg-gray-50 text-sm text-gray-500 dark:bg-gray-900"><tr><th className="p-3">发生时间</th><th className="p-3">类型</th><th className="p-3">任务 / 节点</th><th className="p-3">目标</th><th className="p-3">预期线路</th><th className="p-3">线路变化</th><th className="p-3">关键 ASN</th><th className="p-3">路径</th></tr></thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                         {recordData.events.map((event) => <tr key={event.id} className="align-top hover:bg-gray-50/60 dark:hover:bg-gray-900/50">
                           <td className="p-3 whitespace-nowrap">{formatTime(event.occurred_at)}</td>
                           <td className="p-3"><Badge color={event.kind === "recovery" ? "green" : "red"}>{event.kind === "recovery" ? "恢复" : "切线"}</Badge></td>
                           <td className="p-3"><div className="font-medium">{event.task_name || `#${event.task_id}`}</div><div className="mt-1 text-xs text-gray-500">{event.node_name || event.client}</div></td>
-                          <td className="p-3"><div className="font-mono text-xs">{event.target || "-"}</div><div className="mt-1 text-xs text-gray-500">{event.carrier ? carrierNames[event.carrier] : "-"} · {event.region || "未标记"} · IPv{event.ip_version || 4}</div></td>
+                          <td className="p-3"><div>{event.target || "-"}</div><div className="mt-1 text-xs text-gray-500">{event.carrier ? carrierNames[event.carrier] : "-"} · {event.region || "未标记"} · IPv{event.ip_version || 4}</div></td>
                           <td className="p-3 font-medium">{event.expected_line || "-"}</td>
                           <td className="p-3 whitespace-nowrap"><span>{event.from_line || "-"}</span><span className="px-2 text-gray-400">→</span><strong>{event.to_line}</strong></td>
                           <td className="max-w-[260px] p-3"><div className="flex flex-wrap gap-1">{event.asn_path?.length ? event.asn_path.map((asn) => <Badge key={asn} color="gray" variant="soft">{asn}</Badge>) : <span className="text-gray-400">-</span>}</div></td>
@@ -557,7 +557,7 @@ function ReturnRouteContent() {
 
 function PageControls({ page, pageSize, total, onPageChange, onPageSizeChange }: { page: number; pageSize: number; total: number; onPageChange: (page: number) => void; onPageSizeChange: (pageSize: number) => void }) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
-  return <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500"><span>共 {total} 条</span><Flex align="center" gap="2"><Select.Root value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}><Select.Trigger /><Select.Content><Select.Item value="20">20 条/页</Select.Item><Select.Item value="50">50 条/页</Select.Item><Select.Item value="100">100 条/页</Select.Item></Select.Content></Select.Root><IconButton variant="soft" color="gray" title="上一页" disabled={page <= 1} onClick={() => onPageChange(page - 1)}><ChevronLeft size={16} /></IconButton><span className="min-w-[76px] text-center">{page} / {pages}</span><IconButton variant="soft" color="gray" title="下一页" disabled={page >= pages} onClick={() => onPageChange(page + 1)}><ChevronRight size={16} /></IconButton></Flex></div>;
+  return <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500"><span>共 {total} 条</span><Flex align="center" gap="2"><Select.Root value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}><Select.Trigger /><Select.Content><Select.Item value="10">10 条/页</Select.Item><Select.Item value="20">20 条/页</Select.Item><Select.Item value="50">50 条/页</Select.Item></Select.Content></Select.Root><IconButton variant="soft" color="gray" title="上一页" disabled={page <= 1} onClick={() => onPageChange(page - 1)}><ChevronLeft size={16} /></IconButton><span className="min-w-[76px] text-center">{page} / {pages}</span><IconButton variant="soft" color="gray" title="下一页" disabled={page >= pages} onClick={() => onPageChange(page + 1)}><ChevronRight size={16} /></IconButton></Flex></div>;
 }
 
 function recordRangeStart(range: string) {
@@ -567,7 +567,7 @@ function recordRangeStart(range: string) {
 
 function Summary({ label, value, icon, tone = "gray" }: { label: string; value: number; icon: React.ReactNode; tone?: "gray" | "green" | "red" }) {
   const color = tone === "green" ? "text-green-600" : tone === "red" ? "text-red-600" : "text-gray-500";
-  return <div className="flex min-h-20 items-center justify-between border border-gray-200 px-4 py-3 dark:border-gray-800"><div><div className="text-xs text-gray-500">{label}</div><div className="mt-1 text-xl font-semibold">{value}</div></div><span className={color}>{icon}</span></div>;
+  return <div className="flex min-h-24 items-center justify-between border border-gray-200 px-5 py-4 dark:border-gray-800"><div><div className="text-sm text-gray-500">{label}</div><div className="mt-1 text-2xl font-semibold">{value}</div></div><span className={color}>{icon}</span></div>;
 }
 
 export default function ReturnRoutePage() {

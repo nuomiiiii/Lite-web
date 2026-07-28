@@ -171,7 +171,7 @@ const AddButton: React.FC = () => {
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-start gap-2">
                 <NodeSelectorDialog value={selected} onChange={setSelected} />
-                <label className="text-md font-normal">
+                <label className="text-sm font-normal">
                   {t("common.selected", { count: selected.length })}
                 </label>
               </div>
