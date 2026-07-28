@@ -51,7 +51,14 @@ type Task = {
   recovery_confirm: number;
   cooldown: number;
   notify: boolean;
+  notify_recovery: boolean;
   enabled: boolean;
+};
+
+type TaskForm = Omit<Task, "interval" | "switch_confirm" | "recovery_confirm"> & {
+  interval: string;
+  switch_confirm: string;
+  recovery_confirm: string;
 };
 
 type Status = {
@@ -105,8 +112,28 @@ const defaults: Task = {
   recovery_confirm: 3,
   cooldown: 1800,
   notify: true,
+  notify_recovery: true,
   enabled: true,
 };
+
+function toTaskForm(task?: Task): TaskForm {
+  const value = { ...defaults, ...task };
+  return {
+    ...value,
+    interval: String(value.interval),
+    switch_confirm: String(value.switch_confirm),
+    recovery_confirm: String(value.recovery_confirm),
+  };
+}
+
+function toTaskPayload(form: TaskForm): Task {
+  return {
+    ...form,
+    interval: Number(form.interval),
+    switch_confirm: Number(form.switch_confirm),
+    recovery_confirm: Number(form.recovery_confirm),
+  };
+}
 
 const lineOptions: Record<Task["carrier"], string[]> = {
   mobile: ["CMIN2", "CMI", "CMNET"],
@@ -169,9 +196,9 @@ function RouteTaskDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<Task>({ ...defaults, ...task });
+  const [form, setForm] = useState<TaskForm>(() => toTaskForm(task));
 
-  useEffect(() => setForm({ ...defaults, ...task }), [task, open]);
+  useEffect(() => setForm(toTaskForm(task)), [task, open]);
 
   const setCarrier = (carrier: Task["carrier"]) => {
     setForm((current) => ({
@@ -188,7 +215,7 @@ function RouteTaskDialog({
     }
     setSaving(true);
     try {
-      const result = await request(task?.id ? "/edit" : "/add", form);
+      const result = await request(task?.id ? "/edit" : "/add", toTaskPayload(form));
       if (task?.id) {
         toast.success("任务已更新");
       } else if (result?.dispatched) {
@@ -263,25 +290,20 @@ function RouteTaskDialog({
               <Select.Root value="icmp" disabled><Select.Trigger className="w-full" /><Select.Content><Select.Item value="icmp">内置 ICMP（推荐）</Select.Item></Select.Content></Select.Root>
             </Field>
             <Field label="探测间隔（秒）">
-              <TextField.Root type="number" min="60" max="86400" value={form.interval} onChange={(e) => setForm({ ...form, interval: Number(e.target.value) })} />
+              <TextField.Root required type="number" min="60" max="86400" step="1" value={form.interval} onChange={(e) => setForm({ ...form, interval: e.target.value })} />
             </Field>
             <Field label="切线确认次数">
-              <TextField.Root type="number" min="1" max="20" value={form.switch_confirm} onChange={(e) => setForm({ ...form, switch_confirm: Number(e.target.value) })} />
+              <TextField.Root required type="number" min="1" max="20" step="1" value={form.switch_confirm} onChange={(e) => setForm({ ...form, switch_confirm: e.target.value })} />
             </Field>
             <Field label="恢复确认次数">
-              <TextField.Root type="number" min="1" max="20" value={form.recovery_confirm} onChange={(e) => setForm({ ...form, recovery_confirm: Number(e.target.value) })} />
+              <TextField.Root required type="number" min="1" max="20" step="1" value={form.recovery_confirm} onChange={(e) => setForm({ ...form, recovery_confirm: e.target.value })} />
             </Field>
           </FormSection>
 
           <FormSection title="通知与状态">
-            <Field label="重复通知间隔（秒）">
-              <TextField.Root type="number" min="0" max="604800" value={form.cooldown} onChange={(e) => setForm({ ...form, cooldown: Number(e.target.value) })} />
-            </Field>
-            <Field label="通知渠道">
-              <Select.Root value="default" disabled><Select.Trigger className="w-full" /><Select.Content><Select.Item value="default">系统默认通知渠道</Select.Item></Select.Content></Select.Root>
-            </Field>
-            <div className="flex flex-col justify-end gap-3 pb-1">
-              <label className="flex items-center justify-between gap-3 text-sm"><span>发送切线与恢复通知</span><Switch checked={form.notify} onCheckedChange={(notify) => setForm({ ...form, notify })} /></label>
+            <div className="flex flex-col gap-3 sm:col-span-2">
+              <label className="flex items-center justify-between gap-3 text-sm"><span>发送切线通知</span><Switch checked={form.notify} onCheckedChange={(notify) => setForm({ ...form, notify })} /></label>
+              <label className="flex items-center justify-between gap-3 text-sm"><span>发送恢复通知</span><Switch checked={form.notify_recovery} onCheckedChange={(notify_recovery) => setForm({ ...form, notify_recovery })} /></label>
               <label className="flex items-center justify-between gap-3 text-sm"><span>启用任务</span><Switch checked={form.enabled} onCheckedChange={(enabled) => setForm({ ...form, enabled })} /></label>
             </div>
           </FormSection>
