@@ -42,7 +42,11 @@ const databaseRuntimeStatusSchema = z.object({
   consecutive_checkpoint_failures: z.number().int().nonnegative(),
   consecutive_cycle_failures: z.number().int().nonnegative(),
   last_error: z.string().optional(),
-  digest_handoff_deferred: z.array(digestHandoffStatusSchema).default([]),
+  digest_handoff_deferred: z
+    .array(digestHandoffStatusSchema)
+    .nullable()
+    .default([])
+    .transform((value) => value ?? []),
 });
 const databaseInfoSchema = z.object({
   driver: z.string().trim().min(1),
