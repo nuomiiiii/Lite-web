@@ -244,7 +244,10 @@ function RouteTaskDialog({
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<TaskForm>(() => toTaskForm(task));
 
-  useEffect(() => setForm(toTaskForm(task)), [task, open]);
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) setForm(toTaskForm(task));
+    setOpen(nextOpen);
+  };
 
   const setCarrier = (carrier: Task["carrier"]) => {
     setForm((current) => ({
@@ -284,7 +287,7 @@ function RouteTaskDialog({
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
+    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Trigger>{children}</Dialog.Trigger>
       <Dialog.Content maxWidth="760px">
         <Dialog.Title>{task?.id ? "编辑回程监测" : "新建回程监测"}</Dialog.Title>
