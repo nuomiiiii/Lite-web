@@ -20,8 +20,6 @@ import type { MenuItem } from "../../types/menu";
 import { iconMap } from "../../utils/iconHelper";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
 import { TablerMenu2 } from "../Icones/Tabler";
-import LoginDialog from "../Login";
-import { useAccount } from "@/contexts/AccountContext";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";
 import Tips from "../ui/tips";
 import { CircleFadingArrowUp, Download, LoaderCircle } from "lucide-react";
@@ -157,7 +155,6 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   const [openSubMenus, setOpenSubMenus] = useState<{ [key: string]: boolean }>({
     // 默认所有子菜单关闭
   });
-  const { account } = useAccount();
   const isMobile = useIsMobile();
   const ishttps = window.location.protocol === "https:";
   const [t, i18n] = useTranslation();
@@ -629,15 +626,6 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               </span>
             </Flex>
             <Flex gap="3" align="center" overflowX="auto">
-              {account && !account.logged_in && (
-                <LoginDialog
-                  autoOpen={true}
-                  showSettings={false}
-                  onLoginSuccess={() => {
-                    window.location.reload();
-                  }}
-                />
-              )}
               <ThemeSwitch />
               <ColorSwitch />
               <LanguageSwitch />

@@ -170,7 +170,7 @@ function toTaskPayload(form: TaskForm): Task {
 const lineOptions: Record<Task["carrier"], string[]> = {
   mobile: ["CMIN2", "CMI", "CMNET"],
   telecom: ["CN2 GIA", "CN2 GT", "163"],
-  unicom: ["10099", "9929", "4837"],
+  unicom: ["CUG VIP", "CUG 优化", "9929", "4837"],
 };
 
 const ruleGroupNames: Record<string, string> = {
@@ -180,7 +180,7 @@ const ruleGroupNames: Record<string, string> = {
   cn2_global: "CN2 GIA 入口",
   cn2_backbone: "CN2 骨干",
   telecom_163: "163",
-  unicom_10099: "10099",
+  unicom_10099: "CUG 接入（AS10099）",
   unicom_9929: "9929",
   unicom_4837: "4837",
 };
