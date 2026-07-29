@@ -34,8 +34,16 @@ export function isAdminNodeBootstrapLoading(
   accountLoading: boolean,
   accountKey: string | null,
   loadedAccount: string | null,
+  hasPreauthenticatedNodeData = false,
 ) {
-  return accountLoading || Boolean(accountKey && loadedAccount !== accountKey);
+  return (
+    accountLoading ||
+    Boolean(
+      accountKey &&
+        loadedAccount !== accountKey &&
+        !hasPreauthenticatedNodeData,
+    )
+  );
 }
 
 export async function fetchAccount(

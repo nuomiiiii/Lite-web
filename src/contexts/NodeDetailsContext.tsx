@@ -40,6 +40,7 @@ interface NodeDetailsContextType {
   refresh: () => void;
 }
 const NodeDetailsContext = React.createContext<NodeDetailsContextType | undefined>(undefined);
+const PREAUTHENTICATED_NODE_DATA = "__preauthenticated__";
 
 const NodeDetailsProviderValue: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -49,6 +50,7 @@ const NodeDetailsProviderValue: React.FC<{ children: React.ReactNode }> = ({
   const [loadedAccount, setLoadedAccount] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const requestSequence = React.useRef(0);
+  const activeRequestAccount = React.useRef<string | null>(null);
   const accountKey = account?.logged_in
     ? account.uuid || "__authenticated__"
     : null;
@@ -56,10 +58,12 @@ const NodeDetailsProviderValue: React.FC<{ children: React.ReactNode }> = ({
     accountLoading,
     accountKey,
     loadedAccount,
+    loadedAccount === PREAUTHENTICATED_NODE_DATA,
   );
 
-  const refresh = React.useCallback(() => {
+  const load = React.useCallback((targetAccount: string) => {
     const sequence = ++requestSequence.current;
+    activeRequestAccount.current = targetAccount;
     setError(null);
 
     fetch("/api/admin/client/list", { cache: "no-store" })
@@ -82,24 +86,48 @@ const NodeDetailsProviderValue: React.FC<{ children: React.ReactNode }> = ({
       })
       .finally(() => {
         if (sequence === requestSequence.current) {
-          setLoadedAccount(accountKey);
+          activeRequestAccount.current = null;
+          setLoadedAccount(targetAccount);
         }
       });
-  }, [accountKey]);
+  }, []);
+
+  const refresh = React.useCallback(() => {
+    if (accountKey) load(accountKey);
+  }, [accountKey, load]);
 
   React.useEffect(() => {
-    if (accountLoading) return;
+    if (accountLoading) {
+      if (
+        !activeRequestAccount.current &&
+        loadedAccount !== PREAUTHENTICATED_NODE_DATA
+      ) {
+        load(PREAUTHENTICATED_NODE_DATA);
+      }
+      return;
+    }
 
     if (!account?.logged_in) {
       requestSequence.current += 1;
+      activeRequestAccount.current = null;
       setNodeDetail([]);
       setError(null);
       setLoadedAccount(null);
       return;
     }
+    if (!accountKey) return;
 
-    if (loadedAccount !== accountKey) refresh();
-  }, [accountKey, accountLoading, loadedAccount, refresh]);
+    if (loadedAccount === PREAUTHENTICATED_NODE_DATA) {
+      setLoadedAccount(accountKey);
+      return;
+    }
+    if (
+      loadedAccount !== accountKey &&
+      activeRequestAccount.current !== PREAUTHENTICATED_NODE_DATA
+    ) {
+      load(accountKey);
+    }
+  }, [account?.logged_in, accountKey, accountLoading, load, loadedAccount]);
 
   const value = React.useMemo(
     () => ({ nodeDetail, isLoading, error, refresh }),

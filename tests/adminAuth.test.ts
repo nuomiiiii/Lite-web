@@ -12,6 +12,10 @@ test("登录切换期间保持后台启动加载状态", () => {
   assert.equal(isAdminNodeBootstrapLoading(true, null, null), true);
   assert.equal(isAdminNodeBootstrapLoading(false, "account-1", null), true);
   assert.equal(
+    isAdminNodeBootstrapLoading(false, "account-1", "__preauthenticated__", true),
+    false,
+  );
+  assert.equal(
     isAdminNodeBootstrapLoading(false, "account-1", "account-1"),
     false,
   );
