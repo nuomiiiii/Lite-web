@@ -26,6 +26,7 @@ import { OfflineIndicator } from "./components/OfflineIndicator";
 import { Toaster } from "./components/ui/sonner";
 import { RPC2Provider } from "./contexts/RPC2Context";
 import { NodeListProvider } from "./contexts/NodeListContext";
+import { AccountProvider } from "./contexts/AccountContext";
 const App = () => {
 	const currentPath = window.location.pathname.replace(/\/$/, "");
 	const isUpgradeRoute =
@@ -95,17 +96,19 @@ const App = () => {
 			  {routing}
 			</>
 		  ) : (
-			<RPC2Provider>
-			  <PublicInfoProvider>
-				<NodeListProvider>
-				  <Toaster />
-				  <OfflineIndicator />
-				  {routing}
-				  <PWAInstallPrompt />
-				  <PWAUpdatePrompt />
-				</NodeListProvider>
-			  </PublicInfoProvider>
-			</RPC2Provider>
+			<AccountProvider>
+			  <RPC2Provider>
+				<PublicInfoProvider>
+				  <NodeListProvider>
+					<Toaster />
+					<OfflineIndicator />
+					{routing}
+					<PWAInstallPrompt />
+					<PWAUpdatePrompt />
+				  </NodeListProvider>
+				</PublicInfoProvider>
+			  </RPC2Provider>
+			</AccountProvider>
 		  )}
         </Theme>
       </ThemeContext.Provider>

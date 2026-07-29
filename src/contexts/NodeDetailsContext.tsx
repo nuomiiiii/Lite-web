@@ -1,4 +1,5 @@
-import React from 'react';
+import React from "react";
+import { useAccount } from "@/contexts/AccountContext";
 
 export type NodeDetail = {
   uuid: string;
@@ -32,37 +33,82 @@ export type NodeDetail = {
 };
 
 interface NodeDetailsContextType {
-  nodeDetail: NodeDetail[] | [];
+  nodeDetail: NodeDetail[];
   isLoading: boolean;
   error: string | null;
   refresh: () => void;
 }
 const NodeDetailsContext = React.createContext<NodeDetailsContextType | undefined>(undefined);
-export const NodeDetailsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [nodeDetail, setNodeDetail] = React.useState<NodeDetail[] | []>([]);
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
-  const [error, setError] = React.useState<string | null>(null);
 
-  const refresh = () => {
-    fetch("/api/admin/client/list")
-      .then((response) => response.json())
-      .then((data: NodeDetail[]) => {
-        setNodeDetail(data);
-        setIsLoading(false);
+const NodeDetailsProviderValue: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { account, loading: accountLoading } = useAccount();
+  const [nodeDetail, setNodeDetail] = React.useState<NodeDetail[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const requestSequence = React.useRef(0);
+
+  const refresh = React.useCallback(() => {
+    const sequence = ++requestSequence.current;
+    setError(null);
+
+    fetch("/api/admin/client/list", { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to fetch node details (${response.status})`);
+        }
+        return response.json();
       })
-      .catch((error) => {
-        setError(error.message);
-        setIsLoading(false);
+      .then((data: NodeDetail[]) => {
+        if (sequence !== requestSequence.current) return;
+        if (!Array.isArray(data)) {
+          throw new Error("Invalid node details response");
+        }
+        setNodeDetail(data);
+      })
+      .catch((error: unknown) => {
+        if (sequence !== requestSequence.current) return;
+        setError(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => {
+        if (sequence === requestSequence.current) setIsLoading(false);
       });
-  };
-    React.useEffect(() => {
-        setIsLoading(true);
-        refresh();
-    }, []);
+  }, []);
+
+  React.useEffect(() => {
+    if (accountLoading) return;
+
+    if (!account?.logged_in) {
+      requestSequence.current += 1;
+      setNodeDetail([]);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    refresh();
+  }, [account?.logged_in, accountLoading, refresh]);
+
+  const value = React.useMemo(
+    () => ({ nodeDetail, isLoading, error, refresh }),
+    [nodeDetail, isLoading, error, refresh],
+  );
+
   return (
-    <NodeDetailsContext.Provider value={{ nodeDetail, isLoading, error, refresh }}>
+    <NodeDetailsContext.Provider value={value}>
       {children}
     </NodeDetailsContext.Provider>
+  );
+};
+
+export const NodeDetailsProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const inherited = React.useContext(NodeDetailsContext);
+  return inherited ? children : (
+    <NodeDetailsProviderValue>{children}</NodeDetailsProviderValue>
   );
 };
 

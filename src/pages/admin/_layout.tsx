@@ -2,7 +2,11 @@ import { Outlet } from "react-router-dom";
 
 import AdminPanelBar from "../../components/admin/AdminPanelBar";
 import LoginDialog from "../../components/Login";
-import { AccountProvider, useAccount } from "@/contexts/AccountContext";
+import { useAccount } from "@/contexts/AccountContext";
+import {
+  NodeDetailsProvider,
+  useNodeDetails,
+} from "@/contexts/NodeDetailsContext";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
 import { Button, Callout, Dialog, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
@@ -111,9 +115,12 @@ const AdminAuthenticatedLayout = () => {
 
 const AdminGuard = () => {
   const accountState = useAccount();
+  const { isLoading: nodesLoading } = useNodeDetails();
   const view = resolveAdminAuthView(accountState);
 
-  if (view === "loading") return <AuthStatusScreen />;
+  if (view === "loading" || (view === "admin" && nodesLoading)) {
+    return <AuthStatusScreen />;
+  }
   if (view === "error") {
     return (
       <AuthStatusScreen
@@ -144,9 +151,9 @@ const AdminGuard = () => {
 };
 
 const AdminLayout = () => (
-  <AccountProvider>
+  <NodeDetailsProvider>
     <AdminGuard />
-  </AccountProvider>
+  </NodeDetailsProvider>
 );
 
 export default AdminLayout;
