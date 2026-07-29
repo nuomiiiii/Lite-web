@@ -3,9 +3,19 @@ import test from "node:test";
 
 import {
   fetchAccount,
+  isAdminNodeBootstrapLoading,
   resolveAdminAuthView,
   submitPasswordLogin,
 } from "../src/utils/adminAuth.ts";
+
+test("登录切换期间保持后台启动加载状态", () => {
+  assert.equal(isAdminNodeBootstrapLoading(true, null, null), true);
+  assert.equal(isAdminNodeBootstrapLoading(false, "account-1", null), true);
+  assert.equal(
+    isAdminNodeBootstrapLoading(false, "account-1", "account-1"),
+    false,
+  );
+});
 
 test("未登录时只进入登录视图", () => {
   assert.equal(

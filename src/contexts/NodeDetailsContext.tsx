@@ -1,5 +1,6 @@
 import React from "react";
 import { useAccount } from "@/contexts/AccountContext";
+import { isAdminNodeBootstrapLoading } from "@/utils/adminAuth";
 
 export type NodeDetail = {
   uuid: string;
@@ -45,9 +46,17 @@ const NodeDetailsProviderValue: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { account, loading: accountLoading } = useAccount();
   const [nodeDetail, setNodeDetail] = React.useState<NodeDetail[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [loadedAccount, setLoadedAccount] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const requestSequence = React.useRef(0);
+  const accountKey = account?.logged_in
+    ? account.uuid || "__authenticated__"
+    : null;
+  const isLoading = isAdminNodeBootstrapLoading(
+    accountLoading,
+    accountKey,
+    loadedAccount,
+  );
 
   const refresh = React.useCallback(() => {
     const sequence = ++requestSequence.current;
@@ -72,9 +81,11 @@ const NodeDetailsProviderValue: React.FC<{ children: React.ReactNode }> = ({
         setError(error instanceof Error ? error.message : String(error));
       })
       .finally(() => {
-        if (sequence === requestSequence.current) setIsLoading(false);
+        if (sequence === requestSequence.current) {
+          setLoadedAccount(accountKey);
+        }
       });
-  }, []);
+  }, [accountKey]);
 
   React.useEffect(() => {
     if (accountLoading) return;
@@ -83,13 +94,12 @@ const NodeDetailsProviderValue: React.FC<{ children: React.ReactNode }> = ({
       requestSequence.current += 1;
       setNodeDetail([]);
       setError(null);
-      setIsLoading(false);
+      setLoadedAccount(null);
       return;
     }
 
-    setIsLoading(true);
-    refresh();
-  }, [account?.logged_in, accountLoading, refresh]);
+    if (loadedAccount !== accountKey) refresh();
+  }, [accountKey, accountLoading, loadedAccount, refresh]);
 
   const value = React.useMemo(
     () => ({ nodeDetail, isLoading, error, refresh }),

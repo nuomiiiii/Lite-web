@@ -8,13 +8,14 @@ import {
   useNodeDetails,
 } from "@/contexts/NodeDetailsContext";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
-import { Button, Callout, Dialog, Flex, Spinner, Text } from "@radix-ui/themes";
+import { Button, Callout, Dialog, Flex } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CircleAlert, RefreshCw } from "lucide-react";
 import { Eula } from "@/utils/field";
 import { normalizeLanguage, readStoredLanguage } from "@/utils/language";
 import { resolveAdminAuthView } from "@/utils/adminAuth";
+import FullPageLoading from "@/components/FullPageLoading";
 
 const AuthStatusScreen = ({
   failed = false,
@@ -46,14 +47,7 @@ const AuthStatusScreen = ({
             {t("common.retry")}
           </Button>
         </>
-      ) : (
-        <>
-          <Spinner size="3" />
-          <Text size="2" color="gray">
-            {t("loading")}
-          </Text>
-        </>
-      )}
+      ) : null}
     </Flex>
   );
 };
@@ -118,8 +112,14 @@ const AdminGuard = () => {
   const { isLoading: nodesLoading } = useNodeDetails();
   const view = resolveAdminAuthView(accountState);
 
+  useEffect(() => {
+    if (view === "loading" || view === "admin") {
+      void import("./index");
+    }
+  }, [view]);
+
   if (view === "loading" || (view === "admin" && nodesLoading)) {
-    return <AuthStatusScreen />;
+    return <FullPageLoading />;
   }
   if (view === "error") {
     return (

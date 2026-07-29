@@ -30,6 +30,14 @@ export function resolveAdminAuthView({
   return account.logged_in ? "admin" : "login";
 }
 
+export function isAdminNodeBootstrapLoading(
+  accountLoading: boolean,
+  accountKey: string | null,
+  loadedAccount: string | null,
+) {
+  return accountLoading || Boolean(accountKey && loadedAccount !== accountKey);
+}
+
 export async function fetchAccount(
   fetcher: Fetcher = fetch,
 ): Promise<Account> {
