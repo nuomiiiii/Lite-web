@@ -680,6 +680,8 @@
         },
         "last_checkpoint": "Pemotongan terakhir yang berhasil",
         "last_error": "Kesalahan terbaru: {{error}}",
+        "checkpoint_in_progress": "Sedang berjalan",
+        "checkpoint_waiting_schedule": "Menunggu jadwal berikutnya",
         "next_checkpoint": "Perkiraan pemotongan berikutnya",
         "not_applicable": "Tidak berlaku untuk basis data eksternal",
         "not_started": "Menunggu proses pertama",

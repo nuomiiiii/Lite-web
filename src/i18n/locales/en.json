@@ -695,6 +695,8 @@
         },
         "last_checkpoint": "Last successful truncation",
         "last_error": "Latest error: {{error}}",
+        "checkpoint_in_progress": "In progress",
+        "checkpoint_waiting_schedule": "Waiting for the next scheduled run",
         "next_checkpoint": "Estimated next truncation",
         "not_applicable": "Not applicable to external databases",
         "not_started": "Waiting for first run",

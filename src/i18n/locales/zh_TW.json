@@ -680,6 +680,8 @@
         },
         "last_checkpoint": "最近截斷成功",
         "last_error": "最近錯誤：{{error}}",
+        "checkpoint_in_progress": "正在執行",
+        "checkpoint_waiting_schedule": "等待下一輪排程",
         "next_checkpoint": "預計下次截斷",
         "not_applicable": "外部資料庫不適用",
         "not_started": "等待首次執行",

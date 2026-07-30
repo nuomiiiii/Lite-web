@@ -300,6 +300,15 @@ function DatabaseRuntimePanel({ info }: { info: DatabaseInfo }) {
         shm: formatBytes(info.files.shm),
       })} · ${checkpointHint}`
     : checkpointHint;
+  const nextCheckpointAt = runtime.next_checkpoint_at
+    ? new Date(runtime.next_checkpoint_at)
+    : null;
+  const nextCheckpointValue =
+    runtime.compacting && runtime.total > 0 && runtime.progress >= runtime.total
+      ? t("settings.database.runtime_status.checkpoint_in_progress")
+      : nextCheckpointAt && !Number.isNaN(nextCheckpointAt.getTime()) && nextCheckpointAt.getTime() <= Date.now()
+        ? t("settings.database.runtime_status.checkpoint_waiting_schedule")
+        : formatRuntimeTime(runtime.next_checkpoint_at, unavailable);
 
   return (
     <section className="mt-4 border-t border-[var(--gray-a5)] pt-4">
@@ -361,7 +370,7 @@ function DatabaseRuntimePanel({ info }: { info: DatabaseInfo }) {
           label={t("settings.database.runtime_status.next_checkpoint")}
           value={
             runtime.checkpoint_applicable
-              ? formatRuntimeTime(runtime.next_checkpoint_at, unavailable)
+              ? nextCheckpointValue
               : t("settings.database.runtime_status.not_applicable")
           }
         />

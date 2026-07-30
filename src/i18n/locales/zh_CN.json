@@ -779,6 +779,8 @@
         },
         "last_checkpoint": "最近截断成功",
         "last_error": "最近错误：{{error}}",
+        "checkpoint_in_progress": "正在执行",
+        "checkpoint_waiting_schedule": "等待下一轮调度",
         "next_checkpoint": "预计下次截断",
         "not_applicable": "外置数据库不适用",
         "not_started": "等待首次运行",
