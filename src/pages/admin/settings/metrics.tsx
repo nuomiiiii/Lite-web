@@ -4,7 +4,6 @@ import {
   SettingCard,
   SettingCardLabel,
   SettingCardShortTextInput,
-  SettingCardSwitch,
 } from "@/components/admin/SettingCard";
 import {
   Table,
@@ -76,8 +75,6 @@ type MetricRetentionChange = {
 };
 
 const SAFE_RAW_RETENTION_DAYS = 1;
-const RETENTION_WARNING_CANCELED = new Error("retention warning canceled");
-
 type MetricTextField = "name" | "description";
 type TranslationFunction = ReturnType<typeof useTranslation>["t"];
 
@@ -199,37 +196,7 @@ function metricDescription(
 export default function MetricsSettings() {
   const { t } = useTranslation();
   const { settings, loading, error, updateMultipleSettings } = useSettings();
-  const { call } = useRPC2Call();
   const [saveError, setSaveError] = React.useState<string | null>(null);
-  const [retentionWarningOpen, setRetentionWarningOpen] = React.useState(false);
-  const retentionWarningResolver = React.useRef<
-    ((confirmed: boolean) => void) | null
-  >(null);
-
-  const resolveRetentionWarning = React.useCallback((confirmed: boolean) => {
-    const resolve = retentionWarningResolver.current;
-    retentionWarningResolver.current = null;
-    setRetentionWarningOpen(false);
-    resolve?.(confirmed);
-  }, []);
-
-  const confirmExtendedRawRetention = React.useCallback(
-    () =>
-      new Promise<boolean>((resolve) => {
-        retentionWarningResolver.current?.(false);
-        retentionWarningResolver.current = resolve;
-        setRetentionWarningOpen(true);
-      }),
-    [],
-  );
-
-  React.useEffect(
-    () => () => {
-      retentionWarningResolver.current?.(false);
-      retentionWarningResolver.current = null;
-    },
-    [],
-  );
 
   const saveMetricSettings = React.useCallback(
     async (changes: Partial<SettingsResponse>) => {
@@ -246,38 +213,7 @@ export default function MetricsSettings() {
     [t, updateMultipleSettings],
   );
 
-  const downsamplingEnabled = settings.metric_downsampling_enabled === true;
   const metricDatabaseDriver = resolveMetricDatabaseDriver(settings);
-
-  const handleDownsamplingChange = React.useCallback(
-    async (checked: boolean) => {
-      if (!checked) {
-        let definitions: MetricDefinition[];
-        try {
-          definitions = await call<unknown, MetricDefinition[]>(
-            "admin:listMetricDefinitions",
-            {},
-          );
-          setSaveError(null);
-        } catch (e) {
-          setSaveError(e instanceof Error ? e.message : String(e));
-          throw e;
-        }
-        const hasExtendedRetention =
-          Array.isArray(definitions) &&
-          definitions.some(
-            (metric) =>
-              toNumber(metric.retention_days, SAFE_RAW_RETENTION_DAYS) >
-              SAFE_RAW_RETENTION_DAYS,
-          );
-        if (hasExtendedRetention && !(await confirmExtendedRawRetention())) {
-          throw RETENTION_WARNING_CANCELED;
-        }
-      }
-      await saveMetricSettings({ metric_downsampling_enabled: checked });
-    },
-    [call, confirmExtendedRawRetention, saveMetricSettings],
-  );
 
   if (loading) {
     return <Loading />;
@@ -322,31 +258,11 @@ export default function MetricsSettings() {
         {t("settings.metrics.advanced_title")}
       </SettingCardLabel>
 
-      <SettingCardSwitch
-        title={t("settings.metrics.low_resource_title")}
-        description={t("settings.metrics.low_resource_description")}
-        label={t("settings.metrics.low_resource_enabled")}
-        defaultChecked={settings.low_resource_mode === true}
-        onChange={async (checked) => {
-          await saveMetricSettings({ low_resource_mode: checked });
-        }}
-      />
-
-      <SettingCardSwitch
-        title={t("settings.metrics.downsampling_title")}
-        description={t("settings.metrics.downsampling_description")}
-        label={t("settings.metrics.downsampling_enabled")}
-        defaultChecked={downsamplingEnabled}
-        onChange={handleDownsamplingChange}
-      />
-
       <MetricRetentionTable
         defaultRetentionDays={toNumber(
           settings.metric_retention_days,
           SAFE_RAW_RETENTION_DAYS,
         )}
-        downsamplingEnabled={downsamplingEnabled}
-        confirmExtendedRawRetention={confirmExtendedRawRetention}
       />
 
       <SettingCardShortTextInput
@@ -421,48 +337,14 @@ export default function MetricsSettings() {
       </SettingCardLabel>
       <MigrationCard />
 
-      <Dialog.Root
-        open={retentionWarningOpen}
-        onOpenChange={(open) => {
-          if (!open) resolveRetentionWarning(false);
-        }}
-      >
-        <Dialog.Content maxWidth="520px">
-          <Dialog.Title>
-            {t("settings.metrics.retention_warning_title")}
-          </Dialog.Title>
-          <Dialog.Description>
-            {t("settings.metrics.retention_warning_description")}
-          </Dialog.Description>
-          <Flex justify="end" gap="2" mt="4">
-            <Button
-              variant="soft"
-              color="gray"
-              onClick={() => resolveRetentionWarning(false)}
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              color="orange"
-              onClick={() => resolveRetentionWarning(true)}
-            >
-              {t("settings.metrics.retention_warning_continue")}
-            </Button>
-          </Flex>
-        </Dialog.Content>
-      </Dialog.Root>
     </Flex>
   );
 }
 
 function MetricRetentionTable({
   defaultRetentionDays,
-  downsamplingEnabled,
-  confirmExtendedRawRetention,
 }: {
   defaultRetentionDays: number;
-  downsamplingEnabled: boolean;
-  confirmExtendedRawRetention: () => Promise<boolean>;
 }) {
   const { t, i18n } = useTranslation();
   const { call } = useRPC2Call();
@@ -517,16 +399,6 @@ function MetricRetentionTable({
   const saveRetentionChanges = React.useCallback(
     async (changes: MetricRetentionChange[]) => {
       if (changes.length === 0) return true;
-      if (
-        !downsamplingEnabled &&
-        changes.some(
-          (change) => change.retention_days > SAFE_RAW_RETENTION_DAYS,
-        ) &&
-        !(await confirmExtendedRawRetention())
-      ) {
-        return false;
-      }
-
       setSaving(true);
       try {
         const results = await Promise.allSettled(
@@ -586,7 +458,7 @@ function MetricRetentionTable({
         setSaving(false);
       }
     },
-    [call, confirmExtendedRawRetention, downsamplingEnabled, t],
+    [call, t],
   );
 
   const handleSaveAll = async () => {
