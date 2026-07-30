@@ -1132,6 +1132,7 @@
       "phase_completed": "Migrasi selesai",
       "phase_encoding_points": "Mengenkode titik mentah menjadi blok tanpa kehilangan data",
       "phase_encoding_rollups": "Mengenkode data agregat menjadi blok terkompresi",
+      "phase_encoding_digests": "Mengonversi digest historis tanpa kehilangan data",
       "phase_sharing_point_axes": "Berbagi garis waktu titik mentah dengan waktu sampel yang sama",
       "phase_handoff_tiers": "Meneruskan data antar tingkat dan menghapus duplikasi",
       "phase_merging_ping_series": "Menggabungkan seri latensi dan kehilangan paket",

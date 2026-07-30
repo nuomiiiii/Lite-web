@@ -4,8 +4,20 @@ import type { RouteObject } from "react-router-dom";
 import React from "react";
 
 const Index = lazy(() => import("./pages/Index"));
-const AdminLayout = lazy(() => import("./pages/admin/_layout"));
-const Admin = lazy(() => import("./pages/admin"));
+const importAdminLayout = () => import("./pages/admin/_layout");
+const importAdminIndex = () => import("./pages/admin");
+let adminLayoutModule: ReturnType<typeof importAdminLayout> | undefined;
+let adminIndexModule: ReturnType<typeof importAdminIndex> | undefined;
+const loadAdminLayout = () => (adminLayoutModule ??= importAdminLayout());
+const loadAdminIndex = () => (adminIndexModule ??= importAdminIndex());
+
+export const preloadAdminEntry = () => {
+  void loadAdminLayout();
+  void loadAdminIndex();
+};
+
+const AdminLayout = lazy(loadAdminLayout);
+const Admin = lazy(loadAdminIndex);
 const NotFound = lazy(() => import("./pages/404"));
 
 export const routes: RouteObject[] = [

@@ -1231,6 +1231,7 @@
       "phase_completed": "迁移已完成",
       "phase_encoding_points": "正在将原始指标无损编码为数据块",
       "phase_encoding_rollups": "正在将汇总指标编码为压缩块",
+      "phase_encoding_digests": "正在无损转换历史摘要编码",
       "phase_handoff_tiers": "正在无损接力并清理重复的汇总层级",
       "phase_merging_ping_series": "正在合并延迟与丢包序列",
       "phase_normalizing_points": "正在整理原始指标存储结构",

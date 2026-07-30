@@ -336,6 +336,13 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
     let disposed = false;
     let heartbeat: number | undefined;
     let ws: WebSocket | undefined;
+    const abortController = new AbortController();
+    const clearHeartbeat = () => {
+      if (heartbeat !== undefined) {
+        window.clearInterval(heartbeat);
+        heartbeat = undefined;
+      }
+    };
 
     const connect = async () => {
       setConnectionState("connecting");
@@ -347,13 +354,17 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uuid: node.uuid, ...(otpCode ? { "2fa_code": otpCode } : {}) }),
+          signal: abortController.signal,
         });
-        const payload = await response.json();
+        const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
           if (response.status === 401) {
             setOtpOpen(true);
             setConnectionState("waiting");
             return;
+          }
+          if (response.status === 429) {
+            throw new Error("远程会话数量已满，请关闭不用的终端后重试");
           }
           throw new Error(payload?.message || "无法创建远程会话");
         }
@@ -366,6 +377,10 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
         ws.binaryType = "arraybuffer";
         socket.current = ws;
         ws.onopen = () => {
+          if (disposed) {
+            ws?.close();
+            return;
+          }
           ws?.send(JSON.stringify({ type: "auth", session_id: sessionID, ticket: browserTicket }));
           setConnectionState("waiting");
           heartbeat = window.setInterval(() => {
@@ -375,6 +390,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
           }, 10_000);
         };
         ws.onmessage = (event) => {
+          if (disposed) return;
           if (event.data instanceof ArrayBuffer) {
             terminal.current?.write(new Uint8Array(event.data));
             return;
@@ -406,10 +422,12 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
           }
         };
         ws.onerror = () => {
+          if (disposed) return;
           setConnectionState("error");
           setConnectionError("远程连接发生错误");
         };
         ws.onclose = () => {
+          clearHeartbeat();
           if (!disposed) {
             remoteReadyRef.current = false;
             setRemoteReady(false);
@@ -418,7 +436,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
           }
         };
       } catch (error) {
-        if (!disposed) {
+        if (!disposed && !(error instanceof DOMException && error.name === "AbortError")) {
           setConnectionState("error");
           setConnectionError(error instanceof Error ? error.message : "远程连接失败");
         }
@@ -427,8 +445,9 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
     void connect();
     return () => {
       disposed = true;
+      abortController.abort();
       remoteReadyRef.current = false;
-      if (heartbeat) window.clearInterval(heartbeat);
+      clearHeartbeat();
       if (ws?.readyState === WebSocket.OPEN || ws?.readyState === WebSocket.CONNECTING) ws.close();
       if (socket.current === ws) socket.current = null;
     };

@@ -5,7 +5,6 @@ import LoginDialog from "../../components/Login";
 import { useAccount } from "@/contexts/AccountContext";
 import {
   NodeDetailsProvider,
-  useNodeDetails,
 } from "@/contexts/NodeDetailsContext";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
 import { Button, Callout, Dialog, Flex } from "@radix-ui/themes";
@@ -109,16 +108,9 @@ const AdminAuthenticatedLayout = () => {
 
 const AdminGuard = () => {
   const accountState = useAccount();
-  const { isLoading: nodesLoading } = useNodeDetails();
   const view = resolveAdminAuthView(accountState);
 
-  useEffect(() => {
-    if (view === "loading" || view === "admin") {
-      void import("./index");
-    }
-  }, [view]);
-
-  if (view === "loading" || (view === "admin" && nodesLoading)) {
+  if (view === "loading") {
     return <FullPageLoading />;
   }
   if (view === "error") {

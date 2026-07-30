@@ -1132,6 +1132,7 @@
       "phase_completed": "遷移已完成",
       "phase_encoding_points": "正在將原始指標無損編碼為資料區塊",
       "phase_encoding_rollups": "正在將彙總指標編碼為壓縮區塊",
+      "phase_encoding_digests": "正在無損轉換歷史摘要編碼",
       "phase_sharing_point_axes": "正在共享相同採樣時刻的原始資料時間軸",
       "phase_handoff_tiers": "正在無損接力並清理重複的彙總層級",
       "phase_merging_ping_series": "正在合併延遲與丟包序列",

@@ -1147,6 +1147,7 @@
       "phase_completed": "Migration complete",
       "phase_encoding_points": "Encoding raw points into lossless blocks",
       "phase_encoding_rollups": "Encoding rollups into compressed blocks",
+      "phase_encoding_digests": "Losslessly converting historical digest blocks",
       "phase_sharing_point_axes": "Sharing raw point timelines with identical sample times",
       "phase_handoff_tiers": "Handing data off between tiers and removing duplicates",
       "phase_merging_ping_series": "Merging latency and packet-loss series",

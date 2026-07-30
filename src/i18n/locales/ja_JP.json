@@ -1132,6 +1132,7 @@
       "phase_completed": "移行が完了しました",
       "phase_encoding_points": "生のメトリクスを可逆ブロックへエンコードしています",
       "phase_encoding_rollups": "集約メトリクスを圧縮ブロックへエンコードしています",
+      "phase_encoding_digests": "履歴ダイジェストを可逆形式へ変換しています",
       "phase_sharing_point_axes": "同じ採取時刻を持つ生データの時間軸を共有しています",
       "phase_handoff_tiers": "階層間でデータを引き継ぎ、重複を削除しています",
       "phase_merging_ping_series": "遅延とパケットロスの系列を統合しています",
