@@ -35,6 +35,7 @@ import {
   getThemeConfigurationType,
   THEME_CONFIGURATION_MANAGED,
 } from "@/utils/themeConfiguration";
+import AdminPageTitle from "@/components/admin/AdminPageTitle";
 
 interface Theme {
   id: string;
@@ -449,11 +450,9 @@ const ThemePage = () => {
   }
 
   return (
-    <Box className="p-6 space-y-6">
+    <Box className="space-y-6">
       <Flex justify="between" align="center" gap="3" wrap="wrap">
-        <Text size="6" weight="bold">
-          {t("theme.title")}
-        </Text>
+        <AdminPageTitle>{t("theme.title")}</AdminPageTitle>
         <Flex gap="2">
           {activeThemeHasConfig && (
             <Button

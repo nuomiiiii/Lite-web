@@ -22,6 +22,7 @@ test("keeps the admin navigation in the intended groups", () => {
     menuConfig.menu.map((item) => item.path),
     [
       "/admin",
+      "/admin/servers",
       "/admin/monitoring",
       "/admin/remote-management",
       "/admin/notifications",

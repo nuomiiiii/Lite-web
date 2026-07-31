@@ -16,6 +16,7 @@ import {
 import React from "react";
 import { toast } from "sonner";
 import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
+import AdminPageTitle from "@/components/admin/AdminPageTitle";
 
 export default function GeneralSettings() {
   const { t } = useTranslation();
@@ -33,6 +34,7 @@ export default function GeneralSettings() {
 
   return (
     <>
+      <AdminPageTitle>{t("settings.general.title")}</AdminPageTitle>
       <SettingCardLabel>
         {t("settings.general.auto_discovery")}
       </SettingCardLabel>

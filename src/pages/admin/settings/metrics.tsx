@@ -1,4 +1,5 @@
 import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
+import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import { DatabaseMaintenanceCard } from "@/components/admin/DatabaseMaintenanceCard";
 import { Selector } from "@/components/Selector";
 import {
@@ -231,7 +232,7 @@ export default function MetricsSettings() {
 
   return (
     <Flex direction="column" gap="3">
-      <SettingCardLabel>{t("settings.storage.title")}</SettingCardLabel>
+      <AdminPageTitle>{t("settings.storage.title")}</AdminPageTitle>
 
       <Tabs.Root
         value={activeTab}

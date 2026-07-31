@@ -5,19 +5,20 @@ import React from "react";
 
 const Index = lazy(() => import("./pages/Index"));
 const importAdminLayout = () => import("./pages/admin/_layout");
-const importAdminIndex = () => import("./pages/admin");
+const importAdminDashboard = () => import("./pages/admin/dashboard");
 let adminLayoutModule: ReturnType<typeof importAdminLayout> | undefined;
-let adminIndexModule: ReturnType<typeof importAdminIndex> | undefined;
+let adminDashboardModule: ReturnType<typeof importAdminDashboard> | undefined;
 const loadAdminLayout = () => (adminLayoutModule ??= importAdminLayout());
-const loadAdminIndex = () => (adminIndexModule ??= importAdminIndex());
+const loadAdminDashboard = () =>
+  (adminDashboardModule ??= importAdminDashboard());
 
 export const preloadAdminEntry = () => {
   void loadAdminLayout();
-  void loadAdminIndex();
+  void loadAdminDashboard();
 };
 
 const AdminLayout = lazy(loadAdminLayout);
-const Admin = lazy(loadAdminIndex);
+const AdminDashboard = lazy(loadAdminDashboard);
 const NotFound = lazy(() => import("./pages/404"));
 
 export const routes: RouteObject[] = [
@@ -52,7 +53,11 @@ export const routes: RouteObject[] = [
     path: "/admin",
     element: React.createElement(AdminLayout),
     children: [
-      { index: true, element: React.createElement(Admin) },
+      { index: true, element: React.createElement(AdminDashboard) },
+      {
+        path: "servers",
+        element: React.createElement(lazy(() => import("./pages/admin"))),
+      },
       {
         path: "theme_managed",
         element: React.createElement(

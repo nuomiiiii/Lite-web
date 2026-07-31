@@ -4,9 +4,6 @@ import AdminPanelBar from "../../components/admin/AdminPanelBar";
 import LoginDialog from "../../components/Login";
 import { useAccount } from "@/contexts/AccountContext";
 import {
-  NodeDetailsProvider,
-} from "@/contexts/NodeDetailsContext";
-import {
   SettingsProvider,
   updateSettingsWithToast,
   useSettings,
@@ -152,10 +149,6 @@ const AdminGuard = () => {
   return <AdminAuthenticatedLayout />;
 };
 
-const AdminLayout = () => (
-  <NodeDetailsProvider>
-    <AdminGuard />
-  </NodeDetailsProvider>
-);
+const AdminLayout = () => <AdminGuard />;
 
 export default AdminLayout;

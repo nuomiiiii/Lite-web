@@ -1,7 +1,7 @@
 import Account from "@/pages/admin/account";
 import Sessions from "@/pages/admin/sessions";
 import SignOnSettings from "@/pages/admin/settings/sign-on";
-import { SettingCardLabel } from "@/components/admin/SettingCard";
+import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import { Flex, Tabs } from "@radix-ui/themes";
 import { KeyRound, UserCircle, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -39,7 +39,7 @@ export default function AccountSecuritySettings() {
 
   return (
     <Flex direction="column" gap="3">
-      <SettingCardLabel>{t("navigation.account_security")}</SettingCardLabel>
+      <AdminPageTitle>{t("navigation.account_security")}</AdminPageTitle>
 
       <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
         <div className="w-full overflow-x-auto pb-1">

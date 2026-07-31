@@ -3,7 +3,6 @@ import { Text } from "@radix-ui/themes";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
 import {
   SettingCardButton,
-  SettingCardLabel,
   SettingCardLongTextInput,
   SettingCardSelect,
   SettingCardSwitch,
@@ -12,6 +11,7 @@ import { toast } from "sonner";
 import Loading from "@/components/loading";
 import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import React from "react";
+import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import { renderProviderInputs } from "@/utils/renderProviders";
 import { SquareArrowOutUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -109,7 +109,7 @@ const NotificationSettings = () => {
 
   return (
     <>
-      <SettingCardLabel>{t("settings.notification.title")}</SettingCardLabel>
+      <AdminPageTitle>{t("settings.notification.title")}</AdminPageTitle>
       <SettingCardSwitch
         title={t("settings.notification.enable")}
         description={t("settings.notification.enable_description")}
