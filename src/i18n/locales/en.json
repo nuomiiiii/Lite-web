@@ -471,6 +471,17 @@
   "nodes": {
     "empty": "No server data available"
   },
+  "navigation": {
+    "account_security": "Account & Security",
+    "appearance": "Appearance & Themes",
+    "data_storage": "Data & Storage",
+    "monitoring": "Monitoring",
+    "notification_channels": "Notification Channels",
+    "notifications": "Notifications & Alerts",
+    "remote_management": "Remote Management",
+    "system_settings": "System Settings",
+    "terminal_settings": "Terminal Settings"
+  },
   "notification": {
     "load": {
       "title": "Load"
@@ -765,6 +776,16 @@
       "stop_success": "cloudflared stopped",
       "stopped": "stopped",
       "title": "Reverse Proxy"
+    },
+    "storage": {
+      "main_description": "Configuration, servers, and task data",
+      "migration_maintenance": "Migration & Maintenance",
+      "monitoring_data": "Monitoring Data",
+      "monitoring_description": "Metrics, latency, and historical rollups",
+      "overview": "Storage Overview",
+      "storage_usage": "Storage Usage",
+      "title": "Data & Storage",
+      "total_description": "Database files and temporary runtime files"
     },
     "metrics": {
       "advanced_title": "Advanced Options",

@@ -1,4 +1,5 @@
 import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
+import { DatabaseMaintenanceCard } from "@/components/admin/DatabaseMaintenanceCard";
 import { Selector } from "@/components/Selector";
 import {
   SettingCard,
@@ -24,12 +25,14 @@ import {
   Dialog,
   Flex,
   Progress,
+  Tabs,
   Text,
   TextField,
 } from "@radix-ui/themes";
 import {
   AlertTriangle,
   Database,
+  HardDrive,
   Info,
   ListChecks,
   RefreshCw,
@@ -197,6 +200,9 @@ export default function MetricsSettings() {
   const { t } = useTranslation();
   const { settings, loading, error, updateMultipleSettings } = useSettings();
   const [saveError, setSaveError] = React.useState<string | null>(null);
+  const [activeTab, setActiveTab] = React.useState<
+    "overview" | "monitoring" | "migration"
+  >("overview");
 
   const saveMetricSettings = React.useCallback(
     async (changes: Partial<SettingsResponse>) => {
@@ -225,118 +231,152 @@ export default function MetricsSettings() {
 
   return (
     <Flex direction="column" gap="3">
-      <SettingCardLabel>{t("settings.metrics.title")}</SettingCardLabel>
+      <SettingCardLabel>{t("settings.storage.title")}</SettingCardLabel>
 
-      {/*<Callout.Root color="blue" variant="surface">
-        <Callout.Icon>
-          <Info size={16} />
-        </Callout.Icon>
-        <Callout.Text>{t("settings.metrics.intro")}</Callout.Text>
-      </Callout.Root>*/}
+      <Tabs.Root
+        value={activeTab}
+        onValueChange={(value) =>
+          setActiveTab(value as "overview" | "monitoring" | "migration")
+        }
+      >
+        <div className="w-full overflow-x-auto pb-1">
+          <Tabs.List className="w-max min-w-full">
+            <Tabs.Trigger
+              value="overview"
+              className="min-w-[7.5rem] flex-1"
+            >
+              <HardDrive size={15} />
+              {t("settings.storage.overview")}
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="monitoring"
+              className="min-w-[7.5rem] flex-1"
+            >
+              <ListChecks size={15} />
+              {t("settings.storage.monitoring_data")}
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="migration"
+              className="min-w-[7.5rem] flex-1"
+            >
+              <RefreshCw size={15} />
+              {t("settings.storage.migration_maintenance")}
+            </Tabs.Trigger>
+          </Tabs.List>
+        </div>
 
-      {saveError && (
-        <Callout.Root color="red" variant="surface">
-          <Callout.Icon>
-            <AlertTriangle size={16} />
-          </Callout.Icon>
-          <Callout.Text>{saveError}</Callout.Text>
-        </Callout.Root>
-      )}
+        <Tabs.Content value="overview" className="pt-3">
+          {activeTab === "overview" ? <DatabaseMaintenanceCard /> : null}
+        </Tabs.Content>
 
-      <SettingCardShortTextInput
-        title={t("settings.metrics.dsn_title")}
-        description={t("settings.metrics.dsn_description")}
-        descriptionPlacement="footer"
-        defaultValue={String(settings.metric_db_dsn || "")}
-        placeholder={DSN_PLACEHOLDER}
-        OnSave={async (value) => {
-          await saveMetricSettings({ metric_db_dsn: value.trim() });
-        }}
-      />
+        <Tabs.Content value="monitoring" className="pt-3">
+          <Flex direction="column" gap="3">
+            {saveError && (
+              <Callout.Root color="red" variant="surface">
+                <Callout.Icon>
+                  <AlertTriangle size={16} />
+                </Callout.Icon>
+                <Callout.Text>{saveError}</Callout.Text>
+              </Callout.Root>
+            )}
 
-      <SettingCardLabel>
-        {t("settings.metrics.advanced_title")}
-      </SettingCardLabel>
+            <SettingCardShortTextInput
+              title={t("settings.metrics.dsn_title")}
+              description={t("settings.metrics.dsn_description")}
+              descriptionPlacement="footer"
+              defaultValue={String(settings.metric_db_dsn || "")}
+              placeholder={DSN_PLACEHOLDER}
+              OnSave={async (value) => {
+                await saveMetricSettings({ metric_db_dsn: value.trim() });
+              }}
+            />
 
-      <MetricRetentionTable
-        defaultRetentionDays={toNumber(
-          settings.metric_retention_days,
-          SAFE_RAW_RETENTION_DAYS,
-        )}
-      />
+            <SettingCardLabel>
+              {t("settings.metrics.advanced_title")}
+            </SettingCardLabel>
 
-      <SettingCardShortTextInput
-        title={t("settings.metrics.table_prefix_title")}
-        description={t("settings.metrics.table_prefix_description")}
-        descriptionPlacement="footer"
-        defaultValue={String(settings.metric_table_prefix || "metric_")}
-        placeholder="metric_"
-        OnSave={async (value) => {
-          await saveMetricSettings({
-            metric_table_prefix: value.trim() || "metric_",
-          });
-        }}
-      />
+            <MetricRetentionTable
+              defaultRetentionDays={toNumber(
+                settings.metric_retention_days,
+                SAFE_RAW_RETENTION_DAYS,
+              )}
+            />
 
-      {metricDatabaseDriver === "sqlite" ? (
-        <Callout.Root color="blue" variant="surface">
-          <Callout.Icon>
-            <Info size={16} />
-          </Callout.Icon>
-          <Callout.Text>
-            {t("settings.metrics.sqlite_connection_strategy")}
-          </Callout.Text>
-        </Callout.Root>
-      ) : (
-        <>
-          <SettingCardShortTextInput
-            title={t("settings.metrics.max_open_conns_title")}
-            description={t("settings.metrics.max_open_conns_description")}
-            descriptionPlacement="footer"
-            type="number"
-            defaultValue={String(toNumber(settings.metric_max_open_conns, 25))}
-            placeholder="25"
-            OnSave={async (value) => {
-              const n = parseInt(value, 10);
-              if (isNaN(n) || n <= 0) {
-                toast.error(t("settings.metrics.conns_invalid"));
-                return;
-              }
-              await saveMetricSettings({ metric_max_open_conns: n });
-            }}
-          />
+            <SettingCardShortTextInput
+              title={t("settings.metrics.table_prefix_title")}
+              description={t("settings.metrics.table_prefix_description")}
+              descriptionPlacement="footer"
+              defaultValue={String(settings.metric_table_prefix || "metric_")}
+              placeholder="metric_"
+              OnSave={async (value) => {
+                await saveMetricSettings({
+                  metric_table_prefix: value.trim() || "metric_",
+                });
+              }}
+            />
 
-          <SettingCardShortTextInput
-            title={t("settings.metrics.max_idle_conns_title")}
-            description={t("settings.metrics.max_idle_conns_description")}
-            descriptionPlacement="footer"
-            type="number"
-            defaultValue={String(toNumber(settings.metric_max_idle_conns, 5))}
-            placeholder="5"
-            OnSave={async (value) => {
-              const n = parseInt(value, 10);
-              if (isNaN(n) || n < 0) {
-                toast.error(t("settings.metrics.conns_invalid"));
-                return;
-              }
-              await saveMetricSettings({ metric_max_idle_conns: n });
-            }}
-          />
-        </>
-      )}
+            {metricDatabaseDriver === "sqlite" ? (
+              <Callout.Root color="blue" variant="surface">
+                <Callout.Icon>
+                  <Info size={16} />
+                </Callout.Icon>
+                <Callout.Text>
+                  {t("settings.metrics.sqlite_connection_strategy")}
+                </Callout.Text>
+              </Callout.Root>
+            ) : (
+              <>
+                <SettingCardShortTextInput
+                  title={t("settings.metrics.max_open_conns_title")}
+                  description={t("settings.metrics.max_open_conns_description")}
+                  descriptionPlacement="footer"
+                  type="number"
+                  defaultValue={String(
+                    toNumber(settings.metric_max_open_conns, 25),
+                  )}
+                  placeholder="25"
+                  OnSave={async (value) => {
+                    const n = parseInt(value, 10);
+                    if (isNaN(n) || n <= 0) {
+                      toast.error(t("settings.metrics.conns_invalid"));
+                      return;
+                    }
+                    await saveMetricSettings({ metric_max_open_conns: n });
+                  }}
+                />
 
-      {/*<Callout.Root color="green" variant="surface">
-        <Callout.Icon>
-          <Info size={16} />
-        </Callout.Icon>
-        <Callout.Text>{t("settings.metrics.restart_hint")}</Callout.Text>
-      </Callout.Root>*/}
+                <SettingCardShortTextInput
+                  title={t("settings.metrics.max_idle_conns_title")}
+                  description={t("settings.metrics.max_idle_conns_description")}
+                  descriptionPlacement="footer"
+                  type="number"
+                  defaultValue={String(
+                    toNumber(settings.metric_max_idle_conns, 5),
+                  )}
+                  placeholder="5"
+                  OnSave={async (value) => {
+                    const n = parseInt(value, 10);
+                    if (isNaN(n) || n < 0) {
+                      toast.error(t("settings.metrics.conns_invalid"));
+                      return;
+                    }
+                    await saveMetricSettings({ metric_max_idle_conns: n });
+                  }}
+                />
+              </>
+            )}
+          </Flex>
+        </Tabs.Content>
 
-      <SettingCardLabel>
-        {t("settings.metrics.migration_title")}
-      </SettingCardLabel>
-      <MigrationCard />
-
+        <Tabs.Content value="migration" className="pt-3">
+          {activeTab === "migration" ? (
+            <Flex direction="column" gap="3">
+              <MigrationCard />
+              <DatabaseMaintenanceCard mode="maintenance" />
+            </Flex>
+          ) : null}
+        </Tabs.Content>
+      </Tabs.Root>
     </Flex>
   );
 }

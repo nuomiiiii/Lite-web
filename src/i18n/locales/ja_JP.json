@@ -456,6 +456,17 @@
   "nodes": {
     "empty": "サーバーデータはありません"
   },
+  "navigation": {
+    "account_security": "アカウントとセキュリティ",
+    "appearance": "外観とテーマ",
+    "data_storage": "データとストレージ",
+    "monitoring": "監視",
+    "notification_channels": "通知チャンネル",
+    "notifications": "通知とアラート",
+    "remote_management": "リモート管理",
+    "system_settings": "システム設定",
+    "terminal_settings": "ターミナル設定"
+  },
   "notification": {
     "load": {
       "title": "負荷通知"
@@ -750,6 +761,16 @@
       "stop_success": "cloudflared を停止しました",
       "stopped": "停止中",
       "title": "リバースプロキシ"
+    },
+    "storage": {
+      "main_description": "設定、サーバー、タスクのデータ",
+      "migration_maintenance": "移行とメンテナンス",
+      "monitoring_data": "監視データ",
+      "monitoring_description": "メトリクス、遅延、履歴集計データ",
+      "overview": "ストレージ概要",
+      "storage_usage": "ストレージ使用量",
+      "title": "データとストレージ",
+      "total_description": "データベースファイルと一時実行ファイル"
     },
     "metrics": {
       "advanced_title": "詳細オプション",

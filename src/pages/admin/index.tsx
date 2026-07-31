@@ -429,7 +429,7 @@ const AutoDiscoverySection = ({
                 <Settings size={14} />
                 {t(
                   "admin.nodeTable.autoDiscovery.goToSettings",
-                  "前往“常规设置”开启自动发现"
+                  "前往“通用设置”开启自动发现"
                 )}
               </Button>
             </Link>

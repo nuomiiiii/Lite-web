@@ -456,6 +456,17 @@
   "nodes": {
     "empty": "暫無伺服器資料"
   },
+  "navigation": {
+    "account_security": "帳戶與安全",
+    "appearance": "外觀與主題",
+    "data_storage": "資料與儲存",
+    "monitoring": "監測",
+    "notification_channels": "通知管道",
+    "notifications": "通知與告警",
+    "remote_management": "遠端管理",
+    "system_settings": "系統設定",
+    "terminal_settings": "終端設定"
+  },
   "notification": {
     "load": {
       "title": "負載通知"
@@ -750,6 +761,16 @@
       "stop_success": "cloudflared 已停止",
       "stopped": "已停止",
       "title": "反向代理"
+    },
+    "storage": {
+      "main_description": "設定、伺服器與任務資料",
+      "migration_maintenance": "遷移與維護",
+      "monitoring_data": "監控資料",
+      "monitoring_description": "指標、延遲和歷史彙總資料",
+      "overview": "儲存概覽",
+      "storage_usage": "儲存使用",
+      "title": "資料與儲存",
+      "total_description": "資料庫檔案和執行階段暫存檔案"
     },
     "metrics": {
       "advanced_title": "進階選項",

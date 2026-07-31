@@ -456,6 +456,17 @@
   "nodes": {
     "empty": "Tidak ada data server"
   },
+  "navigation": {
+    "account_security": "Akun & Keamanan",
+    "appearance": "Tampilan & Tema",
+    "data_storage": "Data & Penyimpanan",
+    "monitoring": "Pemantauan",
+    "notification_channels": "Saluran Notifikasi",
+    "notifications": "Notifikasi & Peringatan",
+    "remote_management": "Manajemen Jarak Jauh",
+    "system_settings": "Pengaturan Sistem",
+    "terminal_settings": "Pengaturan Terminal"
+  },
   "notification": {
     "load": {
       "title": "Beban"
@@ -750,6 +761,16 @@
       "stop_success": "cloudflared berhasil dihentikan",
       "stopped": "berhenti",
       "title": "Reverse Proxy"
+    },
+    "storage": {
+      "main_description": "Data konfigurasi, server, dan tugas",
+      "migration_maintenance": "Migrasi & Pemeliharaan",
+      "monitoring_data": "Data Pemantauan",
+      "monitoring_description": "Metrik, latensi, dan agregasi historis",
+      "overview": "Ikhtisar Penyimpanan",
+      "storage_usage": "Penggunaan Penyimpanan",
+      "title": "Data & Penyimpanan",
+      "total_description": "Berkas basis data dan berkas runtime sementara"
     },
     "metrics": {
       "advanced_title": "Opsi Lanjutan",
