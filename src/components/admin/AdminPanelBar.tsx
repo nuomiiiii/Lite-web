@@ -45,6 +45,7 @@ const parsedMenuConfig = menuConfig as {
 };
 const baseMenuItems = parsedMenuConfig.menu;
 const footerMenuItems = parsedMenuConfig.footer ?? [];
+const DESKTOP_SIDEBAR_WIDTH = 212;
 
 interface AdminPanelBarProps {
   content: ReactNode;
@@ -360,7 +361,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   // 侧边栏动画变体
   const sidebarVariants = {
     open: {
-      width: isMobile ? "100vw" : "240px",
+      width: isMobile ? "100vw" : `${DESKTOP_SIDEBAR_WIDTH}px`,
       opacity: 1,
       transition: {
         type: "spring",
@@ -616,7 +617,12 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   return (
     <>
       <Grid
-        columns={{ initial: "1fr", md: sidebarOpen ? "240px 1fr" : "0px 1fr" }} // 动态调整网格列
+        columns={{
+          initial: "1fr",
+          md: sidebarOpen
+            ? `${DESKTOP_SIDEBAR_WIDTH}px 1fr`
+            : "0px 1fr",
+        }} // 动态调整网格列
         rows={{ initial: "auto 1fr", md: "auto 1fr" }}
         style={{
           height: "100vh",
@@ -794,7 +800,10 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               direction="column"
               justify="start"
               align="start"
-              style={{ height: "100%", minWidth: "240px" }}
+              style={{
+                height: "100%",
+                minWidth: `${DESKTOP_SIDEBAR_WIDTH}px`,
+              }}
             >
               {/* 关闭按钮 */}
               <IconButton
