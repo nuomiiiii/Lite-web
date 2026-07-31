@@ -27,7 +27,20 @@ test("keeps the admin navigation in the intended groups", () => {
       "/admin/notifications",
       "/admin/appearance",
       "/admin/settings",
-      "/admin/account-security",
+    ],
+  );
+
+  const systemSettings = menuConfig.menu.find(
+    (item) => item.path === "/admin/settings",
+  );
+  assert.deepEqual(
+    systemSettings?.children?.map((item) => item.path),
+    [
+      "/admin/settings/site",
+      "/admin/settings/reverse-proxy",
+      "/admin/settings/metrics",
+      "/admin/settings/account-security",
+      "/admin/settings/general",
     ],
   );
 
@@ -37,6 +50,7 @@ test("keeps the admin navigation in the intended groups", () => {
     paths.filter((path) => path === "/admin/settings/metrics").length,
     1,
   );
+  assert.equal(paths.includes("/admin/account-security"), false);
 
   const notifications = menuConfig.menu.find(
     (item) => item.path === "/admin/notifications",

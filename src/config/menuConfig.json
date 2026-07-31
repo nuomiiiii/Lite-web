@@ -99,11 +99,6 @@
       "icon": "Bolt",
       "children": [
         {
-          "labelKey": "settings.general.title",
-          "path": "/admin/settings/general",
-          "icon": "Ellipsis"
-        },
-        {
           "labelKey": "settings.site.title",
           "path": "/admin/settings/site",
           "icon": "Home"
@@ -117,28 +112,16 @@
           "labelKey": "navigation.data_storage",
           "path": "/admin/settings/metrics",
           "icon": "Database"
-        }
-      ]
-    },
-    {
-      "labelKey": "navigation.account_security",
-      "path": "/admin/account-security",
-      "icon": "UserCircle",
-      "children": [
+        },
         {
-          "labelKey": "account.title",
-          "path": "/admin/account",
+          "labelKey": "navigation.account_security",
+          "path": "/admin/settings/account-security",
           "icon": "UserCircle"
         },
         {
-          "labelKey": "settings.sign_on.title",
-          "path": "/admin/settings/sign-on",
-          "icon": "CircleArrowRight"
-        },
-        {
-          "labelKey": "sessions.title",
-          "path": "/admin/sessions",
-          "icon": "Users"
+          "labelKey": "settings.general.title",
+          "path": "/admin/settings/general",
+          "icon": "Ellipsis"
         }
       ]
     }

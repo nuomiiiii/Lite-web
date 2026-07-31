@@ -1,6 +1,6 @@
 // routes.js
 import { lazy } from "react";
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
 import React from "react";
 
 const Index = lazy(() => import("./pages/Index"));
@@ -73,15 +73,17 @@ export const routes: RouteObject[] = [
       },
       {
         path: "sessions",
-        element: React.createElement(
-          lazy(() => import("./pages/admin/sessions"))
-        ),
+        element: React.createElement(Navigate, {
+          replace: true,
+          to: "/admin/settings/account-security?tab=sessions",
+        }),
       },
       {
         path: "account",
-        element: React.createElement(
-          lazy(() => import("./pages/admin/account"))
-        ),
+        element: React.createElement(Navigate, {
+          replace: true,
+          to: "/admin/settings/account-security?tab=account",
+        }),
       },
       {
         path: "settings",
@@ -109,9 +111,10 @@ export const routes: RouteObject[] = [
           },
           {
             path: "sign-on",
-            element: React.createElement(
-              lazy(() => import("./pages/admin/settings/sign-on"))
-            ),
+            element: React.createElement(Navigate, {
+              replace: true,
+              to: "/admin/settings/account-security?tab=sign-on",
+            }),
           },
           {
             path: "notification",
@@ -141,6 +144,12 @@ export const routes: RouteObject[] = [
             path: "metrics",
             element: React.createElement(
               lazy(() => import("./pages/admin/settings/metrics"))
+            ),
+          },
+          {
+            path: "account-security",
+            element: React.createElement(
+              lazy(() => import("./pages/admin/settings/account-security"))
             ),
           },
         ],
