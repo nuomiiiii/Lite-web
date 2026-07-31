@@ -1,4 +1,4 @@
-import Loading from "@/components/loading";
+import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import { SettingCard, SettingCardLabel } from "@/components/admin/SettingCard";
 import { useSettings } from "@/lib/api";
 import {
@@ -113,7 +113,7 @@ export default function ReverseProxySettings() {
   };
 
   if (settingsLoading || loading) {
-    return <Loading />;
+    return <SettingsPageSkeleton />;
   }
 
   if (settingsError) {

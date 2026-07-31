@@ -10,6 +10,7 @@ import {
 } from "@/components/admin/SettingCard";
 import { toast } from "sonner";
 import Loading from "@/components/loading";
+import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import React from "react";
 import { renderProviderInputs } from "@/utils/renderProviders";
 import { SquareArrowOutUpRight } from "lucide-react";
@@ -97,7 +98,7 @@ const NotificationSettings = () => {
     setMessageLoading(false);
   };
   if (loading || (!messageLoading && messageList.length === 0 && !messageError)) {
-    return <Loading />;
+    return <SettingsPageSkeleton />;
   }
   if (error) {
     return <Text color="red">{error}</Text>;

@@ -28,7 +28,7 @@ import {
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";
-import Loading from "@/components/loading";
+import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import { useSettings } from "@/lib/api";
 import UploadDialog from "@/components/UploadDialog";
 import {
@@ -441,7 +441,7 @@ const ThemePage = () => {
   }, [currentTheme, settingsLoading, themes.length]);
 
   if (loading) {
-    return <Loading />;
+    return <SettingsPageSkeleton />;
   }
 
   if (error) {

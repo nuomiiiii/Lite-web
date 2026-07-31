@@ -6,7 +6,11 @@ import { useAccount } from "@/contexts/AccountContext";
 import {
   NodeDetailsProvider,
 } from "@/contexts/NodeDetailsContext";
-import { updateSettingsWithToast, useSettings } from "@/lib/api";
+import {
+  SettingsProvider,
+  updateSettingsWithToast,
+  useSettings,
+} from "@/lib/api";
 import { Button, Callout, Dialog, Flex } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -51,7 +55,7 @@ const AuthStatusScreen = ({
   );
 };
 
-const AdminAuthenticatedLayout = () => {
+const AdminAuthenticatedContent = () => {
   const { settings, loading } = useSettings();
   const lang = readStoredLanguage() || "en";
   const [open, setOpen] = useState(false);
@@ -105,6 +109,12 @@ const AdminAuthenticatedLayout = () => {
     </>
   );
 };
+
+const AdminAuthenticatedLayout = () => (
+  <SettingsProvider>
+    <AdminAuthenticatedContent />
+  </SettingsProvider>
+);
 
 const AdminGuard = () => {
   const accountState = useAccount();

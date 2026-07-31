@@ -3,7 +3,7 @@ import { Button, Callout, Flex } from "@radix-ui/themes";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
-import Loading from "@/components/loading";
+import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import {
   SettingCardButton,
   SettingCardLabel,
@@ -133,7 +133,7 @@ export default function XtermjsSettingsPage() {
     !isTransparentBackground(settings.terminalOptions.theme.background);
 
   if (loading) {
-    return <Loading />;
+    return <SettingsPageSkeleton />;
   }
 
   if (error) {

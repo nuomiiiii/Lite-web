@@ -1,4 +1,4 @@
-import Loading from "@/components/loading";
+import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import { Selector } from "@/components/Selector";
 import {
   SettingCard,
@@ -216,7 +216,7 @@ export default function MetricsSettings() {
   const metricDatabaseDriver = resolveMetricDatabaseDriver(settings);
 
   if (loading) {
-    return <Loading />;
+    return <SettingsPageSkeleton />;
   }
 
   if (error) {

@@ -11,7 +11,7 @@ import {
   SettingCardSwitch,
 } from "@/components/admin/SettingCard";
 import { toast } from "sonner";
-import Loading from "@/components/loading";
+import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import { DownloadIcon } from "lucide-react";
 import { useState } from "react";
 import UploadDialog from "@/components/UploadDialog";
@@ -125,7 +125,7 @@ export default function SiteSettings() {
   };
 
   if (loading) {
-    return <Loading />;
+    return <SettingsPageSkeleton />;
   }
 
   if (error) {

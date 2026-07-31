@@ -16,7 +16,7 @@ import {
 import { DatabaseMaintenanceCard } from "@/components/admin/DatabaseMaintenanceCard";
 import React from "react";
 import { toast } from "sonner";
-import Loading from "@/components/loading";
+import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 
 export default function GeneralSettings() {
   const { t } = useTranslation();
@@ -25,7 +25,7 @@ export default function GeneralSettings() {
     null
   );
   if (loading) {
-    return <Loading text="creeper?" />;
+    return <SettingsPageSkeleton />;
   }
 
   if (error) {
