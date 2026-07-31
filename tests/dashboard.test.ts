@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   dashboardLocalStorageTotal,
   dashboardOnlinePercent,
+  dashboardRuntimeStorageTotal,
   shortDashboardDay,
   type DashboardData,
 } from "../src/utils/dashboard.ts";
@@ -38,7 +39,22 @@ const sample = {
 test("derives dashboard totals without altering source values", () => {
   assert.equal(dashboardOnlinePercent(sample), 75);
   assert.equal(dashboardLocalStorageTotal(sample), 30);
+  assert.equal(dashboardRuntimeStorageTotal(sample), 10);
+  assert.equal(
+    dashboardLocalStorageTotal(sample),
+    sample.storage.database_files + dashboardRuntimeStorageTotal(sample),
+  );
   assert.equal(dashboardOnlinePercent({ ...sample, servers: { ...sample.servers, total: 0 } }), 0);
+});
+
+test("uses the visible storage breakdown when a stale aggregate disagrees", () => {
+  assert.equal(
+    dashboardLocalStorageTotal({
+      ...sample,
+      database: { ...sample.database, local_total: 999 },
+    }),
+    30,
+  );
 });
 
 test("falls back to the local main database when a combined size is unavailable", () => {

@@ -65,13 +65,18 @@ export interface DashboardData {
 }
 
 export function dashboardLocalStorageTotal(data: DashboardData): number | null {
+  const measuredTotal = data.storage.database_files + data.storage.wal + data.storage.shm;
   if (typeof data.database.local_total === "number") {
-    return data.database.local_total;
+    return measuredTotal;
   }
   if (data.database.main.location === "local") {
     return data.database.main.size;
   }
   return null;
+}
+
+export function dashboardRuntimeStorageTotal(data: DashboardData): number {
+  return data.storage.wal + data.storage.shm;
 }
 
 export function dashboardOnlinePercent(data: DashboardData): number {

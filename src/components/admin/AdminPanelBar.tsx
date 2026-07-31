@@ -2,6 +2,7 @@ import { Cross1Icon, ExitIcon } from "@radix-ui/react-icons";
 import {
   Button,
   Callout,
+  Dialog,
   Flex,
   Grid,
   IconButton,
@@ -21,8 +22,13 @@ import { iconMap } from "../../utils/iconHelper";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
 import { TablerMenu2 } from "../Icones/Tabler";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";
-import Tips from "../ui/tips";
-import { CircleFadingArrowUp, Download, LoaderCircle } from "lucide-react";
+import {
+  ArrowRight,
+  CircleFadingArrowUp,
+  Download,
+  ExternalLink,
+  LoaderCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useRPC2Call } from "@/contexts/RPC2Context";
 import { resolveI18nText } from "@/utils/i18nText";
@@ -181,6 +187,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   );
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [releasesSince, setReleasesSince] = useState<GithubReleaseInfo[]>([]);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
 
   const currentTheme = publicInfo?.theme;
 
@@ -671,66 +678,84 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                 <span className="text-2xl font-bold leading-none">Komari</span>
               </a>
               {updateAvailable && releasesSince.length > 0 && (
-                <Tips
-                  mode="dialog"
-                  className="check-update flex h-6 w-6 items-end leading-none"
-                  trigger={
-                    <CircleFadingArrowUp
-                      className="block h-6 w-6"
-                      color="#FB4141"
-                      size="24"
-                    />
-                  }
-                >
-                  <div className="flex flex-col gap-2 max-w-[80vw] md:max-w-[720px]">
-                    <label className="font-bold">
-                      {t("common.update_available")}
-                    </label>
-                    <div className="text-sm text-muted-foreground">
-                      <span style={{ marginRight: 8 }}>
+                <Dialog.Root open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
+                  <Dialog.Trigger>
+                    <button
+                      type="button"
+                      className="check-update flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--red-a3)] text-[var(--red-11)] transition-colors hover:bg-[var(--red-a4)]"
+                      aria-label={t("common.update_available")}
+                      title={t("common.update_available")}
+                    >
+                      <CircleFadingArrowUp
+                        className="block h-5 w-5"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  </Dialog.Trigger>
+                  <Dialog.Content
+                    className="max-h-[calc(100dvh-1.5rem)] overflow-hidden p-0"
+                    style={{
+                      width: isMobile
+                        ? "calc(100vw - 1.5rem)"
+                        : "min(920px, calc(100vw - 3rem))",
+                      maxWidth: "none",
+                    }}
+                  >
+                    <header className="border-b px-4 py-4 md:px-6 md:py-5">
+                      <Dialog.Title className="flex items-center gap-2 text-lg font-semibold">
+                        <CircleFadingArrowUp
+                          className="h-5 w-5 shrink-0 text-[var(--red-11)]"
+                          aria-hidden="true"
+                        />
+                        {t("common.update_available")}
+                      </Dialog.Title>
+                      <Dialog.Description className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        <span>
                         {formatVersion(
                           (publicInfo as any)?.version || versionInfo?.version,
                           versionInfo?.hash,
                         )}
                       </span>
-                      <span>{"> "}</span>
-                      <span>{formatReleaseVersion(latestRelease)}</span>
-                    </div>
+                        <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span className="font-medium text-foreground">
+                          {formatReleaseVersion(latestRelease)}
+                        </span>
+                      </Dialog.Description>
+                    </header>
 
-                    <div className="rounded-md p-2 overflow-auto max-h-80">
-                      <div className="flex flex-col gap-4 text-sm">
+                    <div className="max-h-[min(62dvh,620px)] overflow-y-auto px-4 py-1 md:px-6">
+                      <div className="divide-y text-sm">
                         {releasesSince.map((r) => (
-                          <div key={r.html_url} className="flex flex-col gap-2">
-                            <div className="flex items-center justify-between">
-                              <div className="font-medium">
+                          <section key={r.html_url} className="py-5 first:pt-4">
+                            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                              <h3 className="font-semibold text-foreground">
                                 {formatReleaseVersion(r)}
-                              </div>
+                              </h3>
                               {r.published_at && (
                                 <div className="text-xs text-muted-foreground">
                                   {new Date(r.published_at).toLocaleString()}
                                 </div>
                               )}
                             </div>
-                            <div className="whitespace-pre-wrap break-words">
+                            <div className="mt-3 whitespace-pre-wrap break-words leading-6 text-[var(--gray-11)]">
                               {visibleReleaseBody(r.body)}
                             </div>
-                            <div
-                              style={{
-                                height: 1,
-                                background: "var(--accent-5)",
-                                opacity: 0.5,
-                              }}
-                            />
-                          </div>
+                          </section>
                         ))}
                       </div>
                     </div>
-                    <div className="flex items-center justify-end gap-2">
+
+                    <footer className="flex items-center justify-end gap-2 border-t bg-[var(--gray-a2)] px-4 py-3 md:px-6 md:py-4">
+                      <Dialog.Close>
+                        <Button variant="soft" color="gray">
+                          {t("cancel", "取消")}
+                        </Button>
+                      </Dialog.Close>
                       {versionInfo?.deployment === "linux" &&
                       selfUpdate?.supported &&
                       parseReleaseVersionHash(latestRelease?.body) ? (
                         <Button
-                          variant="soft"
+                          color="red"
                           onClick={startSelfUpdate}
                           disabled={updatePhase !== "idle"}
                         >
@@ -751,12 +776,15 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          <Button variant="soft">GitHub</Button>
+                          <Button variant="soft">
+                            <ExternalLink size={16} />
+                            GitHub
+                          </Button>
                         </a>
                       )}
-                    </div>
-                  </div>
-                </Tips>
+                    </footer>
+                  </Dialog.Content>
+                </Dialog.Root>
               )}
               <span
                 className="text-sm text-muted-foreground leading-normal overflow-visible"

@@ -28,6 +28,7 @@ import { ChartContainer } from "@/components/ui/chart";
 import {
   dashboardLocalStorageTotal,
   dashboardOnlinePercent,
+  dashboardRuntimeStorageTotal,
   shortDashboardDay,
   type DashboardData,
   type DashboardDatabaseStatus,
@@ -422,7 +423,7 @@ export default function AdminDashboard() {
             >
               <div className="flex items-center justify-between gap-3">
                 <span>{t("admin_dashboard.database_files")} {formatBytes(data.storage.database_files)}</span>
-                <span>WAL {formatBytes(data.storage.wal)}</span>
+                <span>WAL + SHM {formatBytes(dashboardRuntimeStorageTotal(data))}</span>
               </div>
             </SummaryPanel>
           </div>

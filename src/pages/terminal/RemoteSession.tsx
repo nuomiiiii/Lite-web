@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import type { Record as LiveRecord } from "@/types/LiveData";
 import { formatBytes } from "@/utils/unitHelper";
+import { createRemoteSessionLease, remoteAgentWaitTimeoutMs } from "@/utils/remoteSession";
 import { TerminalContext } from "@/contexts/TerminalContext";
 import {
   defaultXtermjsSettings,
@@ -335,12 +336,20 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
     if (!terminalReady) return;
     let disposed = false;
     let heartbeat: number | undefined;
+    let agentWaitTimeout: number | undefined;
     let ws: WebSocket | undefined;
+    let sessionLease: ReturnType<typeof createRemoteSessionLease> | undefined;
     const abortController = new AbortController();
     const clearHeartbeat = () => {
       if (heartbeat !== undefined) {
         window.clearInterval(heartbeat);
         heartbeat = undefined;
+      }
+    };
+    const clearAgentWaitTimeout = () => {
+      if (agentWaitTimeout !== undefined) {
+        window.clearTimeout(agentWaitTimeout);
+        agentWaitTimeout = undefined;
       }
     };
 
@@ -368,9 +377,13 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
           }
           throw new Error(payload?.message || "无法创建远程会话");
         }
-        if (disposed) return;
+        sessionLease = createRemoteSessionLease(payload.data.session_id);
+        if (disposed) {
+          sessionLease.release();
+          return;
+        }
         setOtpOpen(false);
-        const sessionID = payload.data.session_id;
+        const sessionID = sessionLease.sessionID;
         const browserTicket = payload.data.browser_ticket;
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         ws = new WebSocket(`${protocol}//${window.location.host}/api/admin/client/remote`);
@@ -383,6 +396,15 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
           }
           ws?.send(JSON.stringify({ type: "auth", session_id: sessionID, ticket: browserTicket }));
           setConnectionState("waiting");
+          agentWaitTimeout = window.setTimeout(() => {
+            if (disposed || remoteReadyRef.current) return;
+            const message = "Agent 未在 30 秒内建立远程连接，请确认客户端在线、版本支持远程管理且代理未拦截连接";
+            setConnectionState("error");
+            setConnectionError(message);
+            terminal.current?.writeln(`\r\n${message}`);
+            sessionLease?.release();
+            ws?.close();
+          }, remoteAgentWaitTimeoutMs);
           heartbeat = window.setInterval(() => {
             if (ws?.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({ type: "heartbeat", timestamp: Date.now() }));
@@ -398,6 +420,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
           try {
             const message = JSON.parse(event.data);
             if (message.type === "remote.ready") {
+              clearAgentWaitTimeout();
               setConnectionState("connected");
               remoteReadyRef.current = true;
               setRemoteReady(true);
@@ -409,11 +432,13 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
             } else if (message.type === "remote.status") {
               setConnectionState(message.status === "waiting" ? "waiting" : "connecting");
             } else if (message.type === "remote.error") {
+              clearAgentWaitTimeout();
               remoteReadyRef.current = false;
               setRemoteReady(false);
               setConnectionState("error");
               setConnectionError(message.message || "远程连接失败");
               terminal.current?.writeln(`\r\n${message.message || "Remote connection failed"}`);
+              sessionLease?.release();
             } else if (message.type?.startsWith("file.")) {
               fileManager.current?.handleMessage(message);
             }
@@ -423,11 +448,15 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
         };
         ws.onerror = () => {
           if (disposed) return;
+          clearAgentWaitTimeout();
+          sessionLease?.release();
           setConnectionState("error");
           setConnectionError("远程连接发生错误");
         };
         ws.onclose = () => {
           clearHeartbeat();
+          clearAgentWaitTimeout();
+          sessionLease?.release();
           if (!disposed) {
             remoteReadyRef.current = false;
             setRemoteReady(false);
@@ -436,6 +465,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
           }
         };
       } catch (error) {
+        sessionLease?.release();
         if (!disposed && !(error instanceof DOMException && error.name === "AbortError")) {
           setConnectionState("error");
           setConnectionError(error instanceof Error ? error.message : "远程连接失败");
@@ -448,7 +478,9 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
       abortController.abort();
       remoteReadyRef.current = false;
       clearHeartbeat();
+      clearAgentWaitTimeout();
       if (ws?.readyState === WebSocket.OPEN || ws?.readyState === WebSocket.CONNECTING) ws.close();
+      sessionLease?.release();
       if (socket.current === ws) socket.current = null;
     };
   }, [node.uuid, otpCode, reconnectKey, resizeTerminal, terminalReady]);
