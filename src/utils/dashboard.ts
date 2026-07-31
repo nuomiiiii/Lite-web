@@ -12,6 +12,12 @@ export interface DashboardTrafficDay {
   billable: number;
 }
 
+export interface DashboardTrafficHour {
+  hour: string;
+  up: number;
+  down: number;
+}
+
 export interface DashboardDatabaseFiles {
   database: number;
   wal: number;
@@ -37,6 +43,7 @@ export interface DashboardData {
     today_up: number;
     today_down: number;
     today_billable: number;
+    hourly: DashboardTrafficHour[];
     daily: DashboardTrafficDay[];
     history_ready: boolean;
   };
@@ -46,6 +53,13 @@ export interface DashboardData {
     main: DashboardDatabaseStatus;
     monitoring: DashboardDatabaseStatus;
     local_total: number | null;
+  };
+  storage: {
+    database_files: number;
+    wal: number;
+    shm: number;
+    retention_days: number;
+    last_compacted_at: string | null;
   };
   generated_at: string;
 }

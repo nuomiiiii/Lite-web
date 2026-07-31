@@ -14,6 +14,7 @@ const sample = {
     today_up: 1,
     today_down: 2,
     today_billable: 2,
+    hourly: [],
     daily: [],
     history_ready: true,
   },
@@ -23,6 +24,13 @@ const sample = {
     main: { driver: "sqlite", location: "local", size: 10 },
     monitoring: { driver: "sqlite", location: "local", size: 20 },
     local_total: 30,
+  },
+  storage: {
+    database_files: 20,
+    wal: 8,
+    shm: 2,
+    retention_days: 30,
+    last_compacted_at: null,
   },
   generated_at: "2026-07-31T08:00:00Z",
 } satisfies DashboardData;

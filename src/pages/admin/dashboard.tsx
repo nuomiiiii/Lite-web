@@ -4,9 +4,7 @@ import {
   AlertCircle,
   ArrowDownToLine,
   ArrowUpFromLine,
-  CircleCheck,
   Database,
-  HardDrive,
   RefreshCw,
   Server,
   ServerOff,
@@ -18,6 +16,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Line,
+  LineChart,
   Tooltip,
   XAxis,
   YAxis,
@@ -29,7 +29,6 @@ import {
   dashboardOnlinePercent,
   shortDashboardDay,
   type DashboardData,
-  type DashboardDatabaseFiles,
   type DashboardDatabaseStatus,
 } from "@/utils/dashboard";
 import { formatBytes } from "@/utils/unitHelper";
@@ -67,12 +66,12 @@ async function requestDashboard(): Promise<DashboardData> {
 
 function OverviewSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
       {[0, 1, 2].map((item) => (
-        <div key={item} className="h-[154px] rounded-md border p-4">
+        <div key={item} className="h-[126px] rounded-md border p-4">
           <Skeleton width="7rem" height="1rem" />
-          <Skeleton className="mt-5" width="10rem" height="2.25rem" />
-          <Skeleton className="mt-4" width="75%" height="0.9rem" />
+          <Skeleton className="mt-4" width="9rem" height="1.9rem" />
+          <Skeleton className="mt-3" width="72%" height="0.85rem" />
         </div>
       ))}
     </div>
@@ -93,45 +92,38 @@ function SummaryPanel({
   tone?: "accent" | "green" | "orange";
 }) {
   const toneClass = {
-    accent: "bg-[var(--accent-a3)] text-[var(--accent-11)]",
-    green: "bg-[var(--green-a3)] text-[var(--green-11)]",
-    orange: "bg-[var(--orange-a3)] text-[var(--orange-11)]",
+    accent: "text-[var(--accent-11)]",
+    green: "text-[var(--green-11)]",
+    orange: "text-[var(--orange-11)]",
   }[tone];
   return (
-    <section className="min-h-[154px] rounded-md border bg-[var(--accent-1)] p-4">
+    <section className="min-h-[126px] rounded-md border bg-[var(--gray-a2)] p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-muted-foreground">{label}</span>
-        <span className={`flex size-8 items-center justify-center rounded-md ${toneClass}`}>
-          {icon}
-        </span>
+        <span className={`flex size-7 items-center justify-center ${toneClass}`}>{icon}</span>
       </div>
-      <div className="mt-3 text-3xl font-bold tabular-nums text-foreground">{value}</div>
-      <div className="mt-3 text-sm text-muted-foreground">{children}</div>
+      <div className="mt-2 text-2xl font-bold tabular-nums text-foreground">{value}</div>
+      <div className="mt-2 text-sm text-muted-foreground">{children}</div>
     </section>
   );
 }
 
-function StorageFileRow({
-  label,
-  files,
+function PanelHeader({
+  title,
+  description,
+  trailing,
 }: {
-  label: string;
-  files?: DashboardDatabaseFiles;
+  title: string;
+  description: string;
+  trailing?: React.ReactNode;
 }) {
-  const { t } = useTranslation();
-  if (!files) return null;
   return (
-    <div className="grid grid-cols-[minmax(5rem,1fr)_repeat(3,minmax(4.5rem,auto))] items-center gap-2 border-t py-3 text-sm first:border-t-0">
-      <span className="min-w-0 truncate font-medium">{label}</span>
-      <span className="text-right text-muted-foreground" title={t("admin_dashboard.database_file")}>
-        {formatBytes(files.database)}
-      </span>
-      <span className="text-right text-muted-foreground" title="WAL">
-        {formatBytes(files.wal)}
-      </span>
-      <span className="text-right text-muted-foreground" title="SHM">
-        {formatBytes(files.shm)}
-      </span>
+    <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+      </div>
+      {trailing}
     </div>
   );
 }
@@ -148,6 +140,134 @@ function DatabaseStatusLine({ status }: { status: DashboardDatabaseStatus }) {
         {t("admin_dashboard.database_read_failed")}: {status.error}
       </Callout.Text>
     </Callout.Root>
+  );
+}
+
+function relativeTime(value: string | null, locale: string, fallback: string): string {
+  if (!value) return fallback;
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return fallback;
+  const seconds = Math.round((timestamp - Date.now()) / 1000);
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  if (Math.abs(seconds) < 60) return formatter.format(seconds, "second");
+  const minutes = Math.round(seconds / 60);
+  if (Math.abs(minutes) < 60) return formatter.format(minutes, "minute");
+  const hours = Math.round(minutes / 60);
+  if (Math.abs(hours) < 24) return formatter.format(hours, "hour");
+  return formatter.format(Math.round(hours / 24), "day");
+}
+
+function ServerStatusPanel({ data, locale }: { data: DashboardData; locale: string }) {
+  const { t } = useTranslation();
+  const percent = dashboardOnlinePercent(data);
+  const visibleOffline = data.servers.offline_nodes.slice(0, 3);
+  const remaining = Math.max(0, data.servers.offline - visibleOffline.length);
+
+  return (
+    <section className="h-full rounded-md border bg-[var(--accent-1)] p-4">
+      <PanelHeader
+        title={t("admin_dashboard.server_status")}
+        description={t("admin_dashboard.server_status_hint")}
+        trailing={<ServerOff size={18} className="mt-0.5 text-muted-foreground" />}
+      />
+      <div className="grid min-h-[220px] grid-cols-1 items-center gap-5 sm:grid-cols-[9rem_minmax(0,1fr)]">
+        <div className="flex justify-center">
+          <div
+            className="relative size-32 rounded-full"
+            style={{
+              background: `conic-gradient(var(--accent-9) 0 ${percent}%, var(--gray-a5) ${percent}% 100%)`,
+            }}
+          >
+            <div className="absolute inset-[10px] flex flex-col items-center justify-center rounded-full bg-[var(--accent-1)]">
+              <span className="text-2xl font-bold tabular-nums">{percent}%</span>
+              <span className="mt-0.5 text-xs text-muted-foreground">{t("admin_dashboard.online")}</span>
+            </div>
+          </div>
+        </div>
+        {visibleOffline.length === 0 ? (
+          <div className="text-center text-sm text-[var(--green-11)] sm:text-left">
+            {t("admin_dashboard.all_online")}
+          </div>
+        ) : (
+          <div className="min-w-0 divide-y">
+            {visibleOffline.map((node) => (
+              <div key={node.uuid} className="flex items-center justify-between gap-3 py-2.5 first:pt-0">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="size-2 shrink-0 rounded-full bg-[var(--orange-9)]" />
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium">{node.name || node.uuid}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {node.region || t("admin_dashboard.region_unknown")}
+                    </div>
+                  </div>
+                </div>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {relativeTime(node.last_seen, locale, t("admin_dashboard.no_last_seen"))}
+                </span>
+              </div>
+            ))}
+            {remaining > 0 ? (
+              <div className="pt-2.5 text-sm text-muted-foreground">
+                {t("admin_dashboard.offline_more", { count: remaining })}
+              </div>
+            ) : null}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function StoragePanel({ data, locale }: { data: DashboardData; locale: string }) {
+  const { t } = useTranslation();
+  const storageTotal = data.storage.database_files + data.storage.wal + data.storage.shm;
+  const databaseShare = storageTotal > 0 ? Math.round((data.storage.database_files / storageTotal) * 100) : 0;
+
+  return (
+    <section className="h-full rounded-md border bg-[var(--accent-1)] p-4">
+      <PanelHeader
+        title={t("admin_dashboard.database_usage")}
+        description={t("admin_dashboard.database_composition")}
+        trailing={<Database size={18} className="mt-0.5 text-muted-foreground" />}
+      />
+      <div className="space-y-3 text-sm">
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-medium">{t("admin_dashboard.database_files")}</span>
+            <span className="tabular-nums">{formatBytes(data.storage.database_files)}</span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--gray-a4)]">
+            <div className="h-full rounded-full bg-[var(--accent-9)]" style={{ width: `${databaseShare}%` }} />
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 text-muted-foreground">
+          <span>WAL</span>
+          <span className="tabular-nums">{formatBytes(data.storage.wal)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3 text-muted-foreground">
+          <span>SHM</span>
+          <span className="tabular-nums">{formatBytes(data.storage.shm)}</span>
+        </div>
+        <div className="border-t pt-3">
+          <div className="flex items-center justify-between gap-3">
+            <span>{t("admin_dashboard.retention_period")}</span>
+            <span className="tabular-nums">
+              {data.storage.retention_days > 0
+                ? t("admin_dashboard.days", { count: data.storage.retention_days })
+                : t("admin_dashboard.not_available")}
+            </span>
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <span>{t("admin_dashboard.last_compaction")}</span>
+            <span className="tabular-nums text-muted-foreground">
+              {relativeTime(data.storage.last_compacted_at, locale, t("admin_dashboard.not_available"))}
+            </span>
+          </div>
+        </div>
+      </div>
+      <DatabaseStatusLine status={data.database.main} />
+      <DatabaseStatusLine status={data.database.monitoring} />
+    </section>
   );
 }
 
@@ -177,7 +297,7 @@ export default function AdminDashboard() {
   }, [load]);
 
   const locale = i18n.resolvedLanguage || i18n.language || "zh-CN";
-  const chartData = React.useMemo(
+  const dailyChartData = React.useMemo(
     () =>
       (data?.traffic.daily ?? []).map((item) => ({
         ...item,
@@ -187,11 +307,15 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="flex flex-col gap-4 p-0 md:p-4">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <AdminPageTitle>{t("admin_dashboard.title")}</AdminPageTitle>
+    <div className="flex flex-col gap-3 p-0 md:p-4">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <div>
+          <AdminPageTitle>{t("admin_dashboard.title")}</AdminPageTitle>
+          <p className="mt-1 text-sm text-muted-foreground">{t("admin_dashboard.subtitle")}</p>
+        </div>
         {data?.generated_at ? (
-          <span className="text-xs text-muted-foreground">
+          <Button style={{ marginRight: 0 }} variant="ghost" color="gray" size="1" onClick={() => void load(false)}>
+            <RefreshCw size={14} />
             {t("admin_dashboard.updated_at", {
               time: new Intl.DateTimeFormat(locale, {
                 hour: "2-digit",
@@ -199,7 +323,7 @@ export default function AdminDashboard() {
                 second: "2-digit",
               }).format(new Date(data.generated_at)),
             })}
-          </span>
+          </Button>
         ) : null}
       </div>
 
@@ -222,7 +346,7 @@ export default function AdminDashboard() {
 
       {data ? (
         <>
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <SummaryPanel
               icon={<Server size={18} />}
               label={t("admin_dashboard.servers")}
@@ -230,11 +354,7 @@ export default function AdminDashboard() {
               tone={data.servers.offline > 0 ? "orange" : "green"}
             >
               <div className="flex items-center justify-between gap-3">
-                <span>
-                  {t("admin_dashboard.online_percent", {
-                    percent: dashboardOnlinePercent(data),
-                  })}
-                </span>
+                <span>{t("admin_dashboard.online_count", { count: data.servers.online })}</span>
                 <span className={data.servers.offline > 0 ? "text-[var(--orange-11)]" : "text-[var(--green-11)]"}>
                   {t("admin_dashboard.offline_count", { count: data.servers.offline })}
                 </span>
@@ -248,11 +368,11 @@ export default function AdminDashboard() {
             >
               <div className="grid grid-cols-2 gap-3">
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <ArrowUpFromLine size={14} className="shrink-0 text-[var(--green-11)]" />
+                  <ArrowUpFromLine size={14} className="shrink-0 text-[var(--accent-11)]" />
                   <span className="truncate">{t("admin_dashboard.upload")} {formatBytes(data.traffic.today_up)}</span>
                 </span>
                 <span className="flex min-w-0 items-center justify-end gap-1.5 text-right">
-                  <ArrowDownToLine size={14} className="shrink-0 text-[var(--accent-11)]" />
+                  <ArrowDownToLine size={14} className="shrink-0 text-[var(--orange-11)]" />
                   <span className="truncate">{t("admin_dashboard.download")} {formatBytes(data.traffic.today_down)}</span>
                 </span>
               </div>
@@ -264,34 +384,67 @@ export default function AdminDashboard() {
               value={dashboardLocalStorageTotal(data) === null ? t("admin_dashboard.external_storage") : formatBytes(dashboardLocalStorageTotal(data) ?? 0)}
             >
               <div className="flex items-center justify-between gap-3">
-                <span>{t("admin_dashboard.main_database")} {data.database.main.size === null ? "--" : formatBytes(data.database.main.size)}</span>
-                <span>{t("admin_dashboard.monitoring_database")} {data.database.monitoring.size === null ? "--" : formatBytes(data.database.monitoring.size)}</span>
+                <span>{t("admin_dashboard.database_files")} {formatBytes(data.storage.database_files)}</span>
+                <span>WAL {formatBytes(data.storage.wal)}</span>
               </div>
             </SummaryPanel>
           </div>
 
-          {!data.traffic.history_ready ? (
-            <Callout.Root color="blue" size="1">
-              <Callout.Icon>
-                <RefreshCw size={15} className="animate-spin" />
-              </Callout.Icon>
-              <Callout.Text>{t("admin_dashboard.history_preparing")}</Callout.Text>
-            </Callout.Root>
-          ) : null}
-
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.7fr)_minmax(18rem,0.8fr)]">
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.85fr)]">
             <section className="min-w-0 rounded-md border bg-[var(--accent-1)] p-4">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-semibold">{t("admin_dashboard.daily_billable")}</h2>
-                  <p className="mt-0.5 text-sm text-muted-foreground">{t("admin_dashboard.recent_14_days")}</p>
-                </div>
-                <WalletCards size={18} className="text-muted-foreground" />
-              </div>
-              <ChartContainer config={{ billable: { label: t("admin_dashboard.billable"), color: "var(--accent-9)" } }} className="h-[260px] w-full aspect-auto">
-                <BarChart data={chartData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+              <PanelHeader
+                title={t("admin_dashboard.today_traffic")}
+                description={t("admin_dashboard.hourly_traffic_hint")}
+                trailing={(
+                  <div className="mt-0.5 flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-[var(--accent-9)]" />{t("admin_dashboard.upload")}</span>
+                    <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-[var(--orange-9)]" />{t("admin_dashboard.download")}</span>
+                  </div>
+                )}
+              />
+              <ChartContainer
+                config={{
+                  up: { label: t("admin_dashboard.upload"), color: "var(--accent-9)" },
+                  down: { label: t("admin_dashboard.download"), color: "var(--orange-9)" },
+                }}
+                className="h-[220px] w-full aspect-auto"
+              >
+                <LineChart data={data.traffic.hourly} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={18} />
+                  <XAxis dataKey="hour" tickLine={false} axisLine={false} minTickGap={28} />
+                  <YAxis tickLine={false} axisLine={false} width={58} tickFormatter={(value) => formatBytes(Number(value)).replace(" ", "")} />
+                  <Tooltip
+                    content={({ active, payload, label }) => active && payload?.length ? (
+                      <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-lg">
+                        <div className="mb-1.5 text-muted-foreground">{label}</div>
+                        <div className="font-medium text-[var(--accent-11)]">{t("admin_dashboard.upload")}: {formatBytes(Number(payload[0]?.value ?? 0))}</div>
+                        <div className="mt-1 font-medium text-[var(--orange-11)]">{t("admin_dashboard.download")}: {formatBytes(Number(payload[1]?.value ?? 0))}</div>
+                      </div>
+                    ) : null}
+                  />
+                  <Line type="monotone" dataKey="up" stroke="var(--color-up)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="down" stroke="var(--color-down)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+                </LineChart>
+              </ChartContainer>
+            </section>
+
+            <ServerStatusPanel data={data} locale={locale} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.85fr)]">
+            <section className="min-w-0 rounded-md border bg-[var(--accent-1)] p-4">
+              <PanelHeader
+                title={t("admin_dashboard.daily_billable")}
+                description={t("admin_dashboard.daily_billable_hint")}
+                trailing={<span className="rounded-full bg-[var(--accent-a3)] px-2.5 py-1 text-xs font-medium text-[var(--accent-11)]">{t("admin_dashboard.recent_month")}</span>}
+              />
+              {!data.traffic.history_ready ? (
+                <p className="mb-2 text-xs text-muted-foreground">{t("admin_dashboard.history_preparing")}</p>
+              ) : null}
+              <ChartContainer config={{ billable: { label: t("admin_dashboard.billable"), color: "var(--accent-9)" } }} className="h-[220px] w-full aspect-auto">
+                <BarChart data={dailyChartData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} />
                   <YAxis tickLine={false} axisLine={false} width={58} tickFormatter={(value) => formatBytes(Number(value)).replace(" ", "")} />
                   <Tooltip
                     cursor={{ fill: "var(--accent-a3)" }}
@@ -302,63 +455,13 @@ export default function AdminDashboard() {
                       </div>
                     ) : null}
                   />
-                  <Bar dataKey="billable" fill="var(--color-billable)" radius={[4, 4, 0, 0]} maxBarSize={42} />
+                  <Bar dataKey="billable" fill="var(--color-billable)" radius={[2, 2, 0, 0]} maxBarSize={24} />
                 </BarChart>
               </ChartContainer>
             </section>
 
-            <section className="order-first rounded-md border bg-[var(--accent-1)] p-4 xl:order-none">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-semibold">{t("admin_dashboard.offline_servers")}</h2>
-                  <p className="mt-0.5 text-sm text-muted-foreground">{t("admin_dashboard.offline_count", { count: data.servers.offline })}</p>
-                </div>
-                <ServerOff size={18} className={data.servers.offline > 0 ? "text-[var(--orange-11)]" : "text-muted-foreground"} />
-              </div>
-              {data.servers.offline_nodes.length === 0 ? (
-                <div className="flex min-h-40 flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
-                  <CircleCheck size={28} className="text-[var(--green-11)]" />
-                  {t("admin_dashboard.all_online")}
-                </div>
-              ) : (
-                <div className="max-h-[260px] overflow-y-auto pr-1">
-                  {data.servers.offline_nodes.map((node) => (
-                    <div key={node.uuid} className="flex items-center justify-between gap-3 border-t py-3 first:border-t-0">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium">{node.name || node.uuid}</div>
-                        <div className="mt-0.5 truncate text-xs text-muted-foreground">{node.region || t("admin_dashboard.region_unknown")}</div>
-                      </div>
-                      <div className="shrink-0 text-right text-xs text-muted-foreground">
-                        {node.last_seen
-                          ? new Intl.DateTimeFormat(locale, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(node.last_seen))
-                          : t("admin_dashboard.no_last_seen")}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+            <StoragePanel data={data} locale={locale} />
           </div>
-
-          <section className="rounded-md border bg-[var(--accent-1)] p-4">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold">{t("admin_dashboard.database_breakdown")}</h2>
-                <p className="mt-0.5 text-sm text-muted-foreground">{t("admin_dashboard.database_breakdown_hint")}</p>
-              </div>
-              <HardDrive size={18} className="text-muted-foreground" />
-            </div>
-            <div className="grid grid-cols-[minmax(5rem,1fr)_repeat(3,minmax(4.5rem,auto))] gap-2 border-b pb-2 text-xs text-muted-foreground">
-              <span>{t("admin_dashboard.storage")}</span>
-              <span className="text-right">{t("admin_dashboard.database_file")}</span>
-              <span className="text-right">WAL</span>
-              <span className="text-right">SHM</span>
-            </div>
-            <StorageFileRow label={t("admin_dashboard.main_database")} files={data.database.main.files} />
-            <StorageFileRow label={t("admin_dashboard.monitoring_database")} files={data.database.monitoring.files} />
-            <DatabaseStatusLine status={data.database.main} />
-            <DatabaseStatusLine status={data.database.monitoring} />
-          </section>
         </>
       ) : null}
     </div>
