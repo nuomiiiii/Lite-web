@@ -511,6 +511,17 @@
     "update": "更新",
     "update_available": "有可用更新"
   },
+  "navigation": {
+    "account_security": "账户与安全",
+    "appearance": "外观与主题",
+    "data_storage": "数据与存储",
+    "monitoring": "监测",
+    "notification_channels": "通知渠道",
+    "notifications": "通知与告警",
+    "remote_management": "远程管理",
+    "system_settings": "系统设置",
+    "terminal_settings": "终端设置"
+  },
   "network_speed": "网络速率",
   "nodeCard": {
     "actions": "操作",
@@ -554,17 +565,6 @@
   },
   "nodes": {
     "empty": "暂无服务器数据"
-  },
-  "navigation": {
-    "account_security": "账户与安全",
-    "appearance": "外观与主题",
-    "data_storage": "数据与存储",
-    "monitoring": "监测",
-    "notification_channels": "通知渠道",
-    "notifications": "通知与告警",
-    "remote_management": "远程管理",
-    "system_settings": "系统设置",
-    "terminal_settings": "终端设置"
   },
   "notification": {
     "load": {
@@ -827,16 +827,6 @@
     },
     "invalid_integer": "无效的整数",
     "invalid_number": "无效的数字",
-    "storage": {
-      "main_description": "配置、服务器与任务数据",
-      "migration_maintenance": "迁移与维护",
-      "monitoring_data": "监控数据",
-      "monitoring_description": "指标、延迟和历史汇总数据",
-      "overview": "存储概览",
-      "storage_usage": "存储使用",
-      "title": "数据与存储",
-      "total_description": "数据库文件和运行临时文件"
-    },
     "metrics": {
       "advanced_title": "高级选项",
       "batch_description": "选择多个指标，并为它们统一设置原始数据保留天数。",
@@ -1187,6 +1177,16 @@
       "provider_save_failed": "保存登录提供商设置失败",
       "provider_settings_fetch_failed": "加载登录提供商设置失败",
       "title": "单点登录"
+    },
+    "storage": {
+      "main_description": "配置、服务器与任务数据",
+      "migration_maintenance": "迁移与维护",
+      "monitoring_data": "监控数据",
+      "monitoring_description": "指标、延迟和历史汇总数据",
+      "overview": "存储概览",
+      "storage_usage": "存储使用",
+      "title": "数据与存储",
+      "total_description": "数据库文件和运行临时文件"
     },
     "title": "设置",
     "update_1_2_7": {
