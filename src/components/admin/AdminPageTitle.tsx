@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 
 export default function AdminPageTitle({ children }: { children: ReactNode }) {
-  return <h1 className="text-2xl font-bold text-foreground">{children}</h1>;
+  return (
+    <h1 className="text-xl font-semibold leading-7 text-foreground">
+      {children}
+    </h1>
+  );
 }

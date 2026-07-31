@@ -4,6 +4,10 @@ import path from "node:path";
 import test from "node:test";
 
 const adminPages = [
+  "src/pages/admin/dashboard.tsx",
+  "src/pages/admin/index.tsx",
+  "src/pages/admin/account.tsx",
+  "src/pages/admin/sessions.tsx",
   "src/pages/admin/pingTask.tsx",
   "src/pages/admin/returnRoute.tsx",
   "src/pages/admin/exec.tsx",
@@ -15,6 +19,7 @@ const adminPages = [
   "src/pages/admin/notification/ping_loss.tsx",
   "src/pages/admin/notification/general.tsx",
   "src/pages/admin/settings/theme.tsx",
+  "src/pages/admin/theme_managed.tsx",
   "src/pages/admin/market/themes.tsx",
   "src/pages/admin/settings/site.tsx",
   "src/pages/admin/settings/reverse-proxy.tsx",
@@ -32,10 +37,24 @@ test("all primary admin pages use the shared page title", () => {
   }
 });
 
-test("the shared page title matches the monitoring page baseline", () => {
+test("the shared page title keeps a compact admin hierarchy", () => {
   const source = readFileSync(
     path.resolve("src/components/admin/AdminPageTitle.tsx"),
     "utf8",
   );
-  assert.match(source, /text-2xl font-bold/);
+  assert.match(source, /text-xl font-semibold leading-7/);
+});
+
+test("server and settings pages share the standard page spacing", () => {
+  const serverPage = readFileSync(
+    path.resolve("src/pages/admin/index.tsx"),
+    "utf8",
+  );
+  const settingsLayout = readFileSync(
+    path.resolve("src/pages/admin/settings/_layout.tsx"),
+    "utf8",
+  );
+
+  assert.match(serverPage, /direction="column" gap="4" className="p-0 md:p-4"/);
+  assert.match(settingsLayout, /direction="column" gap="4" className="p-0 md:p-4"/);
 });

@@ -32,7 +32,7 @@
     "region_unknown": "Wilayah belum diatur",
     "retention_period": "Masa retensi",
     "server_status": "Status server",
-    "server_status_hint": "Menyoroti node yang perlu ditangani",
+    "server_status_hint": "Ringkasan status server dan node offline",
     "servers": "Status server",
     "storage": "Penyimpanan",
     "subtitle": "Status server, trafik, dan penyimpanan",

@@ -32,7 +32,7 @@
     "region_unknown": "地域未設定",
     "retention_period": "保存期間",
     "server_status": "サーバー状態",
-    "server_status_hint": "対応が必要なノードを優先表示",
+    "server_status_hint": "サーバーの稼働状況とオフラインノードの概要",
     "servers": "サーバー状態",
     "storage": "ストレージ",
     "subtitle": "サーバー、トラフィック、ストレージの状態",

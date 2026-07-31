@@ -32,7 +32,7 @@
     "region_unknown": "未設定地區",
     "retention_period": "保留週期",
     "server_status": "伺服器狀態",
-    "server_status_hint": "僅突出需要處理的節點",
+    "server_status_hint": "伺服器在線狀態與離線節點概覽",
     "servers": "伺服器狀態",
     "storage": "儲存",
     "subtitle": "伺服器、流量與儲存狀態",

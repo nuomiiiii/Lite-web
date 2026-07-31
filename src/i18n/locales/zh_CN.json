@@ -223,7 +223,7 @@
     "region_unknown": "未设置地区",
     "retention_period": "保留周期",
     "server_status": "服务器状态",
-    "server_status_hint": "仅突出需要处理的节点",
+    "server_status_hint": "服务器在线状态与离线节点概览",
     "servers": "服务器状态",
     "storage": "存储",
     "subtitle": "服务器、流量与存储状态",

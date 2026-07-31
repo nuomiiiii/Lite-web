@@ -32,7 +32,7 @@
     "region_unknown": "Region not set",
     "retention_period": "Retention period",
     "server_status": "Server status",
-    "server_status_hint": "Highlights nodes that need attention",
+    "server_status_hint": "Overview of server availability and offline nodes",
     "servers": "Server status",
     "storage": "Storage",
     "subtitle": "Server, traffic, and storage status",

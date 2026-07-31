@@ -4,6 +4,7 @@ import {
   AlertCircle,
   ArrowDownToLine,
   ArrowUpFromLine,
+  CircleCheck,
   Database,
   RefreshCw,
   Server,
@@ -170,7 +171,10 @@ function ServerStatusPanel({ data, locale }: { data: DashboardData; locale: stri
         description={t("admin_dashboard.server_status_hint")}
         trailing={<ServerOff size={18} className="mt-0.5 text-muted-foreground" />}
       />
-      <div className="grid min-h-[220px] grid-cols-1 items-center gap-5 sm:grid-cols-[9rem_minmax(0,1fr)]">
+      <div className={visibleOffline.length === 0
+        ? "flex min-h-[180px] flex-col items-center justify-center gap-6 sm:flex-row sm:gap-10"
+        : "grid min-h-[220px] grid-cols-1 items-center gap-5 sm:grid-cols-[9rem_minmax(0,1fr)]"}
+      >
         <div className="flex justify-center">
           <div
             className="relative size-32 rounded-full"
@@ -185,8 +189,17 @@ function ServerStatusPanel({ data, locale }: { data: DashboardData; locale: stri
           </div>
         </div>
         {visibleOffline.length === 0 ? (
-          <div className="text-center text-sm text-[var(--green-11)] sm:text-left">
-            {t("admin_dashboard.all_online")}
+          <div className="text-center sm:text-left">
+            <div className="flex items-center justify-center gap-2 text-base font-medium text-[var(--green-11)] sm:justify-start">
+              <CircleCheck size={20} />
+              <span>{t("admin_dashboard.all_online")}</span>
+            </div>
+            <div className="mt-3 text-sm text-muted-foreground">
+              {t("admin_dashboard.online_count", { count: data.servers.online })}
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              {t("admin_dashboard.offline_count", { count: data.servers.offline })}
+            </div>
           </div>
         ) : (
           <div className="min-w-0 divide-y">
@@ -221,7 +234,26 @@ function ServerStatusPanel({ data, locale }: { data: DashboardData; locale: stri
 function StoragePanel({ data, locale }: { data: DashboardData; locale: string }) {
   const { t } = useTranslation();
   const storageTotal = data.storage.database_files + data.storage.wal + data.storage.shm;
-  const databaseShare = storageTotal > 0 ? Math.round((data.storage.database_files / storageTotal) * 100) : 0;
+  const storageParts = [
+    {
+      label: t("admin_dashboard.database_files"),
+      value: data.storage.database_files,
+      barClass: "bg-[var(--accent-9)]",
+      labelClass: "font-medium text-foreground",
+    },
+    {
+      label: "WAL",
+      value: data.storage.wal,
+      barClass: "bg-[var(--orange-9)]",
+      labelClass: "text-muted-foreground",
+    },
+    {
+      label: "SHM",
+      value: data.storage.shm,
+      barClass: "bg-[var(--gray-9)]",
+      labelClass: "text-muted-foreground",
+    },
+  ];
 
   return (
     <section className="h-full rounded-md border bg-[var(--accent-1)] p-4">
@@ -231,22 +263,27 @@ function StoragePanel({ data, locale }: { data: DashboardData; locale: string })
         trailing={<Database size={18} className="mt-0.5 text-muted-foreground" />}
       />
       <div className="space-y-3 text-sm">
-        <div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="font-medium">{t("admin_dashboard.database_files")}</span>
-            <span className="tabular-nums">{formatBytes(data.storage.database_files)}</span>
-          </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--gray-a4)]">
-            <div className="h-full rounded-full bg-[var(--accent-9)]" style={{ width: `${databaseShare}%` }} />
-          </div>
-        </div>
-        <div className="flex items-center justify-between gap-3 text-muted-foreground">
-          <span>WAL</span>
-          <span className="tabular-nums">{formatBytes(data.storage.wal)}</span>
-        </div>
-        <div className="flex items-center justify-between gap-3 text-muted-foreground">
-          <span>SHM</span>
-          <span className="tabular-nums">{formatBytes(data.storage.shm)}</span>
+        <div className="space-y-3">
+          {storageParts.map((part) => {
+            const share = storageTotal > 0 ? (part.value / storageTotal) * 100 : 0;
+            return (
+              <div
+                key={part.label}
+                className="grid grid-cols-[minmax(5.5rem,auto)_minmax(3rem,1fr)_6.5rem] items-center gap-3"
+              >
+                <span className={part.labelClass}>{part.label}</span>
+                <div className="h-2 overflow-hidden rounded-full bg-[var(--gray-a4)]">
+                  <div
+                    className={`h-full rounded-full ${part.barClass}`}
+                    style={{ width: `${share}%` }}
+                  />
+                </div>
+                <span className="text-right tabular-nums text-muted-foreground">
+                  {formatBytes(part.value)}
+                </span>
+              </div>
+            );
+          })}
         </div>
         <div className="border-t pt-3">
           <div className="flex items-center justify-between gap-3">

@@ -93,6 +93,7 @@ import { currencyForDisplay, currencyForStorage } from "@/lib/currency";
 import { openRemoteTerminal } from "@/utils/remoteLaunch";
 import { localizeTokenRotationError } from "@/utils/tokenRotation";
 import { SelectOrInput } from "@/components/ui/select-or-input";
+import AdminPageTitle from "@/components/admin/AdminPageTitle";
 
 
 const NodeDetailsPage = () => {
@@ -125,7 +126,7 @@ const Layout = () => {
   const isEmpty = Array.isArray(nodeDetail) && nodeDetail.length === 0;
 
   return (
-    <Flex direction="column" gap="4" p="4">
+    <Flex direction="column" gap="4" className="p-0 md:p-4">
       <Header
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -1007,11 +1008,9 @@ const Header = ({
     }
   };
   return (
-    <Flex justify="between" align="center" gap="4" wrap="wrap">
+    <Flex justify="between" align="start" gap="4" wrap="wrap">
       <Flex gap="2" align="center">
-        <Text size="5" weight="bold">
-          {t("admin.nodeTable.nodeList")}
-        </Text>
+        <AdminPageTitle>{t("admin.nodeTable.nodeList")}</AdminPageTitle>
         {selectedNodes.length > 0 && (
           <Text size="2">({selectedNodes.length} selected)</Text>
         )}
