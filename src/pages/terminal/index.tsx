@@ -21,7 +21,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { LiveDataResponse, Record as LiveRecord } from "@/types/LiveData";
 import RemoteSession, { type RemoteNode } from "./RemoteSession";
-import { consumeRemoteLaunchTarget } from "@/utils/remoteLaunch";
+import { getRemoteLaunchTarget } from "@/utils/remoteLaunch";
 import { useRPC2Call } from "@/contexts/RPC2Context";
 import { mergeLatestStatus } from "@/utils/liveData";
 import "./Terminal.css";
@@ -78,7 +78,7 @@ function SortableRemoteTab({ tab, label, active, online, onActivate, onClose }: 
 }
 
 export default function TerminalWorkspace() {
-  const initialUUID = useMemo(() => consumeRemoteLaunchTarget(), []);
+  const initialUUID = useMemo(() => getRemoteLaunchTarget(), []);
   const [nodes, setNodes] = useState<RemoteNode[]>([]);
   const [tabs, setTabs] = useState<RemoteTab[]>([]);
   const [activeID, setActiveID] = useState("");
