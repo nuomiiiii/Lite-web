@@ -62,6 +62,18 @@ test("keeps the admin navigation in the intended groups", () => {
     ),
   );
 
+  const remoteManagement = menuConfig.menu.find(
+    (item) => item.path === "/admin/remote-management",
+  );
+  assert.deepEqual(
+    remoteManagement?.children?.map((item) => item.path),
+    [
+      "/admin/exec",
+      "/admin/terminal",
+      "/admin/settings/xtermjs",
+    ],
+  );
+
   assert.deepEqual(
     menuConfig.footer.map((item) => item.path),
     [

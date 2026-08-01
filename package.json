@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build --configLoader runner",
     "lint": "eslint .",
-    "test": "node --test tests/dateInput.test.ts tests/currency.test.ts tests/nodeOrder.test.ts tests/databaseRuntime.test.ts tests/version.test.ts tests/adminAuth.test.ts tests/returnRouteLines.test.ts tests/adminMenu.test.ts tests/adminPageTitle.test.ts tests/dashboard.test.ts tests/liveData.test.ts tests/remoteLaunch.test.ts tests/remoteSession.test.ts tests/themeMetadata.test.ts tests/updateDialog.test.ts",
+    "test": "node --test tests/dateInput.test.ts tests/currency.test.ts tests/nodeOrder.test.ts tests/databaseRuntime.test.ts tests/version.test.ts tests/adminAuth.test.ts tests/loginLayout.test.ts tests/returnRouteLines.test.ts tests/adminMenu.test.ts tests/adminPageTitle.test.ts tests/dashboard.test.ts tests/liveData.test.ts tests/remoteFileManager.test.ts tests/remoteLaunch.test.ts tests/remoteNodePicker.test.ts tests/remoteSession.test.ts tests/reverseProxy.test.ts tests/serviceUrl.test.ts tests/siteBackup.test.ts tests/themeMetadata.test.ts tests/trafficAllowance.test.ts tests/updateDialog.test.ts",
     "preview": "vite preview",
     "i18n:sync": "node ./script/i18n-sync.mjs",
     "i18n:sync:dry": "node ./script/i18n-sync.mjs --dry-run"
@@ -37,7 +37,6 @@
     "http-proxy-middleware": "^3.0.5",
     "i18next": "^25.1.2",
     "i18next-browser-languagedetector": "^8.1.0",
-    "komari-web": "file:",
     "lucide-react": "^0.511.0",
     "motion": "^12.10.5",
     "next-themes": "^0.4.6",

@@ -108,10 +108,10 @@ const App = () => {
           }}
         >
 		{isRestrictedGuideRoute ? (
-		  <>
+		  <PublicInfoProvider>
 			<Toaster />
 			<Suspense fallback={<Loading />}>{routing}</Suspense>
-		  </>
+		  </PublicInfoProvider>
 		) : (
 		  <AccountProvider>
 			<AdminRoutePreloader />

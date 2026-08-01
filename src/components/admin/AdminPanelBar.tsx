@@ -12,6 +12,8 @@ import { AnimatePresence, motion } from "framer-motion"; // 引入 Framer Motion
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation /*useNavigate*/ } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import ColorSwitch from "../ColorSwitch";
 import LanguageSwitch from "../Language";
 import ThemeSwitch from "../ThemeSwitch";
@@ -135,6 +137,94 @@ function visibleReleaseBody(body?: string | null) {
   return (body ?? "")
     .replace(/<!--\s*komari-version-hash:\s*[a-z0-9]{7}\s*-->/i, "")
     .trim();
+}
+
+function ReleaseMarkdown({ body }: { body?: string | null }) {
+  return (
+    <div className="mt-3 break-words text-[var(--gray-11)]">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => (
+            <h1 className="mb-3 mt-5 border-b pb-2 text-xl font-semibold leading-7 text-foreground first:mt-0">
+              {children}
+            </h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="mb-2 mt-5 border-b pb-2 text-lg font-semibold leading-7 text-foreground first:mt-0">
+              {children}
+            </h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="mb-2 mt-4 text-base font-semibold leading-6 text-foreground first:mt-0">
+              {children}
+            </h3>
+          ),
+          h4: ({ children }) => (
+            <h4 className="mb-2 mt-4 text-sm font-semibold text-foreground first:mt-0">
+              {children}
+            </h4>
+          ),
+          p: ({ children }) => <p className="my-3 leading-6">{children}</p>,
+          ul: ({ children }) => (
+            <ul className="my-3 list-disc space-y-1 pl-6 leading-6">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="my-3 list-decimal space-y-1 pl-6 leading-6">{children}</ol>
+          ),
+          li: ({ children }) => <li className="pl-1">{children}</li>,
+          strong: ({ children }) => (
+            <strong className="font-semibold text-foreground">{children}</strong>
+          ),
+          a: ({ children, href }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-[var(--accent-11)] underline underline-offset-2"
+            >
+              {children}
+            </a>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="my-3 border-l-4 border-[var(--gray-a6)] pl-4 text-muted-foreground">
+              {children}
+            </blockquote>
+          ),
+          hr: () => <hr className="my-5 border-[var(--gray-a5)]" />,
+          table: ({ children }) => (
+            <div className="my-4 overflow-x-auto rounded-md border border-[var(--gray-a5)]">
+              <table className="w-full min-w-max border-collapse text-left text-sm">
+                {children}
+              </table>
+            </div>
+          ),
+          th: ({ children }) => (
+            <th className="border-b border-r border-[var(--gray-a5)] bg-[var(--gray-a2)] px-3 py-2 font-semibold text-foreground last:border-r-0">
+              {children}
+            </th>
+          ),
+          td: ({ children }) => (
+            <td className="border-b border-r border-[var(--gray-a5)] px-3 py-2 align-top last:border-r-0">
+              {children}
+            </td>
+          ),
+          code: ({ children }) => (
+            <code className="rounded bg-[var(--gray-a3)] px-1.5 py-0.5 font-mono text-[0.9em] text-foreground">
+              {children}
+            </code>
+          ),
+          pre: ({ children }) => (
+            <pre className="my-4 overflow-x-auto rounded-md bg-[var(--gray-a3)] p-3 leading-6">
+              {children}
+            </pre>
+          ),
+        }}
+      >
+        {visibleReleaseBody(body)}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
 function isReleaseNewer(
@@ -737,9 +827,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                                 </div>
                               )}
                             </div>
-                            <div className="mt-3 whitespace-pre-wrap break-words leading-6 text-[var(--gray-11)]">
-                              {visibleReleaseBody(r.body)}
-                            </div>
+                            <ReleaseMarkdown body={r.body} />
                           </section>
                         ))}
                       </div>

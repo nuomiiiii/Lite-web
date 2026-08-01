@@ -4,6 +4,7 @@ import {
   quoteShellArgs,
 } from "@/utils/shellQuote";
 import { publicVersion } from "@/utils/version";
+import { normalizeOptionalServiceUrl } from "@/utils/serviceUrl";
 import React, { useEffect, useState } from "react";
 import {
   NodeDetailsProvider,
@@ -94,6 +95,11 @@ import { openRemoteTerminal } from "@/utils/remoteLaunch";
 import { localizeTokenRotationError } from "@/utils/tokenRotation";
 import { SelectOrInput } from "@/components/ui/select-or-input";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import {
+  getRegionCode,
+  getRegionDisplayName,
+  getSupportedRegions,
+} from "@/utils/regionHelper";
 
 
 const NodeDetailsPage = () => {
@@ -247,10 +253,7 @@ const AutoDiscoverySection = ({
       if (!settings?.script_domain) {
         return window.location.origin;
       }
-      if (settings.script_domain.startsWith("http")) {
-        return settings.script_domain.replace(/\/+$/, "");
-      }
-      return `http://${settings.script_domain.replace(/\/+$/, "")}`;
+      return normalizeOptionalServiceUrl(settings.script_domain);
     })();
     const args: string[] = ["-e", host, "--auto-discovery", adKey];
     if (installOptions.disableWebSsh) {
@@ -273,9 +276,7 @@ const AutoDiscoverySection = ({
     }
     const ghproxy = installOptions.ghproxy.trim();
     if (enableGhproxy && ghproxy) {
-      const finalUrl = (
-        ghproxy.startsWith("http") ? ghproxy : `http://${ghproxy}`
-      ).replace(/\/+$/, "");
+      const finalUrl = normalizeOptionalServiceUrl(ghproxy);
       args.push(`--install-ghproxy`);
       args.push(finalUrl);
     }
@@ -1596,10 +1597,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
       if (!settings.script_domain) {
         return window.location.origin;
       }
-      if (settings.script_domain.startsWith("http")) {
-        return settings.script_domain.replace(/\/+$/, "");
-      }
-      return `http://${settings.script_domain.replace(/\/+$/, "")}`;
+      return normalizeOptionalServiceUrl(settings.script_domain);
     }();
     const token = node.token || "";
     let args = ["-e", host, "-t", token];
@@ -1624,11 +1622,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
     }
     const ghproxy = installOptions.ghproxy.trim();
     if (enableGhproxy && ghproxy) {
-      const finalUrl = (
-        ghproxy.startsWith("http")
-          ? ghproxy
-          : `http://${ghproxy}`
-      ).replace(/\/+$/, "");
+      const finalUrl = normalizeOptionalServiceUrl(ghproxy);
       args.push(`--install-ghproxy`);
       args.push(finalUrl);
     }
@@ -2350,7 +2344,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
 }
 
 function EditButton({ node }: { node: NodeDetail }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const { refresh } = useNodeDetails();
   const nameRef = React.useRef<HTMLInputElement>(null);
@@ -2363,35 +2357,81 @@ function EditButton({ node }: { node: NodeDetail }) {
   const [traffic_limit, setTrafficLimit] = useState(0);
   const [traffic_limit_type, setTrafficLimitType] = useState("sum");
   const [trafficResetDay, setTrafficResetDay] = useState(0);
+  const [regionOverride, setRegionOverride] = useState("");
+  const [trafficResetAllowance, setTrafficResetAllowance] = useState(0);
+
+  const regionOptions = React.useMemo(
+    () => [
+      {
+        label: t("admin.nodeEdit.regionAuto", "自动识别"),
+        value: "",
+      },
+      ...getSupportedRegions().map((region) => {
+        const code = getRegionCode(region);
+        return {
+          label: `${code} ${getRegionDisplayName(region, i18n.language.startsWith("zh") ? "zh" : "en")}`,
+          value: code,
+          icon: <Flag flag={code} compact />,
+        };
+      }),
+    ],
+    [i18n.language, t],
+  );
 
   React.useEffect(() => {
     setHidden(node.hidden);
     setTrafficLimit(node.traffic_limit || 0);
     setTrafficLimitType(node.traffic_limit_type || "sum");
     setTrafficResetDay(node.traffic_reset_day ?? 0);
+    setRegionOverride(getRegionCode(node.region_override ?? ""));
+    setTrafficResetAllowance(node.traffic_reset_allowance ?? 0);
   }, [
     node.hidden,
     node.traffic_limit,
     node.traffic_limit_type,
     node.traffic_reset_day,
+    node.region_override,
+    node.traffic_reset_allowance,
   ]);
 
   const save = async () => {
+    if (trafficResetAllowance > 0 && (trafficResetDay < 1 || trafficResetDay > 31)) {
+      toast.error(
+        t(
+          "admin.nodeEdit.trafficResetDayRequired",
+          "请先设置 1-31 日的流量重置日，再填写本周期重置流量",
+        ),
+      );
+      return;
+    }
     try {
       setSaving(true);
+      const payload: Record<string, unknown> = {
+        name: nameRef.current?.value,
+        remark: privateRemarkRef.current?.value,
+        public_remark: publicRemarkRef.current?.value,
+        group: groupRef.current?.value,
+        tags: tagsRef.current?.value,
+        hidden,
+      };
+      if (traffic_limit !== (node.traffic_limit || 0)) {
+        payload.traffic_limit = traffic_limit;
+      }
+      if (traffic_limit_type !== (node.traffic_limit_type || "sum")) {
+        payload.traffic_limit_type = traffic_limit_type;
+      }
+      if (trafficResetDay !== (node.traffic_reset_day ?? 0)) {
+        payload.traffic_reset_day = trafficResetDay;
+      }
+      if (regionOverride !== getRegionCode(node.region_override ?? "")) {
+        payload.region_override = regionOverride;
+      }
+      if (trafficResetAllowance !== (node.traffic_reset_allowance ?? 0)) {
+        payload.traffic_reset_allowance = trafficResetAllowance;
+      }
       const response = await fetch(`/api/admin/client/${node.uuid}/edit`, {
         method: "POST",
-        body: JSON.stringify({
-          name: nameRef.current?.value,
-          remark: privateRemarkRef.current?.value,
-          public_remark: publicRemarkRef.current?.value,
-          group: groupRef.current?.value,
-          tags: tagsRef.current?.value,
-          hidden,
-          traffic_limit,
-          traffic_limit_type,
-          traffic_reset_day: trafficResetDay,
-        }),
+        body: JSON.stringify(payload),
         headers: {
           "Content-Type": "application/json",
         },
@@ -2442,6 +2482,24 @@ function EditButton({ node }: { node: NodeDetail }) {
               placeholder={t("admin.nodeEdit.tokenPlaceholder", "请输入 Token")}
               readOnly
             />
+          </div>
+          <div>
+            <label className="block mb-1 text-sm font-medium text-muted-foreground">
+              {t("admin.nodeEdit.regionOverride", "国家图标")}
+            </label>
+            <SelectOrInput
+              options={regionOptions}
+              value={regionOverride}
+              allowCustomInput={false}
+              onChange={setRegionOverride}
+              placeholder={t("admin.nodeEdit.regionAuto", "自动识别")}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t(
+                "admin.nodeEdit.regionOverride_description",
+                "用于广播 IP 或 GeoIP 识别不准的情况；清空后恢复自动识别。",
+              )}
+            </p>
           </div>
           <div>
             <label className="mb-1 text-sm font-medium text-muted-foreground flex items-center">
@@ -2500,11 +2558,12 @@ function EditButton({ node }: { node: NodeDetail }) {
             />
           </div>
           <SettingCardCollapse title={t("admin.nodeEdit.trafficLimit")}>
-            <div className="px-4 py-2">
-              <label className="block mb-1 text-sm font-medium">
+            <div className="space-y-2 pb-3 pt-2">
+              <label className="block text-base font-semibold leading-6">
                 {t("admin.nodeEdit.trafficResetDay", "流量重置日")}
               </label>
               <TextField.Root
+                aria-label={t("admin.nodeEdit.trafficResetDay")}
                 type="number"
                 min="0"
                 max="31"
@@ -2519,7 +2578,7 @@ function EditButton({ node }: { node: NodeDetail }) {
                   );
                 }}
               />
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="text-sm leading-6 text-muted-foreground">
                 {t(
                   "admin.nodeEdit.trafficResetDay_description",
                   "0 表示关闭；1-31 表示每月重置日。保存后自动同步到 Agent。",
@@ -2557,6 +2616,7 @@ function EditButton({ node }: { node: NodeDetail }) {
               }}
             />
             <SettingCardShortTextInput
+              aria-label={t("admin.nodeEdit.trafficLimit")}
               bordless
               title={t("admin.nodeEdit.trafficLimit")}
               description={t("admin.nodeEdit.trafficLimit_description")}
@@ -2569,6 +2629,41 @@ function EditButton({ node }: { node: NodeDetail }) {
                 e.currentTarget.value = formatBytes(traffic_limit);
               }}
             ></SettingCardShortTextInput>
+            <div className="mt-5 border-t border-gray-200 pt-4 dark:border-gray-700">
+              <SettingCardShortTextInput
+                aria-label={t("admin.nodeEdit.trafficResetAllowance")}
+                bordless
+                title={t("admin.nodeEdit.trafficResetAllowance", "重置流量额度")}
+                description={t(
+                  "admin.nodeEdit.trafficResetAllowance_description",
+                  "同一计费周期可多次调整；与原流量限额相加，按上方统计方式计算，并在下个重置日自动归零。",
+                )}
+                defaultValue={formatBytes(trafficResetAllowance || 0)}
+                showSaveButton={false}
+                onChange={(event) => {
+                  setTrafficResetAllowance(stringToBytes(event.currentTarget.value));
+                }}
+                onBlur={(event) => {
+                  event.currentTarget.value = formatBytes(trafficResetAllowance);
+                }}
+              />
+            </div>
+            <div className="mt-3 space-y-1.5 pb-3 text-sm leading-6 text-muted-foreground">
+              <div>
+                {t("admin.nodeEdit.trafficEffectiveFormula", {
+                  defaultValue: "原限额 {{base}} + 重置流量 {{reset}} = 本周期总限额 {{total}}",
+                  base: formatBytes(traffic_limit),
+                  reset: formatBytes(trafficResetAllowance),
+                  total: formatBytes(traffic_limit + trafficResetAllowance),
+                })}
+              </div>
+              <div>
+                {t(
+                  "admin.nodeEdit.trafficResetReportNotice",
+                  "这里只调整本周期额度，不会清零或修改真实流量，日、周、月报仍按实际产生的流量统计。",
+                )}
+              </div>
+            </div>
           </SettingCardCollapse>
         </div>
         <Flex gap="2" justify={"end"} className="mt-4">

@@ -17,3 +17,10 @@ test("update dialog keeps its title, release body, and actions separated", () =>
   assert.match(source, /<div className="divide-y text-sm">/);
   assert.match(source, /<footer className="flex items-center justify-end gap-2 border-t/);
 });
+
+test("release notes render GitHub-flavored Markdown", () => {
+  assert.match(source, /<ReactMarkdown/);
+  assert.match(source, /remarkPlugins=\{\[remarkGfm\]\}/);
+  assert.match(source, /overflow-x-auto rounded-md border/);
+  assert.doesNotMatch(source, /whitespace-pre-wrap/);
+});
