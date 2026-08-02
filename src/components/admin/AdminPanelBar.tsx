@@ -56,6 +56,7 @@ const parsedMenuConfig = menuConfig as {
 const baseMenuItems = parsedMenuConfig.menu;
 const footerMenuItems = parsedMenuConfig.footer ?? [];
 const DESKTOP_SIDEBAR_WIDTH = 212;
+const MOBILE_SIDEBAR_WIDTH = "clamp(184px, 42vw, 244px)";
 
 interface AdminPanelBarProps {
   content: ReactNode;
@@ -125,6 +126,39 @@ function formatVersion(version?: string | null, hash?: string | null) {
   return normalizedHash && normalizedHash !== "unknown"
     ? `${version} (${normalizedHash})`
     : version;
+}
+
+function SidebarVersionLabel({
+  version,
+  hash,
+  isMobile,
+}: {
+  version: string;
+  hash?: string | null;
+  isMobile: boolean;
+}) {
+  const snapshot = !isMobile ? version.match(/^snapshot-(.+)$/i) : null;
+  const normalizedHash = hash?.trim();
+  const visibleHash =
+    normalizedHash && normalizedHash !== "unknown" ? normalizedHash : null;
+
+  if (snapshot) {
+    return (
+      <span className="min-w-0 text-sm font-normal leading-5">
+        <span className="block">Snapshot</span>
+        <span className="block break-words">
+          {snapshot[1]}
+          {visibleHash ? ` · ${visibleHash}` : ""}
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="min-w-0 whitespace-nowrap text-base font-normal leading-5">
+      {formatVersion(version, hash)}
+    </span>
+  );
 }
 
 function formatReleaseVersion(release?: GithubReleaseInfo | null) {
@@ -465,7 +499,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   // 侧边栏动画变体
   const sidebarVariants = {
     open: {
-      width: isMobile ? "100vw" : `${DESKTOP_SIDEBAR_WIDTH}px`,
+      width: isMobile ? MOBILE_SIDEBAR_WIDTH : `${DESKTOP_SIDEBAR_WIDTH}px`,
       opacity: 1,
       transition: {
         type: "spring",
@@ -487,8 +521,8 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   // 内容区域动画变体
   const contentVariants = {
     open: {
-      opacity: isMobile ? 0 : 1,
-      x: isMobile ? "100%" : 0,
+      opacity: 1,
+      x: 0,
       transition: {
         duration: 0.3,
       },
@@ -733,6 +767,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
           width: "100vw",
           overflow: "auto",
           backgroundColor: "var(--accent-1)",
+          position: "relative",
         }}
       >
         {/* Navbar */}
@@ -757,6 +792,8 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               <IconButton
                 size="2"
                 variant="ghost"
+                data-testid="mobile-sidebar-trigger"
+                aria-label={t("navigation.open")}
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="shrink-0"
                 style={{
@@ -900,7 +937,21 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
 
         {/* Sidebar */}
         <AnimatePresence>
+          {isMobile && sidebarOpen && (
+            <motion.button
+              key="mobile-sidebar-backdrop"
+              type="button"
+              aria-label={t("close", "关闭导航")}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setSidebarOpen(false)}
+              className="absolute inset-0 z-[9] cursor-default border-0 bg-[var(--black-a6)] p-0"
+            />
+          )}
           <motion.div
+            key="admin-sidebar"
             variants={sidebarVariants}
             initial="closed"
             animate={sidebarOpen ? "open" : "closed"}
@@ -909,6 +960,8 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               backgroundColor: "var(--accent-1)",
               height: "100%",
               position: isMobile ? "absolute" : "relative",
+              top: isMobile ? 0 : undefined,
+              left: isMobile ? 0 : undefined,
               zIndex: isMobile ? 10 : 1,
               overflowY: "auto",
               overflowX: "hidden",
@@ -922,12 +975,14 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               align="start"
               style={{
                 height: "100%",
-                minWidth: `${DESKTOP_SIDEBAR_WIDTH}px`,
+                minWidth: isMobile ? "100%" : `${DESKTOP_SIDEBAR_WIDTH}px`,
               }}
             >
               {/* 关闭按钮 */}
               <IconButton
                 variant="soft"
+                data-testid="mobile-sidebar-close"
+                aria-label={t("close", "关闭导航")}
                 style={{
                   display: isMobile ? "flex" : "none",
                   margin: "8px 0px 0px 8px",
@@ -953,27 +1008,30 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                   style={{ width: "100%" }}
                 >
                   {renderMenuItems(footerMenuItems)}
-                  {!isMobile && currentVersion && currentReleaseURL && (
+                  {currentVersion && currentReleaseURL && (
                       <a
-                        data-testid="desktop-sidebar-version"
+                        data-testid="sidebar-version"
                         href={currentReleaseURL}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex min-h-8 items-center gap-2 rounded-[4px] px-3 py-1.5 text-[var(--gray-12)] transition-colors hover:bg-[var(--gray-a3)]"
+                        className="flex min-h-8 items-start gap-2 rounded-[4px] px-3 py-1.5 text-[var(--gray-12)] transition-colors hover:bg-[var(--gray-a3)]"
                         title={`${t("common.version", "版本")}：${formatVersion(
                           currentVersion,
                           versionInfo?.hash,
                         )}`}
                       >
-                        <Github size={16} strokeWidth={1.75} aria-hidden="true" />
-                        <span
-                          className="truncate font-mono text-base leading-5"
-                        >
-                          {formatVersion(
-                            currentVersion,
-                            versionInfo?.hash,
-                          )}
+                        <span className="flex h-5 w-4 shrink-0 items-center justify-center">
+                          <Github
+                            className="h-4 w-4"
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                          />
                         </span>
+                        <SidebarVersionLabel
+                          version={currentVersion}
+                          hash={versionInfo?.hash}
+                          isMobile={isMobile}
+                        />
                       </a>
                     )}
                 </Flex>
@@ -988,7 +1046,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
           animate={sidebarOpen ? "open" : "closed"}
           style={{
             backgroundColor: "var(--accent-3)",
-            display: isMobile && sidebarOpen ? "none" : "block",
+            display: "block",
             height: "100%", // Ensure the container takes full height
             minWidth: 0,
             maxWidth: "100%",

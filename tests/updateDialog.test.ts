@@ -19,10 +19,12 @@ test("admin branding keeps Lite smaller and green on desktop and mobile", () => 
   assert.match(brandSource, /lite: "text-base"/);
 });
 
-test("desktop version moves from the top bar to the sidebar footer", () => {
-  assert.match(source, /data-testid="desktop-sidebar-version"/);
-  assert.match(source, /<Github size=\{16\}/);
-  assert.match(source, /truncate font-mono text-base/);
+test("the version link is shared by the desktop and mobile sidebar", () => {
+  assert.match(source, /data-testid="sidebar-version"/);
+  assert.match(source, /<Github/);
+  assert.match(source, /flex h-5 w-4 shrink-0 items-center justify-center/);
+  assert.match(source, /className="h-4 w-4"/);
+  assert.match(source, /strokeWidth=\{1\.5\}/);
   assert.match(source, /text-\[var\(--gray-12\)\]/);
   assert.doesNotMatch(source, />\s*v\{formatVersion\(/);
   assert.match(
@@ -30,9 +32,40 @@ test("desktop version moves from the top bar to the sidebar footer", () => {
     /github\.com\/nuomiiiii\/komari\/releases\/tag\/\$\{encodeURIComponent\(currentVersion\)\}/,
   );
   assert.match(source, /target="_blank"/);
-  assert.match(source, /\{!isMobile &&/);
+  assert.doesNotMatch(source, /\{!isMobile && currentVersion/);
   assert.doesNotMatch(source, /hidden=\{isMobile\}/);
-  assert.doesNotMatch(source, /data-testid="desktop-sidebar-version"[\s\S]{0,120}border-t/);
+  assert.doesNotMatch(source, /data-testid="sidebar-version"[\s\S]{0,120}border-t/);
+});
+
+test("only desktop snapshot versions use the compact wrapped layout", () => {
+  assert.match(source, /const snapshot = !isMobile \? version\.match\(\/\^snapshot-/);
+  assert.match(source, /text-sm font-normal leading-5/);
+  assert.match(source, /<span className="block">Snapshot<\/span>/);
+  assert.match(source, /whitespace-nowrap text-base font-normal leading-5/);
+  assert.match(source, /isMobile=\{isMobile\}/);
+});
+
+test("mobile navigation uses a partial overlay without hiding the page", () => {
+  assert.match(source, /const MOBILE_SIDEBAR_WIDTH = "clamp\(184px, 42vw, 244px\)"/);
+  assert.match(source, /data-testid="mobile-sidebar-trigger"/);
+  assert.match(source, /data-testid="mobile-sidebar-close"/);
+  assert.match(source, /key="mobile-sidebar-backdrop"/);
+  assert.match(source, /onClick=\{\(\) => setSidebarOpen\(false\)\}/);
+  assert.match(source, /backgroundColor: "var\(--accent-3\)"[\s\S]{0,100}display: "block"/);
+  assert.doesNotMatch(
+    source,
+    /backgroundColor: "var\(--accent-3\)"[\s\S]{0,100}display: isMobile && sidebarOpen \? "none"/,
+  );
+});
+
+test("mobile navigation label is localized in every admin language", () => {
+  for (const locale of ["zh_CN", "zh_TW", "en", "ja_JP", "id_ID"]) {
+    const messages = JSON.parse(
+      readFileSync(`src/i18n/locales/${locale}.json`, "utf8"),
+    );
+    assert.equal(typeof messages.navigation.open, "string");
+    assert.notEqual(messages.navigation.open.trim(), "");
+  }
 });
 
 test("desktop update dialog gives release notes enough space", () => {
