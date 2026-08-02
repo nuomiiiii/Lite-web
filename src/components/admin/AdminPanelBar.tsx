@@ -57,6 +57,14 @@ const baseMenuItems = parsedMenuConfig.menu;
 const footerMenuItems = parsedMenuConfig.footer ?? [];
 const DESKTOP_SIDEBAR_WIDTH = 212;
 const MOBILE_SIDEBAR_WIDTH = "clamp(184px, 42vw, 244px)";
+const MOBILE_SIDEBAR_OPEN_TRANSITION = {
+  duration: 0.18,
+  ease: "easeOut",
+} as const;
+const MOBILE_SIDEBAR_CLOSE_TRANSITION = {
+  duration: 0.16,
+  ease: "easeIn",
+} as const;
 
 interface AdminPanelBarProps {
   content: ReactNode;
@@ -497,26 +505,37 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   }, [location.pathname, menuItems]);
 
   // 侧边栏动画变体
-  const sidebarVariants = {
-    open: {
-      width: isMobile ? MOBILE_SIDEBAR_WIDTH : `${DESKTOP_SIDEBAR_WIDTH}px`,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
-      },
-    },
-    closed: {
-      width: 0,
-      opacity: isMobile ? 0 : 1, // 移动端完全透明
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
-      },
-    },
-  } as const;
+  const sidebarVariants = isMobile
+    ? {
+        open: {
+          x: 0,
+          transition: MOBILE_SIDEBAR_OPEN_TRANSITION,
+        },
+        closed: {
+          x: "-100%",
+          transition: MOBILE_SIDEBAR_CLOSE_TRANSITION,
+        },
+      }
+    : {
+        open: {
+          width: `${DESKTOP_SIDEBAR_WIDTH}px`,
+          opacity: 1,
+          transition: {
+            type: "spring",
+            stiffness: 300,
+            damping: 30,
+          },
+        },
+        closed: {
+          width: 0,
+          opacity: 1,
+          transition: {
+            type: "spring",
+            stiffness: 300,
+            damping: 30,
+          },
+        },
+      } as const;
 
   // 内容区域动画变体
   const contentVariants = {
@@ -709,7 +728,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                   ? { height: "auto", opacity: 1 }
                   : { height: 0, opacity: 0 }
               }
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.14 }}
               style={{ overflow: "hidden" }}
             >
               <Flex direction="column" className="ml-4 gap-1">
@@ -953,11 +972,12 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
           <motion.div
             key="admin-sidebar"
             variants={sidebarVariants}
-            initial="closed"
+            initial={false}
             animate={sidebarOpen ? "open" : "closed"}
             exit="closed"
             style={{
               backgroundColor: "var(--accent-1)",
+              width: isMobile ? MOBILE_SIDEBAR_WIDTH : undefined,
               height: "100%",
               position: isMobile ? "absolute" : "relative",
               top: isMobile ? 0 : undefined,
@@ -965,6 +985,9 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               zIndex: isMobile ? 10 : 1,
               overflowY: "auto",
               overflowX: "hidden",
+              willChange: isMobile ? "transform" : "width",
+              backfaceVisibility: isMobile ? "hidden" : undefined,
+              pointerEvents: isMobile && !sidebarOpen ? "none" : "auto",
             }}
           >
             <Flex
@@ -1014,7 +1037,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                         href={currentReleaseURL}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex min-h-8 items-start gap-2 rounded-[4px] px-3 py-1.5 text-[var(--gray-12)] transition-colors hover:bg-[var(--gray-a3)]"
+                        className="group flex min-h-10 w-full items-center gap-2 rounded-md border-l-[4px] border-transparent p-2 text-[var(--gray-12)] transition-colors duration-200 hover:bg-[var(--accent-a3)] hover:text-[var(--accent-11)] focus-visible:bg-[var(--accent-a3)] focus-visible:text-[var(--accent-11)]"
                         title={`${t("common.version", "版本")}：${formatVersion(
                           currentVersion,
                           versionInfo?.hash,

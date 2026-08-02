@@ -26,6 +26,11 @@ test("the version link is shared by the desktop and mobile sidebar", () => {
   assert.match(source, /className="h-4 w-4"/);
   assert.match(source, /strokeWidth=\{1\.5\}/);
   assert.match(source, /text-\[var\(--gray-12\)\]/);
+  assert.match(source, /group flex min-h-10 w-full items-center gap-2 rounded-md/);
+  assert.match(source, /border-l-\[4px\] border-transparent p-2/);
+  assert.match(source, /hover:bg-\[var\(--accent-a3\)\]/);
+  assert.match(source, /hover:text-\[var\(--accent-11\)\]/);
+  assert.doesNotMatch(source, /hover:bg-\[var\(--gray-a3\)\]/);
   assert.doesNotMatch(source, />\s*v\{formatVersion\(/);
   assert.match(
     source,
@@ -47,6 +52,11 @@ test("only desktop snapshot versions use the compact wrapped layout", () => {
 
 test("mobile navigation uses a partial overlay without hiding the page", () => {
   assert.match(source, /const MOBILE_SIDEBAR_WIDTH = "clamp\(184px, 42vw, 244px\)"/);
+  assert.match(source, /open:\s*\{\s*x: 0,/);
+  assert.match(source, /closed:\s*\{\s*x: "-100%",/);
+  assert.match(source, /width: isMobile \? MOBILE_SIDEBAR_WIDTH : undefined/);
+  assert.match(source, /willChange: isMobile \? "transform" : "width"/);
+  assert.doesNotMatch(source, /open:\s*\{\s*width: isMobile/);
   assert.match(source, /data-testid="mobile-sidebar-trigger"/);
   assert.match(source, /data-testid="mobile-sidebar-close"/);
   assert.match(source, /key="mobile-sidebar-backdrop"/);
