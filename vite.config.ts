@@ -71,8 +71,8 @@ export default defineConfig(({ mode }) => {
         registerType: "autoUpdate",
         includeManifestIcons: false,
         manifest: {
-          name: "Komari Monitor",
-          short_name: "Komari Monitor",
+          name: "Komari Lite",
+          short_name: "Komari Lite",
           description: "A simple server monitor tool",
           theme_color: "#2563eb",
           background_color: "#ffffff",

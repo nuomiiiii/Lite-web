@@ -79,9 +79,9 @@ test("keeps the admin navigation in the intended groups", () => {
     [
       "/admin/logs",
       "https://nuomiiiii.github.io/komari-document/",
-      "/admin/about",
     ],
   );
+  assert.equal(allPaths(menuConfig.footer).includes("/admin/about"), false);
 });
 
 test("places dynamic theme configuration inside the appearance group", () => {

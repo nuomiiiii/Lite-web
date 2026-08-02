@@ -17,6 +17,7 @@ import remarkGfm from "remark-gfm";
 import ColorSwitch from "../ColorSwitch";
 import LanguageSwitch from "../Language";
 import ThemeSwitch from "../ThemeSwitch";
+import KomariLiteBrand from "../KomariLiteBrand";
 import { useIsMobile } from "@/hooks/use-mobile";
 import menuConfig from "../../config/menuConfig.json";
 import type { MenuItem } from "../../types/menu";
@@ -29,6 +30,7 @@ import {
   CircleFadingArrowUp,
   Download,
   ExternalLink,
+  Github,
   LoaderCircle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -280,6 +282,11 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
 
   const currentTheme = publicInfo?.theme;
+  const currentVersion =
+    (publicInfo as any)?.version || versionInfo?.version;
+  const currentReleaseURL = currentVersion
+    ? `https://github.com/nuomiiiii/komari/releases/tag/${encodeURIComponent(currentVersion)}`
+    : undefined;
 
   // 动态扩展菜单
   const [extraMenuItems, setExtraMenuItems] = useState<MenuItem[]>([]);
@@ -736,14 +743,14 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
           <Flex
-            gap="3"
+            gap={isMobile ? "1" : "3"}
             p="2"
             justify="between"
             align="center"
             className="border-b-1"
           >
             <Flex
-              gap="3"
+              gap={isMobile ? "2" : "3"}
               align="end"
               style={{ minHeight: "calc(32px * var(--scaling))" }}
             >
@@ -765,7 +772,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                 rel="noopener noreferrer"
                 className="flex items-end leading-none"
               >
-                <span className="text-2xl font-bold leading-none">Komari</span>
+                <KomariLiteBrand size={isMobile ? "sm" : "md"} />
               </a>
               {updateAvailable && releasesSince.length > 0 && (
                 <Dialog.Root open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
@@ -874,16 +881,13 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                   </Dialog.Content>
                 </Dialog.Root>
               )}
-              <span
-                className="text-sm text-muted-foreground leading-normal overflow-visible"
-                hidden={isMobile}
-              >
-                {(publicInfo as any)?.version ||
-                  (versionInfo &&
-                    `${versionInfo.version} (${versionInfo.hash})`)}
-              </span>
             </Flex>
-            <Flex gap="3" align="center" overflowX="auto">
+            <Flex
+              gap={isMobile ? "1" : "3"}
+              align="center"
+              overflowX="auto"
+              className="shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
               <ThemeSwitch />
               <ColorSwitch />
               <LanguageSwitch />
@@ -949,6 +953,29 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                   style={{ width: "100%" }}
                 >
                   {renderMenuItems(footerMenuItems)}
+                  {!isMobile && currentVersion && currentReleaseURL && (
+                      <a
+                        data-testid="desktop-sidebar-version"
+                        href={currentReleaseURL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex min-h-8 items-center gap-2 rounded-[4px] px-3 py-1.5 text-[var(--gray-12)] transition-colors hover:bg-[var(--gray-a3)]"
+                        title={`${t("common.version", "版本")}：${formatVersion(
+                          currentVersion,
+                          versionInfo?.hash,
+                        )}`}
+                      >
+                        <Github size={16} strokeWidth={1.75} aria-hidden="true" />
+                        <span
+                          className="truncate font-mono text-base leading-5"
+                        >
+                          {formatVersion(
+                            currentVersion,
+                            versionInfo?.hash,
+                          )}
+                        </span>
+                      </a>
+                    )}
                 </Flex>
               </Flex>
             </Flex>

@@ -12,7 +12,7 @@ export default function LoginIdentityHeader({
 }: LoginIdentityHeaderProps) {
   const { t } = useTranslation();
   const { publicInfo } = usePublicInfo();
-  const title = publicInfo?.sitename || "Komari";
+  const title = publicInfo?.sitename || "Komari Lite";
 
   return (
     <header className="mb-6 flex items-center gap-3">

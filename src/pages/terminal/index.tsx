@@ -286,7 +286,7 @@ export default function TerminalWorkspace() {
       <Toaster theme="dark" />
       <div className="remote-workspace">
         <nav className="remote-tabbar" aria-label="远程服务器标签">
-          <div className="remote-brand"><Server size={17} /><span>Komari 远程管理</span></div>
+          <div className="remote-brand"><Server size={17} /><span>Komari Lite 远程管理</span></div>
           <DndContext sensors={tabSensors} collisionDetection={closestCenter} onDragEnd={reorderTabs}>
             <div className="remote-tabs">
               <SortableContext items={tabs.map((tab) => tab.id)} strategy={horizontalListSortingStrategy}>

@@ -64,7 +64,7 @@ test("restricted login uses the same unadorned localized fields", () => {
     (restrictedLoginSource.match(/className="text-\[15px\]"/g) ?? []).length,
     2,
   );
-  assert.match(loginIdentitySource, /publicInfo\?\.sitename \|\| "Komari"/);
+  assert.match(loginIdentitySource, /publicInfo\?\.sitename \|\| "Komari Lite"/);
   assert.doesNotMatch(
     restrictedLoginSource,
     /<Dialog\.Title>\{t\("login\.title"\)\}<\/Dialog\.Title>/,

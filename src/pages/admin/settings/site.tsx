@@ -56,7 +56,7 @@ export default function SiteSettings() {
 
     const disposition = response.headers.get("content-disposition") || "";
     const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1]
-      || `Komari-${scope}.zip`;
+      || `Komari-Lite-${scope}.zip`;
     const objectURL = URL.createObjectURL(await response.blob());
     const anchor = document.createElement("a");
     anchor.href = objectURL;

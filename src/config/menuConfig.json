@@ -147,11 +147,6 @@
       "path": "https://nuomiiiii.github.io/komari-document/",
       "icon": "Book",
       "newTab": true
-    },
-    {
-      "labelKey": "common.about",
-      "path": "/admin/about",
-      "icon": "AtSign"
     }
   ]
 }
