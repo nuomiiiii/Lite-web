@@ -78,7 +78,7 @@ test("keeps the admin navigation in the intended groups", () => {
     menuConfig.footer.map((item) => item.path),
     [
       "/admin/logs",
-      "https://komari-document.pages.dev/",
+      "https://nuomiiiii.github.io/komari-document/",
       "/admin/about",
     ],
   );

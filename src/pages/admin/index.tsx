@@ -28,6 +28,7 @@ import {
   Copy,
   CornerRightUp,
   Download,
+  Gauge,
   MenuIcon,
   Pencil,
   Plus,
@@ -38,7 +39,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import {
   DndContext,
   closestCenter,
@@ -1336,6 +1337,52 @@ const NodeTable = ({
 };
 
 type Platform = "linux" | "windows" | "macos" | "docker";
+
+type TrafficUsage = { up: number; down: number };
+type SignedTrafficUsage = { up: number; down: number };
+type TrafficCalibrationHistory = {
+  calibration_id: string;
+  target: TrafficUsage;
+  adjustment: SignedTrafficUsage;
+  operator?: string;
+  created_at: string;
+};
+type TrafficCalibrationSnapshot = {
+  client: string;
+  cycle: string;
+  cycle_start: string;
+  cycle_end: string;
+  raw: TrafficUsage;
+  adjustment: SignedTrafficUsage;
+  effective: TrafficUsage;
+  history: TrafficCalibrationHistory[];
+};
+
+const trafficInputPattern = /^\s*(\d+(?:\.\d+)?)\s*(b|kb|kib|mb|mib|gb|gib|tb|tib|pb|pib)?\s*$/i;
+
+function parseTrafficInput(value: string): number | null {
+  if (!trafficInputPattern.test(value)) return null;
+  const bytes = stringToBytes(value);
+  if (!Number.isSafeInteger(bytes) || bytes < 0) return null;
+  return bytes;
+}
+
+function formatSignedTraffic(value: number): string {
+  if (value === 0) return formatBytes(0);
+  return `${value > 0 ? "+" : "-"}${formatBytes(Math.abs(value))}`;
+}
+
+function formatTrafficCycleRange(snapshot: TrafficCalibrationSnapshot, language: string): string {
+  const locale = language.replace("_", "-");
+  const formatter = new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "Asia/Shanghai",
+  });
+  return `${formatter.format(new Date(snapshot.cycle_start))}-${formatter.format(new Date(snapshot.cycle_end))}`;
+}
+
 const ActionButtons = ({ node, settings }: { node: NodeDetail, settings: any }) => {
   const { t } = useTranslation();
   return (
@@ -1353,10 +1400,234 @@ const ActionButtons = ({ node, settings }: { node: NodeDetail, settings: any }) 
       </IconButton>
       <EditButton node={node} />
       <BillingButton node={node} />
+      <TrafficCalibrationButton node={node} />
       <DeleteButton node={node} />
     </div>
   );
 };
+
+function TrafficCalibrationButton({ node }: { node: NodeDetail }) {
+  const { t, i18n } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [available, setAvailable] = useState(true);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+  const [snapshot, setSnapshot] = useState<TrafficCalibrationSnapshot | null>(null);
+  const [targetUp, setTargetUp] = useState("");
+  const [targetDown, setTargetDown] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    setReason("");
+    setSnapshot(null);
+    fetch(`/api/admin/client/${node.uuid}/traffic-calibration`, { cache: "no-store" })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(payload?.message || `HTTP ${response.status}`);
+        }
+        return payload?.data;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        const nextAvailable = data?.available !== false;
+        setAvailable(nextAvailable);
+        setReason(data?.reason || "");
+        if (nextAvailable && data?.snapshot) {
+          const next = data.snapshot as TrafficCalibrationSnapshot;
+          setSnapshot(next);
+          setTargetUp(formatBytes(next.effective.up));
+          setTargetDown(formatBytes(next.effective.down));
+        }
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled) {
+          setError(cause instanceof Error ? cause.message : String(cause));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, node.uuid]);
+
+  const saveCalibration = async () => {
+    const up = parseTrafficInput(targetUp);
+    const down = parseTrafficInput(targetDown);
+    if (up === null || down === null) {
+      setError(t("admin.nodeTable.trafficCalibration.invalidValue"));
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/admin/client/${node.uuid}/traffic-calibration`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          target_up: up,
+          target_down: down,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.message || `HTTP ${response.status}`);
+      }
+      const next = payload?.data?.snapshot as TrafficCalibrationSnapshot | undefined;
+      if (!next) throw new Error(t("admin.nodeTable.trafficCalibration.invalidResponse"));
+      setSnapshot(next);
+      setTargetUp(formatBytes(next.effective.up));
+      setTargetDown(formatBytes(next.effective.down));
+      toast.success(t("admin.nodeTable.trafficCalibration.saved"));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const summaryItems = snapshot
+    ? [
+        [t("admin.nodeTable.trafficCalibration.raw"), snapshot.raw],
+        [t("admin.nodeTable.trafficCalibration.adjustment"), snapshot.adjustment],
+        [t("admin.nodeTable.trafficCalibration.effective"), snapshot.effective],
+      ]
+    : [];
+
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger>
+        <IconButton
+          variant="ghost"
+          title={t("admin.nodeTable.trafficCalibration.title")}
+        >
+          <Gauge size="18" />
+        </IconButton>
+      </Dialog.Trigger>
+      <Dialog.Content maxWidth="720px" className="max-h-[88vh] overflow-y-auto">
+        <Dialog.Title>{t("admin.nodeTable.trafficCalibration.title")}</Dialog.Title>
+        <Dialog.Description>
+          <Trans
+            i18nKey="admin.nodeTable.trafficCalibration.description"
+            values={{ name: node.name }}
+            components={{ strong: <strong className="font-semibold" /> }}
+          />
+        </Dialog.Description>
+
+        {loading ? (
+          <div className="py-10 text-center text-sm text-muted-foreground">
+            {t("common.loading")}
+          </div>
+        ) : (
+          <Flex direction="column" gap="4" mt="4">
+            {!available && (
+              <Callout.Root color="amber" role="alert">
+                <Callout.Text>{reason || t("admin.nodeTable.trafficCalibration.resetDayRequired")}</Callout.Text>
+              </Callout.Root>
+            )}
+            {error && (
+              <Callout.Root color="red" role="alert">
+                <Callout.Text>{error}</Callout.Text>
+              </Callout.Root>
+            )}
+
+            {snapshot && (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+                  <Text size="2" color="gray">{t("admin.nodeTable.trafficCalibration.currentCycle")}</Text>
+                  <Text size="2" weight="bold">
+                    {formatTrafficCycleRange(snapshot, i18n.resolvedLanguage || i18n.language)}
+                  </Text>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {summaryItems.map(([label, usage]) => {
+                    const value = usage as TrafficUsage & SignedTrafficUsage;
+                    const signed = label === t("admin.nodeTable.trafficCalibration.adjustment");
+                    return (
+                      <div key={label as string} className="min-w-0 border-l-2 border-[var(--accent-7)] pl-3">
+                        <Text as="div" size="2" weight="bold">{label as string}</Text>
+                        <Text as="div" size="2" color="gray" className="mt-1 break-words">
+                          {t("admin.nodeTable.trafficCalibration.upload")}: {signed ? formatSignedTraffic(value.up) : formatBytes(value.up)}
+                        </Text>
+                        <Text as="div" size="2" color="gray" className="break-words">
+                          {t("admin.nodeTable.trafficCalibration.download")}: {signed ? formatSignedTraffic(value.down) : formatBytes(value.down)}
+                        </Text>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label className="flex min-w-0 flex-col gap-2 text-sm font-semibold">
+                    {t("admin.nodeTable.trafficCalibration.targetUp")}
+                    <TextField.Root value={targetUp} onChange={(event) => setTargetUp(event.target.value)} placeholder="10 GB" />
+                  </label>
+                  <label className="flex min-w-0 flex-col gap-2 text-sm font-semibold">
+                    {t("admin.nodeTable.trafficCalibration.targetDown")}
+                    <TextField.Root value={targetDown} onChange={(event) => setTargetDown(event.target.value)} placeholder="10 GB" />
+                  </label>
+                </div>
+
+                <Callout.Root color="blue" size="1">
+                  <Callout.Text>{t("admin.nodeTable.trafficCalibration.syncNotice")}</Callout.Text>
+                </Callout.Root>
+
+                <div>
+                  <Text as="div" size="2" weight="bold" mb="2">
+                    {t("admin.nodeTable.trafficCalibration.history")}
+                  </Text>
+                  {snapshot.history?.length ? (
+                    <div className="overflow-x-auto rounded border">
+                      <table className="w-full min-w-[560px] text-left text-sm">
+                        <thead className="bg-muted/60 text-muted-foreground">
+                          <tr>
+                            <th className="px-3 py-2 font-medium">{t("admin.nodeTable.trafficCalibration.time")}</th>
+                            <th className="px-3 py-2 font-medium">{t("admin.nodeTable.trafficCalibration.targetUp")}</th>
+                            <th className="px-3 py-2 font-medium">{t("admin.nodeTable.trafficCalibration.targetDown")}</th>
+                            <th className="px-3 py-2 font-medium">{t("admin.nodeTable.trafficCalibration.change")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {snapshot.history.map((item) => (
+                            <tr key={item.calibration_id} className="border-t">
+                              <td className="whitespace-nowrap px-3 py-2">{new Date(item.created_at).toLocaleString()}</td>
+                              <td className="whitespace-nowrap px-3 py-2">{formatBytes(item.target.up)}</td>
+                              <td className="whitespace-nowrap px-3 py-2">{formatBytes(item.target.down)}</td>
+                              <td className="whitespace-nowrap px-3 py-2">↑ {formatSignedTraffic(item.adjustment.up)} / ↓ {formatSignedTraffic(item.adjustment.down)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <Text size="2" color="gray">{t("admin.nodeTable.trafficCalibration.noHistory")}</Text>
+                  )}
+                </div>
+              </>
+            )}
+
+            <Flex gap="2" justify="end" wrap="wrap">
+              <Dialog.Close>
+                <Button variant="soft">{t("admin.nodeTable.cancel")}</Button>
+              </Dialog.Close>
+              <Button disabled={!snapshot || !available || saving} onClick={() => void saveCalibration()}>
+                {saving ? t("common.loading") : t("admin.nodeTable.trafficCalibration.save")}
+              </Button>
+            </Flex>
+          </Flex>
+        )}
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
 
 function RotateTokenButton({ node }: { node: NodeDetail }) {
   const { t } = useTranslation();

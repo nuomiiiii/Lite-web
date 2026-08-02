@@ -185,7 +185,29 @@
       "submit": "提交",
       "submitting": "等待",
       "token": "节点 Token",
-      "twoFactorCode": "动态口令（未开启 2FA 可留空）"
+      "twoFactorCode": "动态口令（未开启 2FA 可留空）",
+      "trafficCalibration": {
+        "title": "流量校准",
+        "description": "将 <strong>{{name}}</strong> 当前计费周期的上传和下载用量校准为实际值。",
+        "currentCycle": "当前计费周期",
+        "raw": "原始统计",
+        "adjustment": "校准差额",
+        "effective": "校准后用量",
+        "upload": "上传",
+        "download": "下载",
+        "targetUp": "实际上传用量",
+        "targetDown": "实际下载用量",
+        "syncNotice": "保存后，仪表盘、流量告警、日报/周报/月报、公共接口和主题将统一使用校准后的数据。后续新增流量会继续累加，到下一个重置日时本周期校准值自动清 0。",
+        "history": "最近校准记录",
+        "time": "操作时间",
+        "change": "本次差额",
+        "noHistory": "本周期尚未校准",
+        "save": "保存校准",
+        "saved": "流量校准已保存",
+        "invalidValue": "请输入有效的流量，例如 10 GB 或 1.5 TB",
+        "invalidResponse": "服务器未返回校准结果",
+        "resetDayRequired": "请先在服务器编辑中设置流量重置日"
+      }
     },
     "notification": {
       "expire_enable": "是否启用过期提醒",
@@ -1096,7 +1118,7 @@
       "enable_description": "通过首选方式获取及时通知。",
       "Javascript": {
         "script": "JavaScript 代码",
-        "script_help": "实现 sendMessage(message, title) 及可选的 sendEvent(event) 函数的 JavaScript 代码（部分支持 ES6）。两者均应返回 Promise 或布尔值。可用 API：fetch()、xhr()、console.log()。指南: https://komari-document.pages.dev/faq/notification-template.html"
+        "script_help": "实现 sendMessage(message, title) 及可选的 sendEvent(event) 函数的 JavaScript 代码（部分支持 ES6）。两者均应返回 Promise 或布尔值。可用 API：fetch()、xhr()、console.log()。指南: https://nuomiiiii.github.io/komari-document/faq/notification-template.html"
       },
       "method": "通知渠道",
       "method_description": "选择您偏好的通知平台",

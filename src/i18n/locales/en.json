@@ -228,7 +228,29 @@
       "serviceName_placeholder": "Service name, leave empty to use the default name (komari-agent)",
       "setToLongTerm": "Set to Long term",
       "submit": "submit",
-      "submitting": "wait"
+      "submitting": "wait",
+      "trafficCalibration": {
+        "title": "Traffic calibration",
+        "description": "Set the actual upload and download usage for <strong>{{name}}</strong> in the current billing cycle.",
+        "currentCycle": "Current billing cycle",
+        "raw": "Raw usage",
+        "adjustment": "Calibration difference",
+        "effective": "Calibrated usage",
+        "upload": "Upload",
+        "download": "Download",
+        "targetUp": "Actual upload usage",
+        "targetDown": "Actual download usage",
+        "syncNotice": "Dashboard, alerts, daily/weekly/monthly reports, public APIs and themes will use the calibrated values. New traffic continues accumulating, and this cycle's calibration resets automatically on the next reset day.",
+        "history": "Recent calibrations",
+        "time": "Time",
+        "change": "Difference",
+        "noHistory": "No calibration in this cycle",
+        "save": "Save calibration",
+        "saved": "Traffic calibration saved",
+        "invalidValue": "Enter valid traffic, such as 10 GB or 1.5 TB",
+        "invalidResponse": "The server did not return a calibration result",
+        "resetDayRequired": "Set a traffic reset day in the server editor first"
+      }
     },
     "notification": {
       "expire_enable": "Enable Expiration Reminder",
@@ -1088,7 +1110,7 @@
       "enable_description": "Enable to get updates via your preferred method.",
       "Javascript": {
         "script": "JavaScript code",
-        "script_help": "JavaScript code that implements the sendMessage(message, title) and optional sendEvent(event) functions (partially supports ES6). Both should return a Promise or a boolean value. Available APIs: fetch(), xhr(), console.log(). Guide: https://komari-document.pages.dev/faq/notification-template.html"
+        "script_help": "JavaScript code that implements the sendMessage(message, title) and optional sendEvent(event) functions (partially supports ES6). Both should return a Promise or a boolean value. Available APIs: fetch(), xhr(), console.log(). Guide: https://nuomiiiii.github.io/komari-document/faq/notification-template.html"
       },
       "method": "Delivery Method",
       "method_description": "Pick your preferred platform for alerts.",

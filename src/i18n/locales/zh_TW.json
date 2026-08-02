@@ -222,7 +222,29 @@
       "serviceName_placeholder": "服務名稱，為空則使用默認名稱(komari-agent)",
       "setToLongTerm": "設置為長期",
       "submit": "提交",
-      "submitting": "等待"
+      "submitting": "等待",
+      "trafficCalibration": {
+        "title": "流量校準",
+        "description": "將 <strong>{{name}}</strong> 目前計費週期的上傳與下載用量校準為實際值。",
+        "currentCycle": "目前計費週期",
+        "raw": "原始統計",
+        "adjustment": "校準差額",
+        "effective": "校準後用量",
+        "upload": "上傳",
+        "download": "下載",
+        "targetUp": "實際上傳用量",
+        "targetDown": "實際下載用量",
+        "syncNotice": "儲存後，儀表板、流量警示、日報/週報/月報、公共介面與主題將統一使用校準後的資料。後續新增流量會繼續累加，到下一個重置日時本週期校準值自動清 0。",
+        "history": "最近校準記錄",
+        "time": "操作時間",
+        "change": "本次差額",
+        "noHistory": "本週期尚未校準",
+        "save": "儲存校準",
+        "saved": "流量校準已儲存",
+        "invalidValue": "請輸入有效流量，例如 10 GB 或 1.5 TB",
+        "invalidResponse": "伺服器未回傳校準結果",
+        "resetDayRequired": "請先在伺服器編輯中設定流量重置日"
+      }
     },
     "notification": {
       "expire_enable": "是否啟用過期提醒",
@@ -1073,7 +1095,7 @@
       "enable_description": "通過首選方式獲取及時通知。",
       "Javascript": {
         "script": "JavaScript 代碼",
-        "script_help": "實現 sendMessage(message, title) 及可選的 sendEvent(event) 函數的 JavaScript 代碼（部分支持 ES6）。兩者均應返回 Promise 或布爾值。可用 API：fetch()、xhr()、console.log()。指南: https://komari-document.pages.dev/faq/notification-template.html"
+        "script_help": "實現 sendMessage(message, title) 及可選的 sendEvent(event) 函數的 JavaScript 代碼（部分支持 ES6）。兩者均應返回 Promise 或布爾值。可用 API：fetch()、xhr()、console.log()。指南: https://nuomiiiii.github.io/komari-document/faq/notification-template.html"
       },
       "method": "通知渠道",
       "method_description": "選擇您偏好的通知平台",

@@ -222,7 +222,29 @@
       "serviceName_placeholder": "Nama layanan, biarkan kosong untuk menggunakan nama default (komari-agent)",
       "setToLongTerm": "Atur ke Jangka Panjang",
       "submit": "Kirim",
-      "submitting": "Menunggu..."
+      "submitting": "Menunggu...",
+      "trafficCalibration": {
+        "title": "Kalibrasi trafik",
+        "description": "Atur penggunaan unggah dan unduh aktual <strong>{{name}}</strong> untuk siklus tagihan saat ini.",
+        "currentCycle": "Siklus tagihan saat ini",
+        "raw": "Statistik asli",
+        "adjustment": "Selisih kalibrasi",
+        "effective": "Penggunaan setelah kalibrasi",
+        "upload": "Unggah",
+        "download": "Unduh",
+        "targetUp": "Penggunaan unggah aktual",
+        "targetDown": "Penggunaan unduh aktual",
+        "syncNotice": "Dasbor, peringatan, laporan harian/mingguan/bulanan, API publik, dan tema akan memakai nilai yang telah dikalibrasi. Trafik baru tetap ditambahkan dan kalibrasi siklus ini otomatis kembali ke 0 pada tanggal reset berikutnya.",
+        "history": "Riwayat kalibrasi terbaru",
+        "time": "Waktu",
+        "change": "Selisih",
+        "noHistory": "Belum ada kalibrasi pada siklus ini",
+        "save": "Simpan kalibrasi",
+        "saved": "Kalibrasi trafik disimpan",
+        "invalidValue": "Masukkan trafik yang valid, misalnya 10 GB atau 1.5 TB",
+        "invalidResponse": "Server tidak mengembalikan hasil kalibrasi",
+        "resetDayRequired": "Atur tanggal reset trafik di editor server terlebih dahulu"
+      }
     },
     "notification": {
       "expire_enable": "Aktifkan Pengingat Kedaluwarsa",
@@ -1073,7 +1095,7 @@
       "enable_description": "Aktifkan untuk mendapatkan pembaruan melalui metode pilihan Anda.",
       "Javascript": {
         "script": "Kode JavaScript",
-        "script_help": "Kode JavaScript yang mengimplementasikan fungsi sendMessage(message, title) dan sendEvent(event) yang bersifat opsional (dukungan sebagian untuk ES6). Keduanya harus mengembalikan Promise atau nilai boolean. API yang tersedia: fetch(), xhr(), console.log(). Panduan: https://komari-document.pages.dev/faq/notification-template.html"
+        "script_help": "Kode JavaScript yang mengimplementasikan fungsi sendMessage(message, title) dan sendEvent(event) yang bersifat opsional (dukungan sebagian untuk ES6). Keduanya harus mengembalikan Promise atau nilai boolean. API yang tersedia: fetch(), xhr(), console.log(). Panduan: https://nuomiiiii.github.io/komari-document/faq/notification-template.html"
       },
       "method": "Metode Pengiriman",
       "method_description": "Pilih platform favorit Anda untuk peringatan.",
