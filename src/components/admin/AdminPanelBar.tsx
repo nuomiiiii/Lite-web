@@ -237,7 +237,7 @@ function ReleaseMarkdown({ body }: { body?: string | null }) {
           ),
           hr: () => <hr className="my-5 border-[var(--gray-a5)]" />,
           table: ({ children }) => (
-            <div className="my-4 overflow-x-auto rounded-md border border-[var(--gray-a5)]">
+            <div className="my-4 overflow-x-auto rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)]">
               <table className="w-full min-w-max border-collapse text-left text-sm">
                 {children}
               </table>

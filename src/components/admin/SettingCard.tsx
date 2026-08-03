@@ -49,7 +49,7 @@ export function SettingCard({
       className={
         bordless
           ? "border-0"
-          : "border-1 rounded-md py-2 px-4 bg-transparent  min-h-8" + className
+          : `min-h-8 rounded-md border-1 bg-[var(--color-panel-solid)] px-4 py-2 ${className}`
       }
     >
       <Flex
@@ -734,7 +734,7 @@ export function SettingCardLabel({
   children: React.ReactNode | null;
 }) {
   return (
-    <label className="text-xl font-bold" style={{ fontWeight: 600 }}>
+    <label className="text-base font-semibold leading-6 text-foreground">
       {children}
     </label>
   );

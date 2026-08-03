@@ -114,6 +114,27 @@
     },
     "nodeTable": {
       "addNode": "添加节点",
+      "description": "集中查看节点连接、网络、分组、备注与账单信息，拖动可调整全局显示顺序。",
+      "installCommandSaveFailed": "一键部署配置保存失败",
+      "installCommandSaved": "一键部署配置已保存",
+      "invalidMonthRotate": "网络统计月重置日必须为 0-31",
+      "allNodes": "全部节点",
+      "clearFilterToReorder": "清除搜索和筛选后可调整顺序",
+      "groupAndRemark": "分组与备注",
+      "ipv4Only": "仅 IPv4",
+      "lastReportRecent": "最近上报：刚刚",
+      "lastReportUnavailable": "最近上报：暂不可用",
+      "lastReportWaiting": "最近上报：等待中",
+      "liveTraffic": "流量",
+      "livePreparing": "正在读取实时状态",
+      "liveRefresh": "实时状态刷新",
+      "liveRefreshInterval": "5 秒",
+      "liveUnavailable": "实时状态暂不可用",
+      "liveUpdatedAt": "实时状态 {{time}} 更新",
+      "networkAndAgent": "网络与 Agent",
+      "resourceStatus": "资源状态",
+      "trafficQuotaShort": "总额",
+      "trafficUsedShort": "已用",
       "autoDiscovery": {
         "disabledDescription": "开启自动发现后，无需逐台手动添加节点。只要在目标服务器上运行一条命令，Agent 就会携带密钥自动注册并上线，非常适合批量部署多台服务器。",
         "enabledDescription": "在目标服务器上运行下面的命令，Agent 将自动注册并上线，无需手动添加节点。",
@@ -172,7 +193,10 @@
       "namePlaceholder": "名称",
       "noData": "没有数据",
       "nodeList": "节点列表",
+      "nextPage": "下一页",
       "noResults": "没有结果",
+      "pageSummary": "显示 {{start}}-{{end}}，共 {{total}} 台",
+      "previousPage": "上一页",
       "price": "价格",
       "priceTips": "0不显示，-1表示免费",
       "rotateToken": "重置 Token",
@@ -210,6 +234,7 @@
       "twoFactorCode": "动态口令（未开启 2FA 可留空）"
     },
     "notification": {
+      "page_description": "配置到期、登录与流量用量等通用通知规则。",
       "expire_enable": "是否启用过期提醒",
       "expire_enable_description": "启用后，Komari Lite将在到期前发送提醒通知。",
       "expire_time": "提前多少天开始提醒",
@@ -253,6 +278,20 @@
     "recent_month": "最近一个月",
     "region_unknown": "未设置地区",
     "retention_period": "保留周期",
+    "return_route_abnormal": "探测异常",
+    "return_route_abnormal_tasks": "{{count}} 个任务探测异常",
+    "return_route_all_normal": "当前任务链路均正常",
+    "return_route_changed": "线路变化",
+    "return_route_changed_tasks": "{{count}} 个任务检测到线路变化",
+    "return_route_current": "当前",
+    "return_route_expected": "期望",
+    "return_route_healthy": "链路正常",
+    "return_route_latest_change": "最近变化",
+    "return_route_none": "暂无正在执行的回程线路监测任务",
+    "return_route_normal": "正常",
+    "return_route_recent_events": "24 小时事件",
+    "return_route_status": "回程链路状态",
+    "return_route_status_hint": "监测任务健康度与最近线路变化",
     "server_status": "服务器状态",
     "server_status_hint": "服务器在线状态与离线节点概览",
     "servers": "服务器状态",
@@ -363,6 +402,8 @@
   },
   "common": {
     "about": "关于",
+    "loading": "加载中...",
+    "version": "版本",
     "action": "操作",
     "add": "添加",
     "added_successfully": "成功添加",
@@ -383,6 +424,7 @@
     "documentation": "文档",
     "done": "完毕",
     "edit": "编辑",
+    "modify": "修改",
     "empty_error": "不能为空",
     "enabled": "启用",
     "error": "错误",
@@ -557,6 +599,7 @@
     "username_placeholder": "请输入您的用户名"
   },
   "logs": {
+    "description": "查看系统运行、请求与错误记录。",
     "title": "日志"
   },
   "market": {
@@ -648,9 +691,11 @@
   },
   "notification": {
     "load": {
+      "description": "配置 CPU、内存、负载等资源告警规则，并指定适用节点。",
       "title": "负载通知"
     },
     "offline": {
+      "description": "按节点设置离线宽限期与冷却时间，减少短暂断连造成的重复通知。",
       "batch_edit": "批量修改",
       "cooldown": "冷静期",
       "full_title": "离线通知设置",
@@ -662,6 +707,7 @@
       "title": "离线通知"
     },
     "ping_loss": {
+      "description": "根据延迟监测结果设置丢包阈值、统计窗口和冷却时间。",
       "add": "新增",
       "batch_edit": "批量配置",
       "cooldown": "冷却时间",
@@ -684,6 +730,7 @@
     },
     "title": "通知",
     "traffic_report": {
+      "description": "按节点设置日报、周报与月报的推送周期和内容。",
       "batch_edit": "批量修改",
       "billing_content": "计费流量",
       "daily": "日报",
@@ -714,6 +761,9 @@
   },
   "page_not_found": "真不巧，网页被小鞠吃掉了。",
   "ping": {
+    "default_task_count": "默认开启任务",
+    "linked_server_count": "关联服务器",
+    "task_count": "监测任务",
     "all_servers": "全部服务器",
     "all_servers_description": "勾选后，当前和后续新增的服务器都会开启该监测。",
     "default_on": "默认开启",
@@ -752,6 +802,7 @@
   },
   "region_overview": "点亮地区",
   "return_route": {
+    "description": "识别移动、电信、联通回程线路，确认切线后告警，恢复后自动通知。",
     "title": "回程线路监测"
   },
   "rpc2": {
@@ -801,6 +852,7 @@
     "title": "会话管理"
   },
   "settings": {
+    "account_security_page_description": "管理登录凭据、双因素认证、会话与 API 访问。",
     "api": {
       "description": "使用API密钥可以访问并操作所有资源，包括不限于远程控制、修改设置和账号密码等，请谨慎保管。留空表示取消API密钥功能。",
       "key_length_error": "API 密钥长度至少为12",
@@ -887,6 +939,7 @@
       "total_usage": "总占用"
     },
     "general": {
+      "page_description": "配置自动发现、GeoIP 与其他全局行为。",
       "auto_discovery": "自动发现",
       "auto_discovery_key": "自动发现密钥",
       "auto_discovery_key_description": "使用自动发现可以批量注册客户端，留空表示禁用自动发现。",
@@ -1106,6 +1159,7 @@
     },
     "missing_required_fields": "请填写必填字段: {{fieldNames}}",
     "notification": {
+      "page_description": "配置通知渠道、连接参数与消息模板。",
       "email": {
         "host": "SMTP 服务器",
         "password": "密码",
@@ -1156,6 +1210,15 @@
       "title": "通知"
     },
     "reverse_proxy": {
+      "cloudflare_overview": "运行概览",
+      "cloudflare_overview_description": "集中查看 cloudflared、Tunnel 与令牌状态，并管理连接。",
+      "page_description": "管理内置 HTTPS 与 Cloudflare Tunnel 接入。",
+      "runtime_records": "运行记录",
+      "runtime_records_description": "查看最近状态、错误与 cloudflared 输出。",
+      "token_guide": "查看令牌获取说明",
+      "token_missing": "未配置",
+      "token_ready": "已配置",
+      "token_status": "连接令牌",
       "binary_label": "二进制路径",
       "certificate_domains": "证书域名",
       "certificate_expires": "证书到期时间",
@@ -1228,6 +1291,7 @@
       "title": "登录"
     },
     "site": {
+      "page_description": "配置站点信息、访问控制、备份与自定义内容。",
       "backup": "备份",
       "backup_config_download": "仅导出配置",
       "backup_config_download_description": "保留服务器、设置与探测任务，不包含历史监测数据；可导入当前版本和官方上游最新版。",
@@ -1295,6 +1359,7 @@
       "title": "单点登录"
     },
     "storage": {
+      "page_description": "查看数据库占用并管理监控数据、迁移和维护。",
       "main_description": "配置、服务器与任务数据",
       "migration_maintenance": "迁移与维护",
       "monitoring_data": "监控数据",
@@ -1389,6 +1454,7 @@
       "title": "正在升级监控数据库"
     },
     "xtermjs": {
+      "page_description": "调整远程终端的字体、配色、回滚与显示行为。",
       "convert_eol": "转换 EOL",
       "cursor_blink": "光标闪烁",
       "custom_css": "自定义 CSS",
@@ -1435,6 +1501,8 @@
     "ungrouped": "未分组"
   },
   "theme": {
+    "manage_description": "调整当前主题提供的显示和功能选项。",
+    "page_description": "管理已安装主题、切换当前主题并维护主题配置。",
     "active": "当前使用",
     "author": "作者",
     "confirm_delete": "确认删除主题",

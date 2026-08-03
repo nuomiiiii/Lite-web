@@ -34,12 +34,19 @@ export default function GeneralSettings() {
 
   return (
     <>
-      <AdminPageTitle>{t("settings.general.title")}</AdminPageTitle>
+      <AdminPageTitle
+        description={t(
+          "settings.general.page_description",
+          "配置自动发现、GeoIP 与其他全局行为。",
+        )}
+      >
+        {t("settings.general.title")}
+      </AdminPageTitle>
       <SettingCardLabel>
         {t("settings.general.auto_discovery")}
       </SettingCardLabel>
       <ApiCard settings={settings} />
-      <label className="text-xl font-bold">{t("settings.geoip.title")}</label>
+      <SettingCardLabel>{t("settings.geoip.title")}</SettingCardLabel>
       <SettingCardSwitch
         title={t("settings.geoip.enable_title")}
         description={t("settings.geoip.enable_description")}

@@ -9,9 +9,9 @@ import {
 } from "@/components/ui/table";
 import { Button, Dialog, Flex } from "@radix-ui/themes";
 import { useTranslation } from "react-i18next";
-import NumberPicker from "@/components/ui/number-picker";
 import Loading from "@/components/loading";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 interface Log {
   id: number;
@@ -49,36 +49,7 @@ const LogPage = () => {
       }
     };
     fetchLogs();
-  }, [page]);
-
-  const totalPages = Math.ceil(total / limit);
-  // 计算分页页码，显示当前页及前后1页，两端省略号
-  const siblingsCount = 1;
-  let pageNumbers: (number | string)[] = [];
-  const leftSibling = Math.max(page - siblingsCount, 1);
-  const rightSibling = Math.min(page + siblingsCount, totalPages);
-  const showLeftDots = leftSibling > 2;
-  const showRightDots = rightSibling < totalPages - 1;
-  // 始终包含第一页
-  pageNumbers.push(1);
-  // 左侧省略或中间连续页
-  if (showLeftDots) {
-    pageNumbers.push("...");
-  } else {
-    for (let i = 2; i < leftSibling; i++) pageNumbers.push(i);
-  }
-  // 中间页，仅当不重复首尾页时加入
-  for (let i = leftSibling; i <= rightSibling; i++) {
-    if (i > 1 && i < totalPages) pageNumbers.push(i);
-  }
-  // 右侧省略或中间连续页
-  if (showRightDots) {
-    pageNumbers.push("...");
-  } else {
-    for (let i = rightSibling + 1; i < totalPages; i++) pageNumbers.push(i);
-  }
-  // 始终包含最后一页（如果大于1）
-  if (totalPages > 1) pageNumbers.push(totalPages);
+  }, [limit, page]);
 
   if (loading) {
     return <Loading />;
@@ -88,16 +59,20 @@ const LogPage = () => {
   }
 
   return (
-    <div className="flex flex-col gap-2 p-0 md:p-4">
-      <div className="flex flex-wrap justify-between items-center gap-3">
-        <AdminPageTitle>{t("logs.title")}</AdminPageTitle>
-        <div className="flex items-center gap-2">
-          Limit
-          <NumberPicker defaultValue={limit} onChange={setLimit} min={1} max={100} />
-        </div>
+    <div className="flex flex-col gap-4 p-0 md:p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <AdminPageTitle
+          description={t(
+            "logs.description",
+            "查看后台操作与系统事件记录。",
+          )}
+        >
+          {t("logs.title")}
+        </AdminPageTitle>
       </div>
-      <div className="rounded-lg overflow-hidden">
-        <Table>
+      <div className="overflow-hidden rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)]">
+        <div className="overflow-x-auto">
+        <Table className="min-w-[760px]">
           <TableHeader>
             <TableRow>
               <TableHead>ID</TableHead>
@@ -155,36 +130,17 @@ const LogPage = () => {
             ))}
           </TableBody>
         </Table>
-      </div>
-      {/* 分页数字按钮 */}
-      <div className="flex justify-center items-center space-x-2 mt-4 gap-2">
-        <Button
-          disabled={page === 1}
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-        >
-          {"<"}
-        </Button>
-        {pageNumbers.map((p, i) =>
-          typeof p === "number" ? (
-            <Button
-              key={i}
-              variant={p === page ? "solid" : "soft"}
-              onClick={() => setPage(p)}
-            >
-              {p}
-            </Button>
-          ) : (
-            <span key={i} className="px-2">
-              ...
-            </span>
-          )
-        )}
-        <Button
-          disabled={page === totalPages}
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-        >
-          {">"}
-        </Button>
+        </div>
+        <AdminPagination
+          page={page}
+          total={total}
+          pageSize={limit}
+          onPageChange={setPage}
+          onPageSizeChange={(value) => {
+            setLimit(value);
+            setPage(1);
+          }}
+        />
       </div>
     </div>
   );
