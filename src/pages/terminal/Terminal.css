@@ -706,6 +706,12 @@
     overscroll-behavior: none;
   }
 
+  .remote-terminal-pane,
+  .terminal-page.terminal-xterm-host {
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+
   .remote-brand span {
     display: none;
   }

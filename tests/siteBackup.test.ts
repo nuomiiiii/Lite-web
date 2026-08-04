@@ -40,6 +40,14 @@ test("global list pagination is configured under general settings", () => {
   assert.equal(locales.zhCN.settings.general.admin_default_page_size, "列表默认分页");
 });
 
+test("auto discovery help opens the dedicated agent guide", () => {
+  assert.match(
+    generalSource,
+    /https:\/\/nuomiiiii\.github\.io\/komari-document\/install\/agent-ad["']/,
+  );
+  assert.doesNotMatch(generalSource, /agent-ad\.html/);
+});
+
 test("global pagination is wired into shared and server-backed admin lists", () => {
   const shared = readFileSync("src/components/admin/AdminPagination.tsx", "utf8");
   const globalHook = readFileSync("src/hooks/useAdminDefaultPageSize.ts", "utf8");

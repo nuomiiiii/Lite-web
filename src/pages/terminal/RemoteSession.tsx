@@ -64,6 +64,14 @@ type Props = {
 type ConnectionState = "connecting" | "waiting" | "connected" | "disconnected" | "error";
 type SidePanel = "files" | "commands" | null;
 type ContextMenuState = { x: number; y: number } | null;
+type TerminalTouchState = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  lastY: number;
+  scrollRemainder: number;
+  moved: boolean;
+};
 
 const compactTerminalQuery = "(max-width: 900px)";
 const compactTerminalFontSize = 14;
@@ -123,7 +131,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
   const fileManager = useRef<FileManagerHandle>(null);
   const mobileCommandInput = useRef<HTMLInputElement>(null);
   const mobileComposing = useRef(false);
-  const terminalTouch = useRef<{ pointerId: number; startX: number; startY: number; moved: boolean } | null>(null);
+  const terminalTouch = useRef<TerminalTouchState | null>(null);
   const activeRef = useRef(active);
   const [terminalReady, setTerminalReady] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
@@ -592,26 +600,58 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
               style={{ "--xterm-padding": "16px" } as CSSProperties}
               onPointerDown={(event) => {
                 if (event.pointerType === "mouse" || !event.isPrimary || !window.matchMedia("(pointer: coarse)").matches) return;
-                terminalTouch.current = {
-                  pointerId: event.pointerId,
-                  startX: event.clientX,
-                  startY: event.clientY,
-                  moved: false,
-                };
-              }}
-              onPointerMove={(event) => {
-                const touch = terminalTouch.current;
-                if (!touch || touch.pointerId !== event.pointerId || touch.moved) return;
-                if (Math.hypot(event.clientX - touch.startX, event.clientY - touch.startY) >= 8) touch.moved = true;
-              }}
-              onPointerUp={(event) => {
-                const touch = terminalTouch.current;
-                if (!touch || touch.pointerId !== event.pointerId) return;
-                terminalTouch.current = null;
-                if (!touch.moved) window.requestAnimationFrame(() => mobileCommandInput.current?.focus({ preventScroll: true }));
-              }}
-              onPointerCancel={() => { terminalTouch.current = null; }}
-            />
+                 terminalTouch.current = {
+                   pointerId: event.pointerId,
+                   startX: event.clientX,
+                   startY: event.clientY,
+                   lastY: event.clientY,
+                   scrollRemainder: 0,
+                   moved: false,
+                 };
+               }}
+               onPointerMove={(event) => {
+                 const touch = terminalTouch.current;
+                 if (!touch || touch.pointerId !== event.pointerId) return;
+                 if (!touch.moved && Math.hypot(event.clientX - touch.startX, event.clientY - touch.startY) < 8) return;
+
+                 if (!touch.moved) {
+                   touch.moved = true;
+                   event.currentTarget.setPointerCapture(event.pointerId);
+                 }
+                 event.preventDefault();
+
+                 const instance = terminal.current;
+                 const screen = event.currentTarget.querySelector<HTMLElement>(".xterm-screen");
+                 const lineHeight = instance && screen
+                   ? screen.getBoundingClientRect().height / Math.max(instance.rows, 1)
+                   : compactTerminalFontSize * 1.2;
+                 touch.scrollRemainder += (touch.lastY - event.clientY) / Math.max(lineHeight, 1);
+                 touch.lastY = event.clientY;
+
+                 const lines = touch.scrollRemainder > 0
+                   ? Math.floor(touch.scrollRemainder)
+                   : Math.ceil(touch.scrollRemainder);
+                 if (lines !== 0) {
+                   instance?.scrollLines(lines);
+                   touch.scrollRemainder -= lines;
+                 }
+               }}
+               onPointerUp={(event) => {
+                 const touch = terminalTouch.current;
+                 if (!touch || touch.pointerId !== event.pointerId) return;
+                 terminalTouch.current = null;
+                 if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                   event.currentTarget.releasePointerCapture(event.pointerId);
+                 }
+                 if (!touch.moved) window.requestAnimationFrame(() => mobileCommandInput.current?.focus({ preventScroll: true }));
+               }}
+               onPointerCancel={(event) => {
+                 terminalTouch.current = null;
+                 if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                   event.currentTarget.releasePointerCapture(event.pointerId);
+                 }
+               }}
+             />
             <form
               className="remote-mobile-command"
               onSubmit={(event) => {

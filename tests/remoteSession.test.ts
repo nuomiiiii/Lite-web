@@ -67,6 +67,16 @@ test("mobile terminal input avoids iOS zoom and refits around the keyboard", () 
   assert.match(terminalCss, /\.remote-session-actions \{[\s\S]*overflow-x: auto/);
 });
 
+test("mobile terminal drag scrolls terminal history without moving the browser page", () => {
+  assert.match(terminalSource, /instance\?\.scrollLines\(lines\)/);
+  assert.match(terminalSource, /setPointerCapture\(event\.pointerId\)/);
+  assert.match(terminalSource, /event\.preventDefault\(\)/);
+  assert.match(
+    terminalCss,
+    /\.terminal-page\.terminal-xterm-host \{[\s\S]*overscroll-behavior: none;[\s\S]*touch-action: none;/,
+  );
+});
+
 test("terminal context menu gives select all the same icon treatment", () => {
   assert.match(terminalSource, /TextSelect,/);
   assert.match(
