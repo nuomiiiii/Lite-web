@@ -114,7 +114,6 @@ test("keeps remote execution protected by account 2FA", () => {
 
 test("moves controlled pages onto newly activated PWA assets", () => {
   assert.match(viteConfigSource, /importScripts: \["pwa-update\.js"\]/);
-  assert.match(viteConfigSource, /url\.pathname === "\/sw\.js"/);
   assert.match(pwaUpdateSource, /includeUncontrolled: true/);
   assert.match(pwaUpdateSource, /client\.navigate\(client\.url\)/);
 });

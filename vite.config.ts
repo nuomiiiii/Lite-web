@@ -17,18 +17,6 @@ const configDir = path.dirname(fileURLToPath(import.meta.url));
 function localKomariThemePlugin(): Plugin {
   const themeRequestPath = "/themes/default/komari-theme.json";
   const localThemeFile = path.resolve(configDir, "komari-theme.json");
-  const developmentServiceWorker = `
-self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (event) => {
-  event.waitUntil((async () => {
-    const cacheNames = await caches.keys();
-    await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
-    await self.registration.unregister();
-    const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
-    await Promise.all(windowClients.map((client) => client.navigate(client.url)));
-  })());
-});
-`;
 
   return {
     name: "local-komari-theme",
@@ -39,14 +27,6 @@ self.addEventListener("activate", (event) => {
         if (!req.url) return next();
 
         const url = new URL(req.url, "http://localhost");
-        if (url.pathname === "/sw.js") {
-          res.statusCode = 200;
-          res.setHeader("Content-Type", "application/javascript; charset=utf-8");
-          res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-          res.end(developmentServiceWorker);
-          return;
-        }
-
         if (!url.pathname.endsWith(themeRequestPath)) return next();
 
         fs.readFile(localThemeFile, (err, data) => {
