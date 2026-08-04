@@ -700,8 +700,21 @@
 }
 
 @media (max-width: 900px) {
-  .remote-workspace {
+  html.remote-terminal-open,
+  html.remote-terminal-open body,
+  html.remote-terminal-open #root,
+  html.remote-terminal-open .theme-root {
     width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .remote-workspace {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: auto;
     min-width: 0;
     overscroll-behavior: none;
   }
