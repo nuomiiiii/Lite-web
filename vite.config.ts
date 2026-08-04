@@ -96,7 +96,6 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           cleanupOutdatedCaches: true,
-          importScripts: ["pwa-update.js"],
           globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
           // The public document is selected by Komari at request time. A
           // cached SPA fallback would keep serving the previous theme after

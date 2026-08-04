@@ -17,15 +17,6 @@ const execPageSource = readFileSync(
   new URL("../src/pages/admin/exec.tsx", import.meta.url),
   "utf8",
 );
-const viteConfigSource = readFileSync(
-  new URL("../vite.config.ts", import.meta.url),
-  "utf8",
-);
-const pwaUpdateSource = readFileSync(
-  new URL("../public/pwa-update.js", import.meta.url),
-  "utf8",
-);
-
 const node: RemoteExecNodeSearchItem = {
   uuid: "node-hk",
   name: "Neburst_HK",
@@ -110,10 +101,4 @@ test("keeps remote execution protected by account 2FA", () => {
   assert.match(execPageSource, /placeholder=\{t\("admin\.nodeTable\.twoFactorCode"\)\}/);
   assert.match(execPageSource, /"2fa_code": twoFaCode/);
   assert.match(execPageSource, /twoFaEnabled && !twoFaCode\.trim\(\)/);
-});
-
-test("moves controlled pages onto newly activated PWA assets", () => {
-  assert.match(viteConfigSource, /importScripts: \["pwa-update\.js"\]/);
-  assert.match(pwaUpdateSource, /includeUncontrolled: true/);
-  assert.match(pwaUpdateSource, /client\.navigate\(client\.url\)/);
 });
