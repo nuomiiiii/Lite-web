@@ -14,6 +14,7 @@ const pingLossSource = readFileSync("src/pages/admin/notification/ping_loss.tsx"
 const globalCssSource = readFileSync("src/global.css", "utf8");
 const tableSource = readFileSync("src/components/ui/table.tsx", "utf8");
 const paginationSource = readFileSync("src/components/admin/AdminPagination.tsx", "utf8");
+const statusSummarySource = readFileSync("src/components/admin/AdminNodeStatusSummary.tsx", "utf8");
 const selectionCountSource = readFileSync("src/components/admin/AdminSelectionCount.tsx", "utf8");
 const returnRouteSource = readFileSync("src/pages/admin/returnRoute.tsx", "utf8");
 const sessionsSource = readFileSync("src/pages/admin/sessions.tsx", "utf8");
@@ -34,8 +35,8 @@ test("admin node table keeps persisted ordering and prioritizes identity and bil
   assert.doesNotMatch(pageSource, /ResourceStatus|TrafficQuota|ResourceUsage/);
   assert.match(pageSource, /t\("common\.group", "分组"\)/);
   assert.match(pageSource, /t\("common\.remark", "备注"\)/);
-  assert.match(pageSource, /w-\[19%\].*admin\.nodeTable\.billing/);
-  assert.match(pageSource, /Agent \{publicVersion\(node\.version\)/);
+  assert.match(pageSource, /w-\[21%\].*admin\.nodeTable\.billing/);
+  assert.match(pageSource, /nodeTable\.agent[\s\S]*publicVersion\(node\.version\)/);
   assert.match(pageSource, /admin-node-country-flag/);
   assert.match(pageSource, /reorderEnabled=\{!searchTerm\.trim\(\) && statusFilter === "all"\}/);
   assert.doesNotMatch(pageSource, /selectedNodes|handleSelectAll|handleSelectNode/);
@@ -82,18 +83,19 @@ test("all admin information lists share configurable pagination", () => {
 });
 
 test("admin node toolbar aligns status left and search actions right", () => {
-  assert.match(pageSource, /aria-pressed=\{statusFilter === filter\}/);
-  assert.match(pageSource, /onClick=\{\(\) => setStatusFilter\(filter\)\}/);
+  assert.match(pageSource, /<AdminNodeStatusSummary/);
+  assert.match(statusSummarySource, /aria-pressed=\{value === filter\}/);
+  assert.match(statusSummarySource, /onClick=\{\(\) => onValueChange\(filter\)\}/);
   assert.match(pageSource, /flex flex-col gap-3 md:flex-row md:items-end md:justify-between/);
   assert.match(pageSource, /showStatusSummary[\s\S]*md:ml-auto md:w-auto/);
-  assert.match(pageSource, /flex h-10 items-center justify-center/);
+  assert.match(statusSummarySource, /flex h-10 items-center justify-center/);
   assert.doesNotMatch(pageSource, /style=\{\{ height: "48px" \}\}/);
   assert.doesNotMatch(pageSource, /lastReportRecent|liveRefreshInterval/);
   assert.doesNotMatch(pageSource, /resourceFromLatestReport/);
   assert.match(pageSource, /IPv4 \{node\.ipv4 \|\| "--"\}/);
   assert.match(pageSource, /IPv6 \{node\.ipv6 \? compactIPv6/);
-  assert.match(pageSource, /flex min-w-0 flex-col text-sm leading-5 text-muted-foreground/);
-  assert.match(pageSource, /bg-\[var\(--color-panel-solid\)\]/);
+  assert.match(pageSource, /flex min-w-0 flex-col text-sm leading-\[1\.125rem\] text-muted-foreground/);
+  assert.match(statusSummarySource, /bg-\[var\(--color-panel-solid\)\]/);
   assert.doesNotMatch(pageSource, /md:inline-flex md:w-fit/);
 });
 
@@ -103,7 +105,8 @@ test("server details use a centered read-only form dialog", () => {
   assert.match(pageSource, /admin\.nodeDetail\.system/);
   assert.match(pageSource, /admin\.nodeDetail\.resources/);
   assert.match(pageSource, /admin\.nodeDetail\.identity/);
-  assert.match(pageSource, /<Dialog\.Content\s+maxWidth="720px"/);
+  assert.match(pageSource, /<Dialog\.Content[\s\S]{0,320}maxWidth="720px"/);
+  assert.match(pageSource, /onOpenAutoFocus=\{\(event\) => \{[\s\S]*preventDefault\(\)[\s\S]*focus\(\{ preventScroll: true \}\)/);
   assert.match(pageSource, /readOnly/);
   assert.match(pageSource, /<Button variant="soft">\{t\("admin\.nodeDetail\.done"/);
   assert.doesNotMatch(pageSource, /<Drawer/);

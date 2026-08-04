@@ -139,13 +139,11 @@ function formatVersion(version?: string | null, hash?: string | null) {
 function SidebarVersionLabel({
   version,
   hash,
-  isMobile,
 }: {
   version: string;
   hash?: string | null;
-  isMobile: boolean;
 }) {
-  const snapshot = !isMobile ? version.match(/^snapshot-(.+)$/i) : null;
+  const snapshot = version.match(/^snapshot-(.+)$/i);
   const normalizedHash = hash?.trim();
   const visibleHash =
     normalizedHash && normalizedHash !== "unknown" ? normalizedHash : null;
@@ -1053,7 +1051,6 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                         <SidebarVersionLabel
                           version={currentVersion}
                           hash={versionInfo?.hash}
-                          isMobile={isMobile}
                         />
                       </a>
                     )}

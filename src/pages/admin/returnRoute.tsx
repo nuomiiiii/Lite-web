@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import {
   Badge,
   Box,
@@ -18,8 +19,6 @@ import {
   Activity,
   AlertTriangle,
   BookOpen,
-  ChevronLeft,
-  ChevronRight,
   CheckCircle2,
   Download,
   History,
@@ -616,9 +615,9 @@ function ReturnRouteContent() {
                       <Select.Content><Select.Item value="all">全部</Select.Item><Select.Item value="healthy">线路正常</Select.Item><Select.Item value="probing">探测中</Select.Item><Select.Item value="observing">确认中</Select.Item><Select.Item value="switched">已切线</Select.Item><Select.Item value="unknown">无法识别</Select.Item><Select.Item value="pending">等待探测</Select.Item><Select.Item value="disabled">已暂停</Select.Item></Select.Content>
                     </Select.Root>
                   </Field>
-                  <Button variant="soft" color="gray" disabled={!taskQuery.keyword && !taskQuery.carrier && !taskQuery.state} onClick={() => setTaskQuery((current) => ({ ...current, page: 1, keyword: "", carrier: "", state: "" }))}>重置</Button>
                 </div>
-                <div className="shrink-0">
+                <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto sm:justify-end">
+                  <Button variant="soft" color="gray" disabled={!taskQuery.keyword && !taskQuery.carrier && !taskQuery.state} onClick={() => setTaskQuery((current) => ({ ...current, page: 1, keyword: "", carrier: "", state: "" }))}>重置</Button>
                   <RouteTaskDialog nodes={nodes} onSaved={refreshTasksAfterChange}><Button><Plus size={16} />新建任务</Button></RouteTaskDialog>
                 </div>
               </div>
@@ -648,9 +647,16 @@ function ReturnRouteContent() {
                       </tbody>
                     </table>
                   </div>
+                  <AdminPagination
+                    page={taskQuery.page}
+                    pageSize={taskQuery.page_size}
+                    total={taskData.total}
+                    onPageChange={(page) => updateTaskQuery({ page })}
+                    onPageSizeChange={(page_size) => updateTaskQuery({ page_size })}
+                    showSummary={false}
+                  />
                 </section>
               )}
-              <PageControls page={taskQuery.page} pageSize={taskQuery.page_size} total={taskData.total} onPageChange={(page) => updateTaskQuery({ page })} onPageSizeChange={(page_size) => updateTaskQuery({ page_size })} />
             </div>
           </Tabs.Content>
 
@@ -700,9 +706,16 @@ function ReturnRouteContent() {
                       </tbody>
                     </table>
                   </div>
+                  <AdminPagination
+                    page={recordQuery.page}
+                    pageSize={recordQuery.page_size}
+                    total={recordData.total}
+                    onPageChange={(page) => updateRecordQuery({ page })}
+                    onPageSizeChange={(page_size) => updateRecordQuery({ page_size })}
+                    showSummary={false}
+                  />
                 </section>
               )}
-              <PageControls page={recordQuery.page} pageSize={recordQuery.page_size} total={recordData.total} onPageChange={(page) => updateRecordQuery({ page })} onPageSizeChange={(page_size) => updateRecordQuery({ page_size })} />
             </div>
           </Tabs.Content>
 
@@ -764,11 +777,6 @@ function ReturnRouteContent() {
       </Tabs.Root>
     </div>
   );
-}
-
-function PageControls({ page, pageSize, total, onPageChange, onPageSizeChange }: { page: number; pageSize: number; total: number; onPageChange: (page: number) => void; onPageSizeChange: (pageSize: number) => void }) {
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  return <div className="flex flex-wrap items-center justify-end gap-3 text-sm text-gray-500"><Flex align="center" gap="2"><Select.Root value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}><Select.Trigger /><Select.Content><Select.Item value="10">10 条/页</Select.Item><Select.Item value="20">20 条/页</Select.Item><Select.Item value="50">50 条/页</Select.Item></Select.Content></Select.Root><IconButton variant="soft" color="gray" title="上一页" disabled={page <= 1} onClick={() => onPageChange(page - 1)}><ChevronLeft size={16} /></IconButton><span className="min-w-[76px] text-center tabular-nums">{page} / {pages}</span><IconButton variant="soft" color="gray" title="下一页" disabled={page >= pages} onClick={() => onPageChange(page + 1)}><ChevronRight size={16} /></IconButton></Flex></div>;
 }
 
 function recordRangeStart(range: string) {

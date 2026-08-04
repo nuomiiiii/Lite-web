@@ -181,8 +181,15 @@ body, * {
 }
 
 .admin-card-actions button {
-  min-width: 2.5rem;
-  min-height: 2.5rem;
+  box-sizing: border-box;
+  width: 2rem !important;
+  min-width: 2rem !important;
+  max-width: 2rem;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  max-height: 2rem;
+  margin: 0 !important;
+  padding: 0 !important;
   background-color: transparent !important;
   box-shadow: none !important;
 }
@@ -240,10 +247,25 @@ body, * {
 }
 
 .admin-node-actions > button {
-  width: 2rem;
-  min-width: 2rem;
-  height: 2rem;
-  min-height: 2rem;
+  box-sizing: border-box;
+  width: 2rem !important;
+  min-width: 2rem !important;
+  max-width: 2rem;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  max-height: 2rem;
+  margin: 0 !important;
+  padding: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.admin-node-actions > button:hover {
+  background-color: var(--accent-a3) !important;
+}
+
+.admin-node-actions > button[data-accent-color="red"]:hover {
+  background-color: var(--red-a3) !important;
 }
 
 .admin-node-actions > button svg {
@@ -320,6 +342,11 @@ body, * {
 
   .admin-responsive-table tbody td > * {
     min-width: 0;
+  }
+
+  .admin-responsive-table .rt-Badge {
+    width: fit-content;
+    justify-self: start;
   }
 
   .admin-responsive-table tbody td:last-child {

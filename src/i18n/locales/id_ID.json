@@ -185,6 +185,8 @@
       "liveUnavailable": "Status langsung tidak tersedia",
       "liveUpdatedAt": "Status langsung diperbarui pukul {{time}}",
       "networkAndAgent": "Jaringan & Agent",
+      "network": "Jaringan",
+      "agent": "Agent",
       "resourceStatus": "Status sumber daya",
       "trafficQuotaShort": "Kuota",
       "trafficUsedShort": "Terpakai",

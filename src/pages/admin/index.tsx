@@ -86,6 +86,9 @@ import { openRemoteTerminal } from "@/utils/remoteLaunch";
 import { localizeTokenRotationError } from "@/utils/tokenRotation";
 import { SelectOrInput } from "@/components/ui/select-or-input";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import AdminNodeStatusSummary, {
+  type AdminNodeStatusFilter,
+} from "@/components/admin/AdminNodeStatusSummary";
 import {
   ADMIN_LIST_PAGE_SIZE,
   AdminPagination,
@@ -106,7 +109,6 @@ const NodeDetailsPage = () => {
   );
 };
 
-type NodeStatusFilter = "all" | "online" | "offline";
 const PREVIOUS_PAGE_DROP_ID = "admin-node-previous-page";
 const NEXT_PAGE_DROP_ID = "admin-node-next-page";
 
@@ -115,7 +117,7 @@ const Layout = () => {
   const { settings, loading: settingsLoading } = useSettings();
   const { liveData, available } = useAdminNodeLiveData();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<NodeStatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<AdminNodeStatusFilter>("all");
   const onlineSet = React.useMemo(
     () => new Set(liveData?.data.online ?? []),
     [liveData?.data.online],
@@ -177,62 +179,6 @@ const Layout = () => {
         </>
       )}
     </Flex>
-  );
-};
-
-const NodeStatusSummary = ({
-  total,
-  online,
-  available,
-  statusFilter,
-  setStatusFilter,
-}: {
-  total: number;
-  online: number;
-  available: boolean;
-  statusFilter: NodeStatusFilter;
-  setStatusFilter: (filter: NodeStatusFilter) => void;
-}) => {
-  const { t } = useTranslation();
-  const offline = Math.max(0, total - online);
-  const summaryItems = [
-    { label: t("admin.nodeTable.allNodes", "全部节点"), value: total, color: "var(--accent-9)", filter: "all" as const },
-    { label: t("nodeCard.online", "在线"), value: available ? online : "--", color: "var(--green-9)", filter: "online" as const },
-    { label: t("nodeCard.offline", "离线"), value: available ? offline : "--", color: "var(--red-9)", filter: "offline" as const },
-  ];
-
-  return (
-    <div
-      data-testid="node-status-summary"
-      className="grid w-full grid-cols-3 overflow-hidden rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)] md:w-auto"
-    >
-        {summaryItems.map(({ label, value, color, filter }, index) => {
-          const className = `flex h-10 items-center justify-center gap-2 px-3 text-left md:min-w-28 md:px-4 ${
-              index > 0 ? "border-l border-[var(--gray-a5)]" : ""
-            } ${statusFilter === filter ? "bg-[var(--accent-a3)]" : ""}`;
-          const content = (
-            <>
-              <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: String(color) }} />
-              <span className="flex min-w-0 items-baseline gap-2 whitespace-nowrap">
-                <strong className="shrink-0 text-sm font-medium leading-5 tabular-nums">{value}</strong>
-                <span className="min-w-0 truncate text-sm leading-5 text-muted-foreground">{label}</span>
-              </span>
-            </>
-          );
-          return (
-            <button
-              key={filter}
-              type="button"
-              className={`${className} transition-colors hover:bg-[var(--accent-a2)] disabled:cursor-not-allowed disabled:opacity-60`}
-              aria-pressed={statusFilter === filter}
-              disabled={filter !== "all" && !available}
-              onClick={() => setStatusFilter(filter)}
-            >
-              {content}
-            </button>
-          );
-        })}
-    </div>
   );
 };
 
@@ -1070,8 +1016,8 @@ const Header = ({
   total: number;
   online: number;
   available: boolean;
-  statusFilter: NodeStatusFilter;
-  setStatusFilter: (filter: NodeStatusFilter) => void;
+  statusFilter: AdminNodeStatusFilter;
+  setStatusFilter: (filter: AdminNodeStatusFilter) => void;
 }) => {
   const { t } = useTranslation();
   const { refresh } = useNodeDetails();
@@ -1111,12 +1057,12 @@ const Header = ({
       </AdminPageTitle>
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         {showStatusSummary ? (
-          <NodeStatusSummary
+          <AdminNodeStatusSummary
             total={total}
             online={online}
             available={available}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
+            value={statusFilter}
+            onValueChange={setStatusFilter}
           />
         ) : null}
         <Flex gap="2" className="w-full md:ml-auto md:w-auto">
@@ -1196,7 +1142,7 @@ const SortableRow = React.memo(({
     <TableRow
       ref={setNodeRef}
       style={style}
-      className="text-sm hover:bg-[var(--accent-a2)] [&>td]:align-top [&>td]:py-2"
+      className="text-sm hover:bg-[var(--accent-a2)] [&>td]:align-middle [&>td]:py-1.5"
       data-node-status={online ? "online" : "offline"}
     >
       <TableCell className="w-16 !align-middle" data-label={t("common.sort", "排序")}>
@@ -1226,19 +1172,19 @@ const SortableRow = React.memo(({
       <TableCell className="overflow-hidden !align-middle" data-label={t("admin.nodeTable.name")}>
         <DetailView node={node} online={online} />
       </TableCell>
-      <TableCell data-label={t("admin.nodeTable.networkAndAgent", "网络与 Agent")}>
-        <div className="flex min-w-0 flex-col text-sm leading-5 text-muted-foreground">
+      <TableCell className="!align-middle" data-label={t("admin.nodeTable.network", "网络")}>
+        <div className="flex min-w-0 flex-col text-sm leading-[1.125rem] text-muted-foreground">
           <div className="flex min-w-0 items-center gap-1">
             <span className="truncate tabular-nums">IPv4 {node.ipv4 || "--"}</span>
             {node.ipv4 && (
               <button
                 type="button"
-                className="inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-[var(--accent-a3)] hover:text-[var(--accent-11)]"
+                className="inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-[var(--accent-a3)] hover:text-[var(--accent-11)]"
                 onClick={() => copy(node.ipv4)}
                 aria-label={t("copy", "复制")}
                 title={t("copy", "复制")}
               >
-                <Copy size={14} />
+                <Copy size={13} />
               </button>
             )}
           </div>
@@ -1249,19 +1195,21 @@ const SortableRow = React.memo(({
             {node.ipv6 && (
               <button
                 type="button"
-                className="inline-flex size-6 shrink-0 items-center justify-center rounded hover:bg-[var(--accent-a3)] hover:text-[var(--accent-11)]"
+                className="inline-flex size-5 shrink-0 items-center justify-center rounded hover:bg-[var(--accent-a3)] hover:text-[var(--accent-11)]"
                 onClick={() => copy(node.ipv6)}
                 aria-label={t("copy", "复制")}
                 title={t("copy", "复制")}
               >
-                <Copy size={14} />
+                <Copy size={13} />
               </button>
             )}
           </div>
-          <span>
-            Agent {publicVersion(node.version) || "--"}
-          </span>
         </div>
+      </TableCell>
+      <TableCell className="!align-middle" data-label={t("admin.nodeTable.agent", "Agent")}>
+        <span className="block truncate text-sm leading-5 text-muted-foreground" title={publicVersion(node.version) || "--"}>
+          {publicVersion(node.version) || "--"}
+        </span>
       </TableCell>
       <TableCell className="!align-middle" data-label={t("common.group", "分组")}>
         <span className="block truncate text-sm font-normal text-muted-foreground" title={node.group || ""}>
@@ -1417,17 +1365,20 @@ const NodeTable = ({
               <TableHead className="w-[4%]">
                 <span className="sr-only">{t("common.sort", "排序")}</span>
               </TableHead>
-              <TableHead className="w-[14%]">{t("admin.nodeTable.name")}</TableHead>
-              <TableHead className="w-[17%]">
-                {t("admin.nodeTable.networkAndAgent", "网络与 Agent")}
+              <TableHead className="w-[12%]">{t("admin.nodeTable.name")}</TableHead>
+              <TableHead className="w-[12%]">
+                {t("admin.nodeTable.network", "网络")}
               </TableHead>
-              <TableHead className="w-[8%]">
+              <TableHead className="w-[7%]">
+                {t("admin.nodeTable.agent", "Agent")}
+              </TableHead>
+              <TableHead className="w-[7%]">
                 {t("common.group", "分组")}
               </TableHead>
-              <TableHead className="w-[14%]">
+              <TableHead className="w-[13%]">
                 {t("common.remark", "备注")}
               </TableHead>
-              <TableHead className="w-[19%]">{t("admin.nodeTable.billing")}</TableHead>
+              <TableHead className="w-[21%]">{t("admin.nodeTable.billing")}</TableHead>
               <TableHead className="w-[24%]">{t("common.action", "操作")}</TableHead>
             </TableRow>
           </TableHeader>
@@ -3145,6 +3096,7 @@ function ReadOnlyDetailField({
 
 function DetailView({ node, online }: { node: NodeDetail; online: boolean }) {
   const { t } = useTranslation();
+  const dialogContentRef = React.useRef<HTMLDivElement>(null);
   const statusLabel = online
     ? t("nodeCard.online", "在线")
     : t("nodeCard.offline", "离线");
@@ -3176,6 +3128,12 @@ function DetailView({ node, online }: { node: NodeDetail; online: boolean }) {
         </button>
       </Dialog.Trigger>
       <Dialog.Content
+        ref={dialogContentRef}
+        tabIndex={-1}
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          dialogContentRef.current?.focus({ preventScroll: true });
+        }}
         maxWidth="720px"
         className="max-h-[88vh] overflow-y-auto bg-[var(--color-panel-solid)] max-sm:w-[calc(100%-1rem)]"
         style={{ maxHeight: "88vh" }}

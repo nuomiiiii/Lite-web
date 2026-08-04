@@ -185,6 +185,8 @@
       "liveUnavailable": "Live status unavailable",
       "liveUpdatedAt": "Live status updated at {{time}}",
       "networkAndAgent": "Network & Agent",
+      "network": "Network",
+      "agent": "Agent",
       "resourceStatus": "Resources",
       "trafficQuotaShort": "Quota",
       "trafficUsedShort": "Used",

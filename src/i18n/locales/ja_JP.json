@@ -185,6 +185,8 @@
       "liveUnavailable": "リアルタイム状態を取得できません",
       "liveUpdatedAt": "リアルタイム状態は {{time}} に更新",
       "networkAndAgent": "ネットワークと Agent",
+      "network": "ネットワーク",
+      "agent": "Agent",
       "resourceStatus": "リソース状態",
       "trafficQuotaShort": "上限",
       "trafficUsedShort": "使用済",

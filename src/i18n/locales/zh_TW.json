@@ -185,6 +185,8 @@
       "liveUnavailable": "即時狀態暫時無法使用",
       "liveUpdatedAt": "即時狀態於 {{time}} 更新",
       "networkAndAgent": "網路與 Agent",
+      "network": "網路",
+      "agent": "Agent",
       "resourceStatus": "資源狀態",
       "trafficQuotaShort": "總額",
       "trafficUsedShort": "已用",

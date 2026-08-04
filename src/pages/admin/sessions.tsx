@@ -287,6 +287,7 @@ export default function Sessions() {
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
+          showSummary={false}
         />
       </div>
     </Flex>
