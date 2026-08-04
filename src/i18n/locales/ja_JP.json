@@ -508,7 +508,6 @@
     "pollingTimeout": "タスクの実行がタイムアウトしました",
     "results": "実行結果",
     "selectedNodes": "選択されたノード",
-    "nodeSearchPlaceholder": "名前、アドレス、グループ、メモ、請求を検索",
     "selectNodes": "ターゲットノードを選択",
     "status": {
       "failed": "失敗",

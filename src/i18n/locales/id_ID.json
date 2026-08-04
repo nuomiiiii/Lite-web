@@ -508,7 +508,6 @@
     "pollingTimeout": "Waktu tunggu eksekusi tugas habis",
     "results": "Hasil eksekusi",
     "selectedNodes": "Node terpilih",
-    "nodeSearchPlaceholder": "Cari nama, alamat, grup, catatan, atau tagihan",
     "selectNodes": "Pilih node tujuan",
     "status": {
       "failed": "Gagal",

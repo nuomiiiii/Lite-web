@@ -505,7 +505,6 @@
     },
     "execute": "执行命令",
     "executing": "执行中...",
-    "nodeSearchPlaceholder": "搜索名称、地址、分组、备注或账单",
     "pollingTimeout": "任务执行超时",
     "results": "执行结果",
     "selectedNodes": "已选择节点",
