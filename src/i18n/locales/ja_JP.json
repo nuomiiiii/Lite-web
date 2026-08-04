@@ -860,7 +860,10 @@
       "auto_discovery_key": "自動検出キー",
       "auto_discovery_key_description": "自動検出を使用すると、クライアントを一括登録できます。空白の場合、自動検出は無効になります。",
       "title": "一般",
-      "page_description": "自動検出、GeoIP、その他の全体動作を設定します。"
+      "page_description": "自動検出、GeoIP、その他の全体動作を設定します。",
+      "admin_default_page_size": "リストの既定ページ件数",
+      "admin_default_page_size_description": "ページ分けされたすべてのリストで、1ページに表示する既定件数を設定します。リストを開き直したときに反映されます。",
+      "admin_default_page_size_invalid": "{{min}} から {{max}} までの整数を入力してください"
     },
     "geoip": {
       "enable_description": "ノードの地理位置情報を表示します",

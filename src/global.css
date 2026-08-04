@@ -274,6 +274,61 @@ body, * {
 }
 
 @media (max-width: 767px) {
+  .rt-BaseDialogScrollPadding {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .rt-DialogContent {
+    box-sizing: border-box;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: calc(100dvh - 1rem);
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .rt-DialogContent > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .admin-install-platforms.rt-SegmentedControlRoot {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-install-platforms .rt-SegmentedControlItem {
+    min-width: 0;
+  }
+
+  .admin-install-options-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-install-dialog .rt-TextFieldRoot,
+  .admin-install-dialog .rt-TextAreaRoot {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .setting-card-header {
+    align-items: flex-start !important;
+  }
+
+  .setting-card-action {
+    max-width: 48%;
+  }
+
+  .setting-card-action .rt-Button,
+  .setting-card-action .rt-SelectTrigger {
+    max-width: 100%;
+  }
+
   .admin-responsive-table-wrap {
     overflow: visible !important;
     border: 0 !important;
@@ -553,5 +608,13 @@ body, * {
     max-height: 2.25rem;
     padding: 0 !important;
     justify-self: center;
+  }
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
   }
 }

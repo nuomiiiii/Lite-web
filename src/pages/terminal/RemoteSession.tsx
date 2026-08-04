@@ -21,6 +21,7 @@ import {
   Files,
   PanelRightClose,
   RotateCw,
+  TextSelect,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Record as LiveRecord } from "@/types/LiveData";
@@ -308,18 +309,27 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
 
   useEffect(() => {
     const viewport = window.visualViewport;
-    if (!viewport) return;
     const update = () => {
-      const pageZoomed = Math.abs(viewport.scale - 1) > 0.01;
-      setMobileKeyboardInset(pageZoomed ? 0 : Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop));
-      if (!pageZoomed) resizeTerminal();
+      const compactLayout = window.matchMedia(compactTerminalQuery).matches;
+      const pageZoomed = viewport
+        ? Math.abs(viewport.scale - 1) > 0.01
+        : false;
+      const keyboardInset = viewport
+        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+        : 0;
+      setMobileKeyboardInset(compactLayout && !pageZoomed ? keyboardInset : 0);
+      resizeTerminal();
     };
     update();
-    viewport.addEventListener("resize", update);
-    viewport.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    viewport?.addEventListener("resize", update);
+    viewport?.addEventListener("scroll", update);
     return () => {
-      viewport.removeEventListener("resize", update);
-      viewport.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+      viewport?.removeEventListener("resize", update);
+      viewport?.removeEventListener("scroll", update);
     };
   }, [resizeTerminal]);
 
@@ -615,12 +625,16 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
                 value={mobileCommand}
                 placeholder="输入命令"
                 aria-label="输入终端命令"
+                inputMode="text"
                 enterKeyHint="send"
                 autoCapitalize="none"
                 autoCorrect="off"
+                autoComplete="off"
                 spellCheck={false}
                 disabled={!remoteReady}
                 onChange={(event) => setMobileCommand(event.target.value)}
+                onFocus={resizeTerminal}
+                onBlur={resizeTerminal}
                 onCompositionStart={() => { mobileComposing.current = true; }}
                 onCompositionEnd={() => { mobileComposing.current = false; }}
                 onKeyDown={(event) => {
@@ -695,7 +709,7 @@ export default function RemoteSession({ node, live, online, active, onDuplicate 
             <button type="button" role="menuitem" onClick={() => {
               terminal.current?.selectAll();
               setContextMenu(null);
-            }}>全选</button>
+            }}><TextSelect size={15} />全选</button>
           </div>
         )}
 

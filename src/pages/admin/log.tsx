@@ -11,7 +11,10 @@ import { Button, Dialog, Flex } from "@radix-ui/themes";
 import { useTranslation } from "react-i18next";
 import Loading from "@/components/loading";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
-import { AdminPagination } from "@/components/admin/AdminPagination";
+import {
+  AdminPagination,
+} from "@/components/admin/AdminPagination";
+import { useAdminDefaultPageSize } from "@/hooks/useAdminDefaultPageSize";
 
 interface Log {
   id: number;
@@ -22,13 +25,20 @@ interface Log {
   time: string;
 }
 const LogPage = () => {
+  const defaultPageSize = useAdminDefaultPageSize();
   const [loading, setLoading] = React.useState<boolean>(true);
   const [logs, setLogs] = React.useState<Log[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [page, setPage] = React.useState<number>(1);
   const [total, setTotal] = React.useState<number>(1);
-  const [limit, setLimit] = React.useState<number>(10);
+  const [limit, setLimit] = React.useState<number>(defaultPageSize);
+  const limitCustomized = React.useRef(false);
   const [t] = useTranslation();
+  React.useEffect(() => {
+    if (limitCustomized.current) return;
+    setLimit(defaultPageSize);
+    setPage(1);
+  }, [defaultPageSize]);
   React.useEffect(() => {
     const fetchLogs = async () => {
       setLoading(true);
@@ -137,9 +147,11 @@ const LogPage = () => {
           pageSize={limit}
           onPageChange={setPage}
           onPageSizeChange={(value) => {
+            limitCustomized.current = true;
             setLimit(value);
             setPage(1);
           }}
+          showSummary={false}
         />
       </div>
     </div>

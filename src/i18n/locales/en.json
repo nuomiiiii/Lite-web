@@ -860,7 +860,10 @@
       "auto_discovery_key": "Auto discovery key",
       "auto_discovery_key_description": "Use automatic discovery to register clients in bulk. Leave blank to disable automatic discovery.",
       "title": "General",
-      "page_description": "Configure auto discovery, GeoIP, and other global behavior."
+      "page_description": "Configure auto discovery, GeoIP, and other global behavior.",
+      "admin_default_page_size": "Default list pagination",
+      "admin_default_page_size_description": "Set the default number of items shown per page across all paginated lists. The value is applied when a list page is opened again.",
+      "admin_default_page_size_invalid": "Enter an integer between {{min}} and {{max}}"
     },
     "geoip": {
       "enable_description": "Display node geographic locations",

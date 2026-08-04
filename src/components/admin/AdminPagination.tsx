@@ -3,15 +3,26 @@ import { useDroppable } from "@dnd-kit/core";
 import { Flex, IconButton, Select, Text } from "@radix-ui/themes";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useAdminDefaultPageSize } from "@/hooks/useAdminDefaultPageSize";
+import {
+  ADMIN_LIST_PAGE_SIZE,
+  adminPageSizeOptions,
+  normalizeAdminPageSize,
+} from "@/utils/adminPagination";
 
-export const ADMIN_LIST_PAGE_SIZE = 10;
+export { ADMIN_LIST_PAGE_SIZE } from "@/utils/adminPagination";
 
 export const useAdminPagination = <T,>(
   items: readonly T[],
-  initialPageSize = ADMIN_LIST_PAGE_SIZE,
+  initialPageSize?: number,
 ) => {
+  const defaultPageSize = useAdminDefaultPageSize();
+  const followsGlobalDefault = initialPageSize === undefined;
   const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSizeState] = React.useState(initialPageSize);
+  const [pageSize, setPageSizeState] = React.useState(() =>
+    normalizeAdminPageSize(initialPageSize ?? defaultPageSize),
+  );
+  const pageSizeCustomized = React.useRef(false);
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pageStart = (currentPage - 1) * pageSize;
@@ -21,8 +32,15 @@ export const useAdminPagination = <T,>(
     setPage((value) => Math.min(value, totalPages));
   }, [totalPages]);
 
+  React.useEffect(() => {
+    if (!followsGlobalDefault || pageSizeCustomized.current) return;
+    setPageSizeState(defaultPageSize);
+    setPage(1);
+  }, [defaultPageSize, followsGlobalDefault]);
+
   const setPageSize = React.useCallback((value: number) => {
-    setPageSizeState(value);
+    pageSizeCustomized.current = true;
+    setPageSizeState(normalizeAdminPageSize(value));
     setPage(1);
   }, []);
 
@@ -121,6 +139,8 @@ export const AdminPagination = ({
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(Math.max(page, 1), totalPages);
   const pageStart = (currentPage - 1) * pageSize;
+  const pageSizeOptions = adminPageSizeOptions();
+  const usesCustomPageSize = !pageSizeOptions.includes(pageSize);
   const previousProps: PageButtonProps = {
     direction: "previous",
     disabled: currentPage <= 1,
@@ -155,9 +175,20 @@ export const AdminPagination = ({
           >
             <Select.Trigger aria-label={t("admin.nodeTable.pageSize", "每页条数")} />
             <Select.Content>
-              <Select.Item value="10">10 条/页</Select.Item>
-              <Select.Item value="20">20 条/页</Select.Item>
-              <Select.Item value="50">50 条/页</Select.Item>
+              {usesCustomPageSize ? (
+                <Select.Item
+                  value={String(pageSize)}
+                  className="hidden"
+                  aria-hidden="true"
+                >
+                  {pageSize} {t("admin.nodeTable.itemsPerPage", "条/页")}
+                </Select.Item>
+              ) : null}
+              {pageSizeOptions.map((option) => (
+                <Select.Item key={option} value={String(option)}>
+                  {option} {t("admin.nodeTable.itemsPerPage", "条/页")}
+                </Select.Item>
+              ))}
             </Select.Content>
           </Select.Root>
         ) : null}

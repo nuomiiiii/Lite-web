@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
-import { AdminPagination } from "@/components/admin/AdminPagination";
+import {
+  AdminPagination,
+} from "@/components/admin/AdminPagination";
+import { useAdminDefaultPageSize } from "@/hooks/useAdminDefaultPageSize";
 import {
   Badge,
   Box,
@@ -380,13 +383,14 @@ function FormSection({ title, children }: { title: string; children: React.React
 
 function ReturnRouteContent() {
   const { t } = useTranslation();
+  const defaultPageSize = useAdminDefaultPageSize();
   const { nodeDetail, isLoading: nodesLoading } = useNodeDetails();
   const nodes = Array.isArray(nodeDetail) ? nodeDetail.map((node) => ({ uuid: node.uuid, name: node.name })) : [];
   const [activeTab, setActiveTab] = useState<"tasks" | "records" | "rules">("tasks");
-  const [taskQuery, setTaskQuery] = useState({ page: 1, page_size: 10, keyword: "", carrier: "", state: "" });
-  const [recordQuery, setRecordQuery] = useState({ page: 1, page_size: 10, keyword: "", range: "24h", kind: "", carrier: "", region: "", expected_line: "", actual_line: "" });
-  const [taskData, setTaskData] = useState<TaskPage>({ tasks: [], statuses: [], probing_task_ids: [], total: 0, page: 1, page_size: 10 });
-  const [recordData, setRecordData] = useState<RecordPage>({ events: [], total: 0, page: 1, page_size: 10 });
+  const [taskQuery, setTaskQuery] = useState({ page: 1, page_size: defaultPageSize, keyword: "", carrier: "", state: "" });
+  const [recordQuery, setRecordQuery] = useState({ page: 1, page_size: defaultPageSize, keyword: "", range: "24h", kind: "", carrier: "", region: "", expected_line: "", actual_line: "" });
+  const [taskData, setTaskData] = useState<TaskPage>({ tasks: [], statuses: [], probing_task_ids: [], total: 0, page: 1, page_size: defaultPageSize });
+  const [recordData, setRecordData] = useState<RecordPage>({ events: [], total: 0, page: 1, page_size: defaultPageSize });
   const [summary, setSummary] = useState<SummaryData>({ tasks: 0, healthy: 0, switched: 0, recent_events: 0 });
   const [taskLoading, setTaskLoading] = useState(true);
   const [recordLoading, setRecordLoading] = useState(false);
@@ -446,6 +450,11 @@ function ReturnRouteContent() {
   useEffect(() => {
     loadSummary();
   }, [loadSummary]);
+
+  useEffect(() => {
+    setTaskQuery((current) => ({ ...current, page: 1, page_size: defaultPageSize }));
+    setRecordQuery((current) => ({ ...current, page: 1, page_size: defaultPageSize }));
+  }, [defaultPageSize]);
 
   useEffect(() => {
     if (activeTab !== "tasks") return;

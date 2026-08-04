@@ -90,9 +90,9 @@ import AdminNodeStatusSummary, {
   type AdminNodeStatusFilter,
 } from "@/components/admin/AdminNodeStatusSummary";
 import {
-  ADMIN_LIST_PAGE_SIZE,
   AdminPagination,
 } from "@/components/admin/AdminPagination";
+import { useAdminDefaultPageSize } from "@/hooks/useAdminDefaultPageSize";
 import { useAdminNodeLiveData } from "@/hooks/use-admin-node-live-data";
 import {
   getRegionCode,
@@ -486,6 +486,7 @@ const AutoDiscoverySection = ({
       </Flex>
 
       <SegmentedControl.Root
+        className="admin-install-platforms"
         value={selectedPlatform}
         onValueChange={(value) => setSelectedPlatform(value as Platform)}
       >
@@ -510,7 +511,7 @@ const AutoDiscoverySection = ({
 
       {showOptions && (
         <Flex direction="column" gap="2">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="admin-install-options-grid grid grid-cols-2 gap-2">
             <Flex gap="2" align="center">
               <Checkbox
                 checked={installOptions.disableWebSsh}
@@ -1271,7 +1272,9 @@ const NodeTable = ({
   const [localNodes, setLocalNodes] = useState<NodeDetail[]>(nodes);
   const [isDragging, setIsDragging] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(ADMIN_LIST_PAGE_SIZE);
+  const defaultPageSize = useAdminDefaultPageSize();
+  const [pageSize, setPageSize] = useState(defaultPageSize);
+  const pageSizeCustomized = React.useRef(false);
   const totalPages = Math.max(
     1,
     Math.ceil(localNodes.length / pageSize),
@@ -1289,6 +1292,11 @@ const NodeTable = ({
   React.useEffect(() => {
     setCurrentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
+  React.useEffect(() => {
+    if (pageSizeCustomized.current) return;
+    setPageSize(defaultPageSize);
+    setCurrentPage(1);
+  }, [defaultPageSize]);
   const handleDragStart = () => {
     if (!reorderEnabled) return;
     setIsDragging(true);
@@ -1405,6 +1413,7 @@ const NodeTable = ({
         onPageChange={setCurrentPage}
         pageSize={pageSize}
         onPageSizeChange={(value) => {
+          pageSizeCustomized.current = true;
           setPageSize(value);
           setCurrentPage(1);
         }}
@@ -1866,7 +1875,7 @@ function DeleteButton({ node }: { node: NodeDetail }) {
           <Trash2Icon size="18" />
         </IconButton>
       </Dialog.Trigger>
-      <Dialog.Content>
+      <Dialog.Content className="admin-install-dialog">
         <Dialog.Title>{t("delete")}</Dialog.Title>
         <Dialog.Description>
           {t("admin.nodeTable.confirmDelete")}
@@ -2151,6 +2160,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
         </Dialog.Title>
         <div className="flex flex-col gap-4">
           <SegmentedControl.Root
+            className="admin-install-platforms"
             value={selectedPlatform}
             onValueChange={(value) => setSelectedPlatform(value as Platform)}
           >
@@ -2166,7 +2176,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
             <label className="text-base font-bold">
               {t("admin.nodeTable.installOptions", "安装选项")}
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="admin-install-options-grid grid grid-cols-2 gap-2">
               <Flex gap="2" align="center">
                 <Checkbox
                   checked={installOptions.disableWebSsh}

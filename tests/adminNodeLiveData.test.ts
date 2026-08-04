@@ -14,6 +14,8 @@ const pingLossSource = readFileSync("src/pages/admin/notification/ping_loss.tsx"
 const globalCssSource = readFileSync("src/global.css", "utf8");
 const tableSource = readFileSync("src/components/ui/table.tsx", "utf8");
 const paginationSource = readFileSync("src/components/admin/AdminPagination.tsx", "utf8");
+const paginationUtilitySource = readFileSync("src/utils/adminPagination.ts", "utf8");
+const paginationHookSource = readFileSync("src/hooks/useAdminDefaultPageSize.ts", "utf8");
 const statusSummarySource = readFileSync("src/components/admin/AdminNodeStatusSummary.tsx", "utf8");
 const selectionCountSource = readFileSync("src/components/admin/AdminSelectionCount.tsx", "utf8");
 const returnRouteSource = readFileSync("src/pages/admin/returnRoute.tsx", "utf8");
@@ -22,6 +24,7 @@ const metricsSource = readFileSync("src/pages/admin/settings/metrics.tsx", "utf8
 const logSource = readFileSync("src/pages/admin/log.tsx", "utf8");
 const execSource = readFileSync("src/pages/admin/exec.tsx", "utf8");
 const marketSource = readFileSync("src/pages/admin/market/themes.tsx", "utf8");
+const settingCardSource = readFileSync("src/components/admin/SettingCard.tsx", "utf8");
 
 test("admin node status uses one guarded compact poll", () => {
   assert.match(hookSource, /ADMIN_NODE_LIVE_INTERVAL_MS = 5000/);
@@ -42,11 +45,11 @@ test("admin node table keeps persisted ordering and prioritizes identity and bil
   assert.doesNotMatch(pageSource, /selectedNodes|handleSelectAll|handleSelectNode/);
 });
 
-test("admin node table defaults to 10 rows and saves the complete cross-page order", () => {
-  assert.match(paginationSource, /ADMIN_LIST_PAGE_SIZE = 10/);
-  assert.match(paginationSource, /value="10">10 条\/页/);
-  assert.match(paginationSource, /value="20">20 条\/页/);
-  assert.match(paginationSource, /value="50">50 条\/页/);
+test("admin node table uses the global page size and saves the complete cross-page order", () => {
+  assert.match(paginationUtilitySource, /ADMIN_LIST_PAGE_SIZE = 10/);
+  assert.match(paginationUtilitySource, /return \[10, 50, 100\]/);
+  assert.match(paginationHookSource, /settings\.admin_default_page_size/);
+  assert.match(paginationSource, /adminPageSizeOptions\(\)/);
   assert.match(pageSource, /visibleNodes = localNodes\.slice/);
   assert.match(pageSource, /PREVIOUS_PAGE_DROP_ID/);
   assert.match(pageSource, /NEXT_PAGE_DROP_ID/);
@@ -57,6 +60,18 @@ test("admin node table defaults to 10 rows and saves the complete cross-page ord
   assert.match(pageSource, /onPageSizeChange=/);
   assert.match(pageSource, /destinationPage \* pageSize - 1/);
   assert.match(pageSource, /overflow-x-auto overflow-y-hidden/);
+});
+
+test("mobile dialogs and settings cards stay within the viewport", () => {
+  assert.match(pageSource, /className="admin-install-dialog"/);
+  assert.match(pageSource, /admin-install-platforms/);
+  assert.match(pageSource, /admin-install-options-grid grid grid-cols-2/);
+  assert.match(globalCssSource, /\.rt-BaseDialogScrollPadding \{[\s\S]*width: 100%;[\s\S]*min-width: 0/);
+  assert.match(globalCssSource, /\.rt-DialogContent \{[\s\S]*width: 100% !important/);
+  assert.doesNotMatch(globalCssSource, /\.rt-DialogContent \{[\s\S]*transform: translate\(-50%, -50%\) !important/);
+  assert.match(globalCssSource, /\.admin-install-options-grid \{[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(globalCssSource, /font-size: 16px !important/);
+  assert.match(settingCardSource, /setting-card-header w-full min-w-0 max-w-full/);
 });
 
 test("all admin information lists share configurable pagination", () => {
