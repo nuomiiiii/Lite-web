@@ -508,6 +508,7 @@
     "pollingTimeout": "Task execution timed out",
     "results": "Execute result",
     "selectedNodes": "Selected node",
+    "nodeSearchPlaceholder": "Search name, address, group, note, or billing",
     "selectNodes": "Select target node",
     "status": {
       "failed": "Failed",

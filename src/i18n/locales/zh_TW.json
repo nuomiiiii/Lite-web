@@ -508,6 +508,7 @@
     "pollingTimeout": "任務執行超時",
     "results": "執行結果",
     "selectedNodes": "已選擇節點",
+    "nodeSearchPlaceholder": "搜尋名稱、位址、群組、備註或帳單",
     "selectNodes": "選擇目標節點",
     "status": {
       "failed": "失敗",

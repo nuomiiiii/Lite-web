@@ -12,6 +12,10 @@ import type { MenuItem } from "../src/types/menu.ts";
 const menuConfig = JSON.parse(
   readFileSync(new URL("../src/config/menuConfig.json", import.meta.url), "utf8"),
 ) as { menu: MenuItem[]; footer: MenuItem[] };
+const adminPanelSource = readFileSync(
+  new URL("../src/components/admin/AdminPanelBar.tsx", import.meta.url),
+  "utf8",
+);
 
 function allPaths(items: MenuItem[]): string[] {
   return items.flatMap((item) => [item.path, ...allPaths(item.children ?? [])]);
@@ -110,4 +114,12 @@ test("keeps only one sidebar group expanded", () => {
     toggleSingleSubMenu({ "/admin/settings": true }, "/admin/settings"),
     {},
   );
+});
+
+test("does not create an implicit second grid column on mobile", () => {
+  assert.match(adminPanelSource, /className="md:col-span-2"/);
+  assert.doesNotMatch(adminPanelSource, /className="col-span-2"/);
+  assert.match(adminPanelSource, /open: \{\s+x: 0,\s+opacity: 1,/);
+  assert.match(adminPanelSource, /closed: \{\s+x: 0,\s+opacity: 1,/);
+  assert.match(adminPanelSource, /sidebarOpen\s+\? `\$\{DESKTOP_SIDEBAR_WIDTH\}px`\s+: "0px"/);
 });
