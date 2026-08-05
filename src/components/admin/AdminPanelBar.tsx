@@ -516,7 +516,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
       }
     : {
         open: {
-          width: `${DESKTOP_SIDEBAR_WIDTH}px`,
+          x: 0,
           opacity: 1,
           transition: {
             type: "spring",
@@ -525,7 +525,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
           },
         },
         closed: {
-          width: 0,
+          x: 0,
           opacity: 1,
           transition: {
             type: "spring",
@@ -789,7 +789,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
       >
         {/* Navbar */}
         <motion.nav
-          className="col-span-2"
+          className="md:col-span-2"
           initial={{ y: 0 }}
           animate={{ y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
@@ -975,7 +975,11 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             exit="closed"
             style={{
               backgroundColor: "var(--accent-1)",
-              width: isMobile ? MOBILE_SIDEBAR_WIDTH : undefined,
+              width: isMobile
+                ? MOBILE_SIDEBAR_WIDTH
+                : sidebarOpen
+                  ? `${DESKTOP_SIDEBAR_WIDTH}px`
+                  : "0px",
               height: "100%",
               position: isMobile ? "absolute" : "relative",
               top: isMobile ? 0 : undefined,
@@ -983,7 +987,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               zIndex: isMobile ? 10 : 1,
               overflowY: "auto",
               overflowX: "hidden",
-              willChange: isMobile ? "transform" : "width",
+              willChange: isMobile ? "transform" : undefined,
               backfaceVisibility: isMobile ? "hidden" : undefined,
               pointerEvents: isMobile && !sidebarOpen ? "none" : "auto",
             }}

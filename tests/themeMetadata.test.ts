@@ -45,6 +45,8 @@ test("default managed theme metadata covers every admin language", () => {
 test("public theme navigation is always selected by the server", () => {
   assert.match(viteConfig, /navigateFallback:\s*null/);
   assert.doesNotMatch(viteConfig, /navigateFallbackDenylist/);
+  assert.match(viteConfig, /globPatterns:\s*\["\*\*\/\*\.\{js,css,ico,png,svg\}"\]/);
+  assert.doesNotMatch(viteConfig, /globPatterns:[^\n]*html/);
   assert.match(themePage, /clearThemeNavigationCache/);
   assert.match(themePage, /komari-active-theme-changed/);
 });

@@ -5,6 +5,7 @@ import {
   dashboardLocalStorageTotal,
   dashboardOnlinePercent,
   dashboardRuntimeStorageTotal,
+  dashboardTrafficAxisWidth,
   shortDashboardDay,
   type DashboardData,
 } from "../src/utils/dashboard.ts";
@@ -78,4 +79,12 @@ test("falls back to the local main database when a combined size is unavailable"
 test("formats Beijing ledger day keys for chart labels", () => {
   assert.match(shortDashboardDay("2026-07-31", "zh-CN"), /7.*31/);
   assert.equal(shortDashboardDay("invalid", "zh-CN"), "invalid");
+});
+
+test("reserves enough mobile chart space for complete traffic labels", () => {
+  const value = 558.79 * 1024 ** 3;
+  assert.equal(dashboardTrafficAxisWidth([value], false), 58);
+  assert.ok(dashboardTrafficAxisWidth([value], true) > 58);
+  assert.equal(dashboardTrafficAxisWidth([], true), 68);
+  assert.ok(dashboardTrafficAxisWidth([Number.MAX_VALUE], true) <= 92);
 });
