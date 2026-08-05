@@ -34,6 +34,7 @@ import {
   Plus,
   Radar,
   RotateCw,
+  Save,
   Settings,
   Terminal,
   Trash2Icon,
@@ -1904,6 +1905,39 @@ type InstallOptions = {
   interval: string;
   monthRotate: string;
 };
+
+type DeploymentProfilePayload = {
+  platform: Platform;
+  disable_web_ssh: boolean;
+  disable_auto_update: boolean;
+  ignore_unsafe_cert: boolean;
+  get_ip_addr_from_nic: boolean;
+  memory_include_cache: boolean;
+  enable_gpu: boolean;
+  enable_ghproxy: boolean;
+  ghproxy: string;
+  enable_custom_dir: boolean;
+  dir: string;
+  enable_custom_service_name: boolean;
+  service_name: string;
+  enable_include_nics: boolean;
+  include_nics: string;
+  enable_exclude_nics: boolean;
+  exclude_nics: string;
+  enable_include_mountpoints: boolean;
+  include_mountpoints: string;
+  enable_interval: boolean;
+  interval: number;
+  enable_month_rotate: boolean;
+  month_rotate: number;
+};
+
+type DeploymentProfileResponse = {
+  profile: DeploymentProfilePayload;
+  saved?: boolean;
+  delivery?: "dispatched" | "saved_for_reconnect" | "agent_upgrade_required";
+};
+
 function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings: any }) {
   const { t } = useTranslation();
   const { refresh } = useNodeDetails();
@@ -1945,7 +1979,9 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
   const [enableMonthRotate, setEnableMonthRotate] = React.useState(
     initialResetDay !== "",
   );
-  const [savingResetDay, setSavingResetDay] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
+  const [loadingProfile, setLoadingProfile] = React.useState(false);
+  const [savingProfile, setSavingProfile] = React.useState(false);
 
   React.useEffect(() => {
     setEnableMonthRotate(initialResetDay !== "");
@@ -1955,6 +1991,61 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
     }));
   }, [node.uuid, initialResetDay]);
 
+  React.useEffect(() => {
+    if (!open) return;
+    const controller = new AbortController();
+    setLoadingProfile(true);
+    fetch(`/api/admin/client/${node.uuid}/deployment-profile`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error((await response.text()) || `HTTP ${response.status}`);
+        }
+        return response.json() as Promise<DeploymentProfileResponse>;
+      })
+      .then(({ profile }) => {
+        setSelectedPlatform(profile.platform || "linux");
+        setInstallOptions({
+          disableWebSsh: profile.disable_web_ssh,
+          disableAutoUpdate: profile.disable_auto_update,
+          ignoreUnsafeCert: profile.ignore_unsafe_cert,
+          memoryIncludeCache: profile.memory_include_cache,
+          getIpAddrFromNic: profile.get_ip_addr_from_nic,
+          enableGpu: profile.enable_gpu,
+          ghproxy: profile.ghproxy || "",
+          dir: profile.dir || "",
+          serviceName: profile.service_name || "",
+          includeNics: profile.include_nics || "",
+          excludeNics: profile.exclude_nics || "",
+          includeMountpoints: profile.include_mountpoints || "",
+          interval: profile.enable_interval ? String(profile.interval) : "",
+          monthRotate: profile.enable_month_rotate ? String(profile.month_rotate) : "",
+        });
+        setEnableGhproxy(profile.enable_ghproxy);
+        setEnableCustomDir(profile.enable_custom_dir);
+        setEnableCustomServiceName(profile.enable_custom_service_name);
+        setEnableIncludeNics(profile.enable_include_nics);
+        setEnableExcludeNics(profile.enable_exclude_nics);
+        setEnableIncludeMountpoints(profile.enable_include_mountpoints);
+        setEnableInterval(profile.enable_interval);
+        setEnableMonthRotate(profile.enable_month_rotate);
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : t("admin.nodeTable.deploymentProfileLoadFailed", "读取部署配置失败"),
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingProfile(false);
+      });
+    return () => controller.abort();
+  }, [node.uuid, open, t]);
+
   const selectedTrafficResetDay = () => {
     if (!enableMonthRotate) return 0;
     const value = Number(installOptions.monthRotate);
@@ -1962,6 +2053,40 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
       ? value
       : null;
   };
+
+  const selectedInterval = () => {
+    if (!enableInterval) return 0;
+    const value = Number(installOptions.interval);
+    return Number.isFinite(value) && value >= 1 && value <= 3600
+      ? value
+      : null;
+  };
+
+  const deploymentProfile = (): DeploymentProfilePayload => ({
+    platform: selectedPlatform,
+    disable_web_ssh: installOptions.disableWebSsh,
+    disable_auto_update: installOptions.disableAutoUpdate,
+    ignore_unsafe_cert: installOptions.ignoreUnsafeCert,
+    get_ip_addr_from_nic: installOptions.getIpAddrFromNic,
+    memory_include_cache: installOptions.memoryIncludeCache,
+    enable_gpu: installOptions.enableGpu,
+    enable_ghproxy: enableGhproxy,
+    ghproxy: installOptions.ghproxy,
+    enable_custom_dir: enableCustomDir,
+    dir: installOptions.dir,
+    enable_custom_service_name: enableCustomServiceName,
+    service_name: installOptions.serviceName,
+    enable_include_nics: enableIncludeNics,
+    include_nics: installOptions.includeNics,
+    enable_exclude_nics: enableExcludeNics,
+    exclude_nics: installOptions.excludeNics,
+    enable_include_mountpoints: enableIncludeMountpoints,
+    include_mountpoints: installOptions.includeMountpoints,
+    enable_interval: enableInterval,
+    interval: selectedInterval() ?? 0,
+    enable_month_rotate: enableMonthRotate,
+    month_rotate: selectedTrafficResetDay() ?? 0,
+  });
 
   const generateCommand = () => {
     const host = function () {
@@ -2098,7 +2223,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
     return finalCommand;
   };
 
-  const saveAndCopyCommand = async () => {
+  const saveProfile = async (copyCommand: boolean) => {
     const trafficResetDay = selectedTrafficResetDay();
     if (trafficResetDay === null) {
       toast.error(
@@ -2110,27 +2235,48 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
       return;
     }
 
-    setSavingResetDay(true);
+    if (selectedInterval() === null) {
+      toast.error(
+        t(
+          "admin.nodeTable.invalidInterval",
+          "采集间隔必须在 1 到 3600 秒之间",
+        ),
+      );
+      return;
+    }
+
+    setSavingProfile(true);
     try {
-      if (trafficResetDay !== (node.traffic_reset_day ?? 0)) {
-        const response = await fetch(`/api/admin/client/${node.uuid}/edit`, {
+      const response = await fetch(
+        `/api/admin/client/${node.uuid}/deployment-profile`,
+        {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ traffic_reset_day: trafficResetDay }),
-        });
-        if (!response.ok) {
-          const message = await response.text();
-          throw new Error(message || `HTTP ${response.status}`);
-        }
-        refresh();
+          body: JSON.stringify({ profile: deploymentProfile() }),
+        },
+      );
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || `HTTP ${response.status}`);
       }
+      const result = (await response.json()) as DeploymentProfileResponse;
 
-      await navigator.clipboard.writeText(generateCommand());
+      if (copyCommand) {
+        await navigator.clipboard.writeText(generateCommand());
+      }
+      refresh();
+      const deliveryMessage = result.delivery === "dispatched"
+        ? t("admin.nodeTable.runtimeConfigDispatched", "在线配置已下发")
+        : result.delivery === "agent_upgrade_required"
+          ? t("admin.nodeTable.runtimeConfigUpgradeRequired", "配置已保存，Agent 升级后应用")
+          : t("admin.nodeTable.runtimeConfigSaved", "配置已保存，Agent 下次连接时应用");
       toast.success(
-        t(
-          "admin.nodeTable.installCommandSaved",
-          "配置已保存，指令已复制到剪贴板",
-        ),
+        copyCommand
+          ? `${deliveryMessage}；${t(
+              "admin.nodeTable.installCommandSaved",
+              "部署指令已复制到剪贴板",
+            )}`
+          : deliveryMessage,
       );
     } catch (err) {
       console.error("Failed to save install options or copy command:", err);
@@ -2140,11 +2286,11 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
           : t("admin.nodeTable.installCommandSaveFailed", "保存配置失败"),
       );
     } finally {
-      setSavingResetDay(false);
+      setSavingProfile(false);
     }
   };
   return (
-    <Dialog.Root>
+    <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger>
         <IconButton variant="ghost" title={t("admin.nodeTable.installCommand")}>
           <Download size="18" />
@@ -2154,7 +2300,14 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
         <Dialog.Title>
           {t("admin.nodeTable.installCommand", "一键部署指令")}
         </Dialog.Title>
-        <div className="flex flex-col gap-4">
+        <div
+          className="flex flex-col gap-4"
+          aria-busy={loadingProfile}
+          style={{
+            opacity: loadingProfile ? 0.55 : 1,
+            pointerEvents: loadingProfile ? "none" : undefined,
+          }}
+        >
           <SegmentedControl.Root
             className="admin-install-platforms"
             value={selectedPlatform}
@@ -2169,9 +2322,14 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
           </SegmentedControl.Root>
 
           <Flex direction="column" gap="2">
-            <label className="text-base font-bold">
-              {t("admin.nodeTable.installOptions", "安装选项")}
-            </label>
+            <Flex justify="between" align="center">
+              <Text size="3" weight="bold">
+                {t("admin.nodeTable.installationSettings", "安装配置")}
+              </Text>
+              <Text size="1" color="gray">
+                {t("admin.nodeTable.reinstallRequired", "重装后生效")}
+              </Text>
+            </Flex>
             <div className="admin-install-options-grid grid grid-cols-2 gap-2">
               <Flex gap="2" align="center">
                 <Checkbox
@@ -2241,31 +2399,6 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
               </Flex>
               <Flex gap="2" align="center">
                 <Checkbox
-                  checked={installOptions.memoryIncludeCache}
-                  onCheckedChange={(checked) => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      memoryIncludeCache: Boolean(checked),
-                    }));
-                  }}
-                />
-                <label
-                  className="text-sm font-normal"
-                  onClick={() => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      memoryIncludeCache: !prev.memoryIncludeCache,
-                    }));
-                  }}
-                >
-                  {t("admin.nodeTable.memoryModeAvailable", "监测可用内存")}
-                </label>
-                <Tips size="14">
-                  {t("admin.nodeTable.memoryModeAvailable_tip")}
-                </Tips>
-              </Flex>
-              <Flex gap="2" align="center">
-                <Checkbox
                   checked={installOptions.getIpAddrFromNic}
                   onCheckedChange={(checked) => {
                     setInstallOptions((prev) => ({
@@ -2284,28 +2417,6 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
                   }}
                 >
                   {t("admin.nodeTable.getIpAddrFromNic", "从网卡获取 IP 地址")}
-                </label>
-              </Flex>
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={installOptions.enableGpu}
-                  onCheckedChange={(checked) => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      enableGpu: Boolean(checked),
-                    }));
-                  }}
-                />
-                <label
-                  className="text-sm font-normal"
-                  onClick={() => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      enableGpu: !prev.enableGpu,
-                    }));
-                  }}
-                >
-                  {t("admin.nodeTable.enableGpuMonitoring", "启用详细 GPU 监控")}
                 </label>
               </Flex>
             </div>
@@ -2442,6 +2553,63 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
                   }
                 />
               )}
+              <Flex justify="between" align="center" mt="2">
+                <Text size="3" weight="bold">
+                  {t("admin.nodeTable.onlineCollectionSettings", "在线采集配置")}
+                </Text>
+                <Text size="1" color="green">
+                  {t("admin.nodeTable.onlineApplicable", "保存后可直接下发")}
+                </Text>
+              </Flex>
+              <div className="admin-install-options-grid grid grid-cols-2 gap-2">
+                <Flex gap="2" align="center">
+                  <Checkbox
+                    checked={installOptions.memoryIncludeCache}
+                    onCheckedChange={(checked) => {
+                      setInstallOptions((prev) => ({
+                        ...prev,
+                        memoryIncludeCache: Boolean(checked),
+                      }));
+                    }}
+                  />
+                  <label
+                    className="text-sm font-normal"
+                    onClick={() => {
+                      setInstallOptions((prev) => ({
+                        ...prev,
+                        memoryIncludeCache: !prev.memoryIncludeCache,
+                      }));
+                    }}
+                  >
+                    {t("admin.nodeTable.memoryModeAvailable", "监测可用内存")}
+                  </label>
+                  <Tips size="14">
+                    {t("admin.nodeTable.memoryModeAvailable_tip")}
+                  </Tips>
+                </Flex>
+                <Flex gap="2" align="center">
+                  <Checkbox
+                    checked={installOptions.enableGpu}
+                    onCheckedChange={(checked) => {
+                      setInstallOptions((prev) => ({
+                        ...prev,
+                        enableGpu: Boolean(checked),
+                      }));
+                    }}
+                  />
+                  <label
+                    className="text-sm font-normal"
+                    onClick={() => {
+                      setInstallOptions((prev) => ({
+                        ...prev,
+                        enableGpu: !prev.enableGpu,
+                      }));
+                    }}
+                  >
+                    {t("admin.nodeTable.enableGpuMonitoring", "启用详细 GPU 监控")}
+                  </label>
+                </Flex>
+              </div>
               <Flex gap="2" align="center">
                 <Checkbox
                   checked={enableIncludeNics}
@@ -2684,6 +2852,19 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
                   }
                 />
               )}
+              <Button
+                mt="2"
+                variant="solid"
+                disabled={
+                  savingProfile ||
+                  selectedTrafficResetDay() === null ||
+                  selectedInterval() === null
+                }
+                onClick={() => void saveProfile(false)}
+              >
+                <Save size={16} />
+                {t("admin.nodeTable.saveAndDispatch", "保存并下发")}
+              </Button>
             </Flex>
           </Flex>
           <Flex direction="column" gap="2">
@@ -2702,11 +2883,15 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
           <Flex justify="center">
             <Button
               style={{ width: "100%" }}
-              disabled={savingResetDay || selectedTrafficResetDay() === null}
-              onClick={saveAndCopyCommand}
+              disabled={
+                savingProfile ||
+                selectedTrafficResetDay() === null ||
+                selectedInterval() === null
+              }
+              onClick={() => void saveProfile(true)}
             >
               <Copy size={16} />
-              {t("copy")}
+              {t("admin.nodeTable.saveAndCopyCommand", "保存并复制部署指令")}
             </Button>
           </Flex>
         </div>
@@ -2755,7 +2940,9 @@ function EditButton({ node }: { node: NodeDetail }) {
     setTrafficLimit(node.traffic_limit || 0);
     setTrafficLimitType(node.traffic_limit_type || "sum");
     setTrafficResetDay(node.traffic_reset_day ?? 0);
-    setRegionOverride(getRegionCode(node.region_override ?? ""));
+    setRegionOverride(
+      node.region_override ? getRegionCode(node.region_override) : "",
+    );
     setTrafficResetAllowance(node.traffic_reset_allowance ?? 0);
   }, [
     node.hidden,
@@ -2795,7 +2982,10 @@ function EditButton({ node }: { node: NodeDetail }) {
       if (trafficResetDay !== (node.traffic_reset_day ?? 0)) {
         payload.traffic_reset_day = trafficResetDay;
       }
-      if (regionOverride !== getRegionCode(node.region_override ?? "")) {
+      const currentRegionOverride = node.region_override
+        ? getRegionCode(node.region_override)
+        : "";
+      if (regionOverride !== currentRegionOverride) {
         payload.region_override = regionOverride;
       }
       if (trafficResetAllowance !== (node.traffic_reset_allowance ?? 0)) {
