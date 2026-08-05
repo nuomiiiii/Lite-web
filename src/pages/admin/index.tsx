@@ -1152,7 +1152,7 @@ const SortableRow = React.memo(({
       className="text-sm hover:bg-[var(--accent-a2)] [&>td]:align-middle [&>td]:py-1.5"
       data-node-status={online ? "online" : "offline"}
     >
-      <TableCell className="w-14 !align-middle" data-label={t("common.sort", "排序")}>
+      <TableCell className="w-[44px] px-2 !align-middle" data-label={t("common.sort", "排序")}>
         <div className="flex items-center">
           <button
             type="button"
@@ -1363,27 +1363,27 @@ const NodeTable = ({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setIsDragging(false)}
       >
-        <Table className="admin-responsive-table admin-node-table min-w-[1280px] table-fixed text-sm">
+        <Table className="admin-responsive-table admin-node-table min-w-[1136px] table-fixed text-sm">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[56px]">
+              <TableHead className="w-[44px]">
                 <span className="sr-only">{t("common.sort", "排序")}</span>
               </TableHead>
-              <TableHead className="w-[192px]">{t("admin.nodeTable.name")}</TableHead>
-              <TableHead className="w-[208px]">
+              <TableHead className="w-[190px]">{t("admin.nodeTable.name")}</TableHead>
+              <TableHead className="w-[190px]">
                 {t("admin.nodeTable.network", "网络")}
               </TableHead>
-              <TableHead className="w-[88px]">
+              <TableHead className="w-[64px]">
                 {t("admin.nodeTable.agent", "Agent")}
               </TableHead>
-              <TableHead className="w-[112px]">
+              <TableHead className="w-[72px]">
                 {t("common.group", "分组")}
               </TableHead>
-              <TableHead className="w-[160px]">
+              <TableHead className="w-[80px]">
                 {t("common.remark", "备注")}
               </TableHead>
               <TableHead className="w-[224px]">{t("admin.nodeTable.billing")}</TableHead>
-              <TableHead className="w-[240px]">{t("common.action", "操作")}</TableHead>
+              <TableHead className="w-[272px]">{t("common.action", "操作")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

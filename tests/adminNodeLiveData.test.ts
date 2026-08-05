@@ -175,11 +175,19 @@ test("wide admin tables turn into labelled row cards on mobile", () => {
 test("desktop node table keeps readable name and network columns while resizing", () => {
   assert.match(
     pageSource,
-    /admin-responsive-table admin-node-table min-w-\[1280px\] table-fixed/,
+    /admin-responsive-table admin-node-table min-w-\[1136px\] table-fixed/,
   );
-  assert.match(pageSource, /TableHead className="w-\[192px\]"/);
-  assert.match(pageSource, /TableHead className="w-\[208px\]"/);
-  assert.match(pageSource, /TableHead className="w-\[112px\]"/);
+  assert.match(pageSource, /TableCell className="w-\[44px\] px-2 !align-middle"/);
+  assert.match(pageSource, /TableHead className="w-\[44px\]"/);
+  assert.match(pageSource, /TableHead className="w-\[190px\]"/);
+  assert.equal(pageSource.match(/TableHead className="w-\[190px\]"/g)?.length, 2);
+  assert.match(pageSource, /TableHead className="w-\[64px\]"/);
+  assert.match(pageSource, /TableHead className="w-\[72px\]"/);
+  assert.match(pageSource, /TableHead className="w-\[80px\]"/);
+  assert.match(pageSource, /TableHead className="w-\[224px\]"/);
+  assert.match(pageSource, /TableHead className="w-\[272px\]"/);
+  assert.match(pageSource, /text-sm hover:bg-\[var\(--accent-a2\)\][^\n]*\[&>td\]:py-1\.5/);
+  assert.match(pageSource, /text-sm leading-\[1\.125rem\]/);
   assert.match(pageSource, /data-label=\{t\("admin\.nodeTable\.name"\)\}[\s\S]{0,80}title=\{node\.name\}/);
   assert.match(pageSource, /\["IPv4", node\.ipv4\?\.trim\(\)\][\s\S]{0,80}\["IPv6", node\.ipv6\?\.trim\(\)\]/);
   assert.match(pageSource, /networkAddresses\.length > 0 \? networkAddresses\.map/);
