@@ -586,6 +586,11 @@ body, * {
     gap: 0.25rem;
   }
 
+  .admin-node-table .admin-node-agent-cell {
+    align-items: flex-start !important;
+    text-align: left !important;
+  }
+
   .admin-sortable-table tbody td:nth-child(2) {
     order: -1;
     grid-template-columns: minmax(0, 1fr);

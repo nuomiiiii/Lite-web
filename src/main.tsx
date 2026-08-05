@@ -30,6 +30,7 @@ import { AccountProvider } from "./contexts/AccountContext";
 import { useAccount } from "./contexts/AccountContext";
 import FullPageLoading from "./components/FullPageLoading";
 import DocumentTitle from "./components/DocumentTitle";
+import AccountPreferenceSync from "./components/AccountPreferenceSync";
 
 const AdminRoutePreloader = () => {
   const { account } = useAccount();
@@ -139,6 +140,7 @@ const App = () => {
 		  </PublicInfoProvider>
 		) : (
 		  <AccountProvider>
+			<AccountPreferenceSync />
 			<AdminRoutePreloader />
 			<RPC2Provider>
 			  <PublicInfoProvider>

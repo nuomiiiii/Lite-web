@@ -96,7 +96,10 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           cleanupOutdatedCaches: true,
-          globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+          // HTML is rendered by Komari so it can inject the current site
+          // title and custom Head/Body content. Precaching the build-time
+          // index would bypass that server-side rendering.
+          globPatterns: ["**/*.{js,css,ico,png,svg}"],
           // The public document is selected by Komari at request time. A
           // cached SPA fallback would keep serving the previous theme after
           // an administrator switches themes.

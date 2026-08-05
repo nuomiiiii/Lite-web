@@ -157,3 +157,18 @@ export function shortDashboardDay(day: string, locale: string): string {
     day: "numeric",
   }).format(parsed);
 }
+
+export function dashboardTrafficAxisWidth(
+  values: readonly number[],
+  isMobile: boolean,
+): number {
+  if (!isMobile) return 58;
+
+  const longestLabel = values.reduce((longest, value) => {
+    if (!Number.isFinite(value)) return longest;
+    const label = formatBytes(Math.max(0, value)).replace(" ", "");
+    return Math.max(longest, label.length);
+  }, 0);
+  return Math.min(92, Math.max(68, longestLabel * 7 + 16));
+}
+import { formatBytes } from "./unitHelper.ts";

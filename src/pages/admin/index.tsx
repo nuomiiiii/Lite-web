@@ -1223,7 +1223,7 @@ const SortableRow = React.memo(({
         </div>
       </TableCell>
       <TableCell className="!align-middle" data-label={t("admin.nodeTable.agent", "Agent")}>
-        <div className="flex min-w-0 flex-col items-center justify-center gap-0.5 text-center leading-none">
+        <div className="admin-node-agent-cell flex min-w-0 flex-col items-center justify-center gap-0.5 text-center leading-none">
           <span className="block max-w-full truncate text-sm leading-5 text-muted-foreground" title={publicVersion(node.version) || "--"}>
             {publicVersion(node.version) || "--"}
           </span>
@@ -2022,7 +2022,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
   );
   const [open, setOpen] = React.useState(false);
   const [loadingProfile, setLoadingProfile] = React.useState(false);
-  const [savingProfile, setSavingProfile] = React.useState(false);
+  const [profileAction, setProfileAction] = React.useState<"dispatch" | "copy" | null>(null);
   const [deliveryState, setDeliveryState] = React.useState<DeploymentDeliveryState>();
   const deliveryStatus = deliveryState?.status;
 
@@ -2298,6 +2298,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
   };
 
   const saveProfile = async (copyCommand: boolean) => {
+    if (profileAction) return;
     const trafficResetDay = selectedTrafficResetDay();
     if (trafficResetDay === null) {
       toast.error(
@@ -2319,7 +2320,8 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
       return;
     }
 
-    setSavingProfile(true);
+    const action = copyCommand ? "copy" : "dispatch";
+    setProfileAction(action);
     try {
       const response = await fetch(
         `/api/admin/client/${node.uuid}/deployment-profile`,
@@ -2365,7 +2367,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
           : t("admin.nodeTable.installCommandSaveFailed", "保存配置失败"),
       );
     } finally {
-      setSavingProfile(false);
+      setProfileAction(null);
     }
   };
   const deliveryPresentation = (() => {
@@ -2998,8 +3000,10 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
               <Button
                 mt="2"
                 variant="solid"
+                loading={profileAction === "dispatch"}
+                aria-disabled={Boolean(profileAction)}
                 disabled={
-                  savingProfile ||
+                  profileAction === "dispatch" ||
                   selectedTrafficResetDay() === null ||
                   selectedInterval() === null
                 }
@@ -3026,8 +3030,10 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
           <Flex justify="center">
             <Button
               style={{ width: "100%" }}
+              loading={profileAction === "copy"}
+              aria-disabled={Boolean(profileAction)}
               disabled={
-                savingProfile ||
+                profileAction === "copy" ||
                 selectedTrafficResetDay() === null ||
                 selectedInterval() === null
               }

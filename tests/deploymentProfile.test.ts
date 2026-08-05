@@ -13,6 +13,10 @@ const nodeContextSource = fs.readFileSync(
   path.join(root, "src/contexts/NodeDetailsContext.tsx"),
   "utf8",
 );
+const globalCssSource = fs.readFileSync(
+  path.join(root, "src/global.css"),
+  "utf8",
+);
 
 test("deployment settings are restored and saved per node", () => {
   assert.match(source, /client\/\$\{node\.uuid\}\/deployment-profile/);
@@ -73,4 +77,19 @@ test("server Agent column shows the matching delivery state below the version", 
   assert.match(source, /admin\.nodeTable\.deliveryFailed/);
   assert.match(nodeContextSource, /hydrateLegacyDeploymentStatuses/);
   assert.match(nodeContextSource, /Object\.hasOwn\(node, "deployment_status"\)/);
+});
+
+test("mobile Agent version and delivery state align left without changing desktop alignment", () => {
+  assert.match(source, /className="admin-node-agent-cell[^\"]*items-center[^\"]*text-center/);
+  assert.match(
+    globalCssSource,
+    /@media \(max-width: 767px\)[\s\S]*\.admin-node-table \.admin-node-agent-cell \{[\s\S]*align-items: flex-start !important;[\s\S]*text-align: left !important;/,
+  );
+});
+
+test("deployment actions expose loading state only on the clicked button", () => {
+  assert.match(source, /profileAction, setProfileAction/);
+  assert.match(source, /loading=\{profileAction === "dispatch"\}/);
+  assert.match(source, /loading=\{profileAction === "copy"\}/);
+  assert.doesNotMatch(source, /savingProfile/);
 });

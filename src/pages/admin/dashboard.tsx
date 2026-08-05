@@ -30,6 +30,7 @@ import { ChartContainer } from "@/components/ui/chart";
 import {
   dashboardLocalStorageTotal,
   dashboardRuntimeStorageTotal,
+  dashboardTrafficAxisWidth,
   shortDashboardDay,
   type DashboardAlertSummary,
   type DashboardChartsData,
@@ -37,6 +38,7 @@ import {
   type DashboardDatabaseStatus,
 } from "@/utils/dashboard";
 import { formatBytes } from "@/utils/unitHelper";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const SUMMARY_REFRESH_INTERVAL_MS = 15_000;
 const CHART_REFRESH_INTERVAL_MS = 30_000;
@@ -524,6 +526,7 @@ function StoragePanel({ data, locale }: { data: DashboardData; locale: string })
 
 export default function AdminDashboard() {
   const { t, i18n } = useTranslation();
+  const isMobile = useIsMobile();
   const [data, setData] = React.useState<DashboardData | null>(dashboardSnapshot);
   const [charts, setCharts] = React.useState<DashboardChartsData | null>(dashboardChartsSnapshot);
   const [loading, setLoading] = React.useState(!dashboardSnapshot);
@@ -577,6 +580,22 @@ export default function AdminDashboard() {
         label: shortDashboardDay(item.day, locale),
       })),
     [charts?.traffic.daily, locale],
+  );
+  const hourlyTrafficAxisWidth = React.useMemo(
+    () =>
+      dashboardTrafficAxisWidth(
+        (charts?.traffic.hourly ?? []).flatMap((item) => [item.up, item.down]),
+        isMobile,
+      ),
+    [charts?.traffic.hourly, isMobile],
+  );
+  const dailyTrafficAxisWidth = React.useMemo(
+    () =>
+      dashboardTrafficAxisWidth(
+        (charts?.traffic.daily ?? []).map((item) => item.billable),
+        isMobile,
+      ),
+    [charts?.traffic.daily, isMobile],
   );
 
   return (
@@ -698,7 +717,7 @@ export default function AdminDashboard() {
                   <LineChart data={charts.traffic.hourly} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                     <CartesianGrid vertical={false} strokeDasharray="3 3" />
                     <XAxis dataKey="hour" tickLine={false} axisLine={false} minTickGap={28} />
-                    <YAxis tickLine={false} axisLine={false} width={58} tickFormatter={(value) => formatBytes(Number(value)).replace(" ", "")} />
+                    <YAxis tickLine={false} axisLine={false} width={hourlyTrafficAxisWidth} tickFormatter={(value) => formatBytes(Number(value)).replace(" ", "")} />
                     <Tooltip
                       content={({ active, payload, label }) => active && payload?.length ? (
                         <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-lg">
@@ -731,7 +750,7 @@ export default function AdminDashboard() {
                   <BarChart data={dailyChartData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
                     <CartesianGrid vertical={false} strokeDasharray="3 3" />
                     <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} />
-                    <YAxis tickLine={false} axisLine={false} width={58} tickFormatter={(value) => formatBytes(Number(value)).replace(" ", "")} />
+                    <YAxis tickLine={false} axisLine={false} width={dailyTrafficAxisWidth} tickFormatter={(value) => formatBytes(Number(value)).replace(" ", "")} />
                     <Tooltip
                       cursor={{ fill: "var(--accent-a3)" }}
                       content={({ active, payload, label }) => active && payload?.length ? (
