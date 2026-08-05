@@ -3000,10 +3000,8 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
               <Button
                 mt="2"
                 variant="solid"
-                loading={profileAction === "dispatch"}
-                aria-disabled={Boolean(profileAction)}
+                aria-busy={profileAction === "dispatch"}
                 disabled={
-                  profileAction === "dispatch" ||
                   selectedTrafficResetDay() === null ||
                   selectedInterval() === null
                 }
@@ -3030,10 +3028,8 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
           <Flex justify="center">
             <Button
               style={{ width: "100%" }}
-              loading={profileAction === "copy"}
-              aria-disabled={Boolean(profileAction)}
+              aria-busy={profileAction === "copy"}
               disabled={
-                profileAction === "copy" ||
                 selectedTrafficResetDay() === null ||
                 selectedInterval() === null
               }

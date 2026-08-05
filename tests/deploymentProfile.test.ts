@@ -80,16 +80,19 @@ test("server Agent column shows the matching delivery state below the version", 
 });
 
 test("mobile Agent version and delivery state align left without changing desktop alignment", () => {
-  assert.match(source, /className="admin-node-agent-cell[^\"]*items-center[^\"]*text-center/);
+  assert.match(source, /className="admin-node-agent-cell[^"]*items-center[^"]*text-center/);
   assert.match(
     globalCssSource,
     /@media \(max-width: 767px\)[\s\S]*\.admin-node-table \.admin-node-agent-cell \{[\s\S]*align-items: flex-start !important;[\s\S]*text-align: left !important;/,
   );
 });
 
-test("deployment actions expose loading state only on the clicked button", () => {
+test("deployment actions keep stable button content while a request is pending", () => {
   assert.match(source, /profileAction, setProfileAction/);
-  assert.match(source, /loading=\{profileAction === "dispatch"\}/);
-  assert.match(source, /loading=\{profileAction === "copy"\}/);
+  assert.match(source, /aria-busy=\{profileAction === "dispatch"\}/);
+  assert.match(source, /aria-busy=\{profileAction === "copy"\}/);
+  assert.doesNotMatch(source, /loading=\{profileAction === "(?:dispatch|copy)"\}/);
+  assert.doesNotMatch(source, /profileAction === "(?:dispatch|copy)" \|\|/);
+  assert.doesNotMatch(source, /aria-disabled=\{Boolean\(profileAction\)\}/);
   assert.doesNotMatch(source, /savingProfile/);
 });
