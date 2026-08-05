@@ -181,9 +181,8 @@ test("desktop node table keeps readable name and network columns while resizing"
   assert.match(pageSource, /TableHead className="w-\[44px\]"/);
   assert.match(pageSource, /TableHead className="w-\[190px\]"/);
   assert.equal(pageSource.match(/TableHead className="w-\[190px\]"/g)?.length, 2);
-  assert.match(pageSource, /TableHead className="w-\[64px\]"/);
-  assert.match(pageSource, /TableHead className="w-\[72px\]"/);
-  assert.match(pageSource, /TableHead className="w-\[80px\]"/);
+  assert.match(pageSource, /TableHead className="w-\[72px\] text-center"/);
+  assert.equal(pageSource.match(/TableHead className="w-\[72px\]/g)?.length, 3);
   assert.match(pageSource, /TableHead className="w-\[224px\]"/);
   assert.match(pageSource, /TableHead className="w-\[272px\]"/);
   assert.match(pageSource, /text-sm hover:bg-\[var\(--accent-a2\)\][^\n]*\[&>td\]:py-1\.5/);

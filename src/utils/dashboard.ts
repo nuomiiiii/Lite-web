@@ -54,20 +54,47 @@ export interface DashboardReturnRouteStatus {
   error?: string;
 }
 
+export interface DashboardAlertLatest {
+  title: string;
+  node_name?: string;
+  occurred_at?: string;
+}
+
+export interface DashboardAlertSummary {
+  current: number;
+  affected_nodes: number;
+  recovered_today: number;
+  latest_alert?: DashboardAlertLatest;
+  error?: string;
+}
+
+export interface DashboardAlerts {
+  resource: DashboardAlertSummary;
+  offline: DashboardAlertSummary;
+  latency_loss: DashboardAlertSummary;
+  traffic: DashboardAlertSummary;
+  return_route: DashboardAlertSummary;
+  billing: DashboardAlertSummary;
+}
+
+export interface DashboardLatencyPoint {
+  time: string;
+  average: number;
+}
+
+export interface DashboardLatencySummary {
+  average: number;
+  targets: number;
+  points: DashboardLatencyPoint[];
+  error?: string;
+}
+
 export interface DashboardData {
   servers: {
     total: number;
     online: number;
     offline: number;
     offline_nodes: DashboardOfflineNode[];
-  };
-  traffic: {
-    today_up: number;
-    today_down: number;
-    today_billable: number;
-    hourly: DashboardTrafficHour[];
-    daily: DashboardTrafficDay[];
-    history_ready: boolean;
   };
   database: {
     type: string;
@@ -84,6 +111,21 @@ export interface DashboardData {
     last_compacted_at: string | null;
   };
   return_route: DashboardReturnRouteStatus;
+  alerts: DashboardAlerts;
+  generated_at: string;
+}
+
+export interface DashboardChartsData {
+  traffic: {
+    today_up: number;
+    today_down: number;
+    today_billable: number;
+    hourly: DashboardTrafficHour[];
+    daily: DashboardTrafficDay[];
+    history_ready: boolean;
+    error?: string;
+  };
+  latency: DashboardLatencySummary;
   generated_at: string;
 }
 

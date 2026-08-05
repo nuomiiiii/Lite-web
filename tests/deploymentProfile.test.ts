@@ -9,6 +9,10 @@ const source = fs.readFileSync(
   path.join(root, "src/pages/admin/index.tsx"),
   "utf8",
 );
+const nodeContextSource = fs.readFileSync(
+  path.join(root, "src/contexts/NodeDetailsContext.tsx"),
+  "utf8",
+);
 
 test("deployment settings are restored and saved per node", () => {
   assert.match(source, /client\/\$\{node\.uuid\}\/deployment-profile/);
@@ -46,4 +50,27 @@ test("deployment section headings and dispatch action use consistent styling", (
     source,
     /<Button\s+mt="2"\s+variant="solid"[\s\S]*?admin\.nodeTable\.saveAndDispatch/,
   );
+});
+
+test("deployment UI shows only the current delivery state", () => {
+  assert.match(source, /admin-deployment-delivery/);
+  assert.match(source, /deliveryStatusTitle/);
+  assert.match(source, /deliveryNotStarted/);
+  assert.match(source, /admin-deployment-delivery-current/);
+  assert.match(source, /deliveryPresentation\.label/);
+  assert.match(source, /deliveryPresentation\.hint/);
+  assert.match(source, /aria-live="polite"/);
+  assert.doesNotMatch(source, /deliverySteps\.map/);
+  assert.doesNotMatch(source, /deliveryRevision[\s\S]*revision: deliveryState\.revision/);
+});
+
+test("server Agent column shows the matching delivery state below the version", () => {
+  assert.match(source, /node\.deployment_status/);
+  assert.match(source, /admin-agent-config-status/);
+  assert.match(source, /admin\.nodeTable\.deliverySaved/);
+  assert.match(source, /admin\.nodeTable\.deliverySent/);
+  assert.match(source, /admin\.nodeTable\.deliveryApplied/);
+  assert.match(source, /admin\.nodeTable\.deliveryFailed/);
+  assert.match(nodeContextSource, /hydrateLegacyDeploymentStatuses/);
+  assert.match(nodeContextSource, /Object\.hasOwn\(node, "deployment_status"\)/);
 });

@@ -25,6 +25,8 @@ import {
 } from "@radix-ui/themes";
 import {
   CircleDollarSign,
+  CheckCircle2,
+  Clock3,
   Copy,
   CornerRightUp,
   Download,
@@ -35,9 +37,11 @@ import {
   Radar,
   RotateCw,
   Save,
+  Send,
   Settings,
   Terminal,
   Trash2Icon,
+  XCircle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
@@ -954,7 +958,7 @@ const AutoDiscoverySection = ({
                   }));
                 }}
               >
-                {t("admin.nodeTable.monthRotate", "网络统计月重置")}
+                {t("admin.nodeTable.monthRotate", "流量重置日")}
               </label>
             </Flex>
             {enableMonthRotate && (
@@ -1146,6 +1150,20 @@ const SortableRow = React.memo(({
   ] as const).filter(
     (entry): entry is readonly ["IPv4" | "IPv6", string] => Boolean(entry[1]),
   );
+  const deploymentStatusLabel = (() => {
+    switch (node.deployment_status) {
+      case "saved":
+        return t("admin.nodeTable.deliverySaved", "已保存");
+      case "sent":
+        return t("admin.nodeTable.deliverySent", "已发送");
+      case "applied":
+        return t("admin.nodeTable.deliveryApplied", "已生效");
+      case "failed":
+        return t("admin.nodeTable.deliveryFailed", "应用失败");
+      default:
+        return "";
+    }
+  })();
   return (
     <TableRow
       ref={setNodeRef}
@@ -1205,9 +1223,20 @@ const SortableRow = React.memo(({
         </div>
       </TableCell>
       <TableCell className="!align-middle" data-label={t("admin.nodeTable.agent", "Agent")}>
-        <span className="block truncate text-sm leading-5 text-muted-foreground" title={publicVersion(node.version) || "--"}>
-          {publicVersion(node.version) || "--"}
-        </span>
+        <div className="flex min-w-0 flex-col items-center justify-center gap-0.5 text-center leading-none">
+          <span className="block max-w-full truncate text-sm leading-5 text-muted-foreground" title={publicVersion(node.version) || "--"}>
+            {publicVersion(node.version) || "--"}
+          </span>
+          {deploymentStatusLabel ? (
+            <span
+              className="admin-agent-config-status"
+              data-status={node.deployment_status}
+              title={deploymentStatusLabel}
+            >
+              {deploymentStatusLabel}
+            </span>
+          ) : null}
+        </div>
       </TableCell>
       <TableCell className="!align-middle" data-label={t("common.group", "分组")}>
         <span className="block truncate text-sm font-normal text-muted-foreground" title={node.group || ""}>
@@ -1374,13 +1403,13 @@ const NodeTable = ({
               <TableHead className="w-[190px]">
                 {t("admin.nodeTable.network", "网络")}
               </TableHead>
-              <TableHead className="w-[64px]">
+              <TableHead className="w-[72px] text-center">
                 {t("admin.nodeTable.agent", "Agent")}
               </TableHead>
               <TableHead className="w-[72px]">
                 {t("common.group", "分组")}
               </TableHead>
-              <TableHead className="w-[80px]">
+              <TableHead className="w-[72px]">
                 {t("common.remark", "备注")}
               </TableHead>
               <TableHead className="w-[224px]">{t("admin.nodeTable.billing")}</TableHead>
@@ -1935,7 +1964,19 @@ type DeploymentProfilePayload = {
 type DeploymentProfileResponse = {
   profile: DeploymentProfilePayload;
   saved?: boolean;
-  delivery?: "dispatched" | "saved_for_reconnect" | "agent_upgrade_required";
+  delivery?: "saved" | "sent" | "applied" | "failed" | "agent_upgrade_required";
+  delivery_state?: DeploymentDeliveryState;
+  runtime_changed?: boolean;
+};
+
+type DeploymentDeliveryState = {
+  revision: number;
+  status: "saved" | "sent" | "applied" | "failed";
+  error?: string;
+  saved_at?: string;
+  updated_at?: string;
+  sent_at?: string;
+  finished_at?: string;
 };
 
 function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings: any }) {
@@ -1982,6 +2023,8 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
   const [open, setOpen] = React.useState(false);
   const [loadingProfile, setLoadingProfile] = React.useState(false);
   const [savingProfile, setSavingProfile] = React.useState(false);
+  const [deliveryState, setDeliveryState] = React.useState<DeploymentDeliveryState>();
+  const deliveryStatus = deliveryState?.status;
 
   React.useEffect(() => {
     setEnableMonthRotate(initialResetDay !== "");
@@ -2005,7 +2048,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
         }
         return response.json() as Promise<DeploymentProfileResponse>;
       })
-      .then(({ profile }) => {
+      .then(({ profile, saved, delivery_state }) => {
         setSelectedPlatform(profile.platform || "linux");
         setInstallOptions({
           disableWebSsh: profile.disable_web_ssh,
@@ -2031,6 +2074,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
         setEnableIncludeMountpoints(profile.enable_include_mountpoints);
         setEnableInterval(profile.enable_interval);
         setEnableMonthRotate(profile.enable_month_rotate);
+        setDeliveryState(saved ? delivery_state : undefined);
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
@@ -2045,6 +2089,36 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
       });
     return () => controller.abort();
   }, [node.uuid, open, t]);
+
+  React.useEffect(() => {
+    if (!open || !deliveryStatus || !["saved", "sent"].includes(deliveryStatus)) {
+      return;
+    }
+    const controller = new AbortController();
+    let attempts = 0;
+    const timer = window.setInterval(() => {
+      attempts += 1;
+      if (attempts > 30) {
+        window.clearInterval(timer);
+        return;
+      }
+      void fetch(`/api/admin/client/${node.uuid}/deployment-profile`, {
+        cache: "no-store",
+        signal: controller.signal,
+      })
+        .then((response) => response.ok ? response.json() as Promise<DeploymentProfileResponse> : undefined)
+        .then((result) => {
+          if (!result?.delivery_state) return;
+          if (result.delivery_state.status !== deliveryStatus) refresh();
+          setDeliveryState(result.delivery_state);
+        })
+        .catch(() => undefined);
+    }, 2000);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+    };
+  }, [deliveryStatus, node.uuid, open, refresh]);
 
   const selectedTrafficResetDay = () => {
     if (!enableMonthRotate) return 0;
@@ -2229,7 +2303,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
       toast.error(
         t(
           "admin.nodeTable.invalidMonthRotate",
-          "网络统计月重置日必须是 1 到 31 的整数",
+          "流量重置日必须是 1 到 31 的整数",
         ),
       );
       return;
@@ -2260,16 +2334,21 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
         throw new Error(message || `HTTP ${response.status}`);
       }
       const result = (await response.json()) as DeploymentProfileResponse;
+      setDeliveryState(result.delivery_state);
 
       if (copyCommand) {
         await navigator.clipboard.writeText(generateCommand());
       }
       refresh();
-      const deliveryMessage = result.delivery === "dispatched"
-        ? t("admin.nodeTable.runtimeConfigDispatched", "在线配置已下发")
+      const deliveryMessage = result.delivery_state?.status === "applied"
+        ? t("admin.nodeTable.deliveryApplied", "已生效")
+        : result.delivery_state?.status === "failed"
+          ? t("admin.nodeTable.deliveryFailed", "应用失败")
+          : result.delivery_state?.status === "sent" || result.delivery === "sent"
+            ? t("admin.nodeTable.deliverySent", "已发送")
         : result.delivery === "agent_upgrade_required"
           ? t("admin.nodeTable.runtimeConfigUpgradeRequired", "配置已保存，Agent 升级后应用")
-          : t("admin.nodeTable.runtimeConfigSaved", "配置已保存，Agent 下次连接时应用");
+          : t("admin.nodeTable.deliverySaved", "已保存");
       toast.success(
         copyCommand
           ? `${deliveryMessage}；${t(
@@ -2289,6 +2368,43 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
       setSavingProfile(false);
     }
   };
+  const deliveryPresentation = (() => {
+    switch (deliveryState?.status) {
+      case "sent":
+        return {
+          Icon: Send,
+          label: t("admin.nodeTable.deliverySent", "已发送"),
+          hint: t("admin.nodeTable.deliverySentHint", "等待 Agent 返回应用结果"),
+        };
+      case "applied":
+        return {
+          Icon: CheckCircle2,
+          label: t("admin.nodeTable.deliveryApplied", "已生效"),
+          hint: t("admin.nodeTable.deliveryAppliedHint", "Agent 已确认配置生效"),
+        };
+      case "failed":
+        return {
+          Icon: XCircle,
+          label: t("admin.nodeTable.deliveryFailed", "应用失败"),
+          hint: deliveryState.error || t("admin.nodeTable.deliveryFailedHint", "Agent 未能应用此配置"),
+        };
+      case "saved":
+        return {
+          Icon: Clock3,
+          label: t("admin.nodeTable.deliverySaved", "已保存"),
+          hint: t("admin.nodeTable.deliverySavedHint", "等待 Agent 上线后发送"),
+        };
+      default:
+        return {
+          Icon: Clock3,
+          label: t("admin.nodeTable.deliveryNotStarted", "尚未下发"),
+          hint: t(
+            "admin.nodeTable.deliveryNotStartedHint",
+            "保存在线采集配置后，可在这里查看发送和 Agent 应用结果",
+          ),
+        };
+    }
+  })();
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger>
@@ -2834,7 +2950,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
                     }
                   }}
                 >
-                  {t("admin.nodeTable.monthRotate", "网络统计月重置")}
+                  {t("admin.nodeTable.monthRotate", "流量重置日")}
                 </label>
               </Flex>
               {enableMonthRotate && (
@@ -2852,6 +2968,33 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
                   }
                 />
               )}
+              <div
+                className="admin-deployment-delivery"
+                role="status"
+                aria-live="polite"
+              >
+                <Text size="2" weight="bold" className="admin-deployment-delivery-title">
+                  {t("admin.nodeTable.deliveryStatusTitle", "在线配置状态")}
+                </Text>
+                <div className="admin-deployment-delivery-body">
+                  <div
+                    className="admin-deployment-delivery-current"
+                    data-status={deliveryState?.status || "not-started"}
+                  >
+                    <span className="admin-deployment-delivery-dot" />
+                    <span>{deliveryPresentation.label}</span>
+                  </div>
+                  <Flex gap="2" align="center" className="admin-deployment-delivery-hint">
+                    <deliveryPresentation.Icon size={15} />
+                    <Text
+                      size="1"
+                      color={deliveryState?.status === "failed" ? "red" : "gray"}
+                    >
+                      {deliveryPresentation.hint}
+                    </Text>
+                  </Flex>
+                </div>
+              </div>
               <Button
                 mt="2"
                 variant="solid"

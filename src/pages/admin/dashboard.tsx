@@ -4,6 +4,7 @@ import {
   AlertCircle,
   ArrowDownToLine,
   ArrowUpFromLine,
+  BellRing,
   Clock3,
   Database,
   RefreshCw,
@@ -30,15 +31,20 @@ import {
   dashboardLocalStorageTotal,
   dashboardRuntimeStorageTotal,
   shortDashboardDay,
+  type DashboardAlertSummary,
+  type DashboardChartsData,
   type DashboardData,
   type DashboardDatabaseStatus,
 } from "@/utils/dashboard";
 import { formatBytes } from "@/utils/unitHelper";
 
-const REFRESH_INTERVAL_MS = 15_000;
+const SUMMARY_REFRESH_INTERVAL_MS = 15_000;
+const CHART_REFRESH_INTERVAL_MS = 30_000;
 
 let dashboardSnapshot: DashboardData | null = null;
 let pendingDashboardRequest: Promise<DashboardData> | null = null;
+let dashboardChartsSnapshot: DashboardChartsData | null = null;
+let pendingDashboardChartsRequest: Promise<DashboardChartsData> | null = null;
 
 async function requestDashboard(): Promise<DashboardData> {
   if (pendingDashboardRequest) return pendingDashboardRequest;
@@ -66,11 +72,37 @@ async function requestDashboard(): Promise<DashboardData> {
   return pendingDashboardRequest;
 }
 
+async function requestDashboardCharts(): Promise<DashboardChartsData> {
+  if (pendingDashboardChartsRequest) return pendingDashboardChartsRequest;
+  pendingDashboardChartsRequest = fetch("/api/admin/dashboard/charts", { cache: "no-store" })
+    .then(async (response) => {
+      if (!response.ok) {
+        let message = `HTTP ${response.status}`;
+        try {
+          const payload = await response.json();
+          if (payload?.message) message = String(payload.message);
+        } catch {
+          // Keep the HTTP status fallback.
+        }
+        throw new Error(message);
+      }
+      return response.json() as Promise<DashboardChartsData>;
+    })
+    .then((data) => {
+      dashboardChartsSnapshot = data;
+      return data;
+    })
+    .finally(() => {
+      pendingDashboardChartsRequest = null;
+    });
+  return pendingDashboardChartsRequest;
+}
+
 function OverviewSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
       {[0, 1, 2].map((item) => (
-        <div key={item} className="h-[126px] rounded-md border bg-[var(--color-panel-solid)] p-4">
+        <div key={item} className="h-[112px] rounded-md border bg-[var(--color-panel-solid)] p-3">
           <Skeleton width="7rem" height="1rem" />
           <Skeleton className="mt-4" width="9rem" height="1.9rem" />
           <Skeleton className="mt-3" width="72%" height="0.85rem" />
@@ -99,7 +131,7 @@ function SummaryPanel({
     orange: "text-[var(--orange-11)]",
   }[tone];
   return (
-    <section className="min-h-[126px] rounded-md border bg-[var(--color-panel-solid)] p-4">
+    <section className="min-h-[112px] rounded-md border bg-[var(--color-panel-solid)] p-3">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-muted-foreground">{label}</span>
         <span className={`flex size-7 items-center justify-center ${toneClass}`}>{icon}</span>
@@ -116,14 +148,14 @@ function PanelHeader({
   trailing,
 }: {
   title: string;
-  description: string;
+  description?: string;
   trailing?: React.ReactNode;
 }) {
   return (
     <div className="mb-3 flex items-start justify-between gap-3">
       <div className="min-w-0">
         <h2 className="text-base font-semibold text-foreground">{title}</h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+        {description ? <p className="mt-0.5 text-sm text-muted-foreground">{description}</p> : null}
       </div>
       {trailing}
     </div>
@@ -159,6 +191,164 @@ function relativeTime(value: string | null, locale: string, fallback: string): s
   return formatter.format(Math.round(hours / 24), "day");
 }
 
+function AlertOverviewPanel({ data, locale }: { data: DashboardData; locale: string }) {
+  const { t } = useTranslation();
+  const items: Array<{
+    label: string;
+    to: string;
+    summary: DashboardAlertSummary;
+    marker: string;
+  }> = [
+    { label: t("admin_dashboard.alert_offline"), to: "/admin/notification/offline", summary: data.alerts.offline, marker: "bg-[var(--red-9)]" },
+    { label: t("admin_dashboard.alert_resource"), to: "/admin/notification/load", summary: data.alerts.resource, marker: "bg-[var(--orange-9)]" },
+    { label: t("admin_dashboard.alert_latency_loss"), to: "/admin/notification/ping-loss", summary: data.alerts.latency_loss, marker: "bg-[var(--orange-9)]" },
+    { label: t("admin_dashboard.alert_traffic"), to: "/admin/servers", summary: data.alerts.traffic, marker: "bg-[var(--accent-9)]" },
+    { label: t("admin_dashboard.alert_return_route"), to: "/admin/return-route", summary: data.alerts.return_route, marker: "bg-[var(--orange-9)]" },
+    { label: t("admin_dashboard.alert_billing"), to: "/admin/servers", summary: data.alerts.billing, marker: "bg-[var(--gray-8)]" },
+  ];
+  const available = items.filter((item) => !item.summary.error);
+  const current = available.reduce((total, item) => total + item.summary.current, 0);
+  const affected = available.reduce((total, item) => total + item.summary.affected_nodes, 0);
+  const recovered = available.reduce((total, item) => total + item.summary.recovered_today, 0);
+  const latestItem = available
+    .filter((item) => item.summary.latest_alert?.occurred_at)
+    .sort((left, right) => (
+      new Date(right.summary.latest_alert?.occurred_at ?? 0).getTime()
+      - new Date(left.summary.latest_alert?.occurred_at ?? 0).getTime()
+    ))[0];
+  const latest = latestItem?.summary.latest_alert;
+  const latestText = [latest?.node_name, latest?.title].filter(Boolean).join(" · ");
+
+  return (
+    <section className="rounded-md border bg-[var(--color-panel-solid)] p-3">
+      <PanelHeader
+        title={t("admin_dashboard.alerts_overview")}
+        description={t("admin_dashboard.alerts_overview_hint")}
+        trailing={<BellRing size={18} className="mt-0.5 text-muted-foreground" />}
+      />
+      <div className="grid grid-cols-3 divide-x border-b pb-3">
+        {[
+          [t("admin_dashboard.current_alerts"), current, "text-[var(--red-11)]"],
+          [t("admin_dashboard.affected_nodes"), affected, "text-[var(--orange-11)]"],
+          [t("admin_dashboard.recovered_today"), recovered, "text-[var(--green-11)]"],
+        ].map(([label, value, color], index) => (
+          <div key={String(label)} className={index === 0 ? "pr-3" : "px-3"}>
+            <div className={`text-xl font-semibold leading-none tabular-nums ${color}`}>{value}</div>
+            <div className="mt-1 text-[11px] text-muted-foreground">{label}</div>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2 border-b py-3 sm:grid-cols-3 xl:grid-cols-6">
+        {items.map((item) => (
+          <Link
+            key={item.label}
+            to={item.to}
+            className="flex min-w-0 items-center gap-1.5 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]"
+          >
+            <span className={`size-1.5 shrink-0 rounded-full ${item.marker}`} />
+            <span className="truncate">{item.label}</span>
+            <strong className="ml-auto shrink-0 font-semibold tabular-nums text-foreground">
+              {item.summary.error ? "-" : item.summary.current}
+            </strong>
+          </Link>
+        ))}
+      </div>
+      <div className="flex min-h-10 items-center justify-between gap-3 pt-2.5 text-xs">
+        <div className="min-w-0">
+          <div className="truncate font-medium text-foreground">
+            {latestText || t("admin_dashboard.no_recent_alert")}
+          </div>
+          {latestItem ? <div className="mt-0.5 truncate text-muted-foreground">{latestItem.label}</div> : null}
+        </div>
+        {latest?.occurred_at ? (
+          <span className="flex shrink-0 items-center gap-1 text-muted-foreground">
+            <Clock3 size={12} />
+            {relativeTime(latest.occurred_at, locale, t("admin_dashboard.not_available"))}
+          </span>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function LatencyPanel({
+  charts,
+  locale,
+  requestError,
+  warningCount,
+}: {
+  charts: DashboardChartsData | null;
+  locale: string;
+  requestError?: string | null;
+  warningCount: number;
+}) {
+  const { t } = useTranslation();
+  const points = React.useMemo(
+    () => (charts?.latency.points ?? []).map((point) => ({
+      ...point,
+      label: new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(new Date(point.time)),
+    })),
+    [charts?.latency.points, locale],
+  );
+  return (
+    <section className="min-h-[148px] rounded-md border bg-[var(--color-panel-solid)] p-3">
+      <PanelHeader
+        title={t("admin_dashboard.latency_overview")}
+        description={t("admin_dashboard.latency_overview_hint")}
+        trailing={(
+          <span className="mt-0.5 flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-sm bg-[var(--accent-9)]" />
+              {t("admin_dashboard.average_latency")}
+            </span>
+          </span>
+        )}
+      />
+      <div className="grid min-h-[78px] grid-cols-1 items-center gap-3 md:grid-cols-[17rem_minmax(0,1fr)]">
+        <div className="grid grid-cols-3 divide-x">
+          {[
+            [charts ? `${charts.latency.average.toFixed(0)} ms` : "-", t("admin_dashboard.average_latency"), "text-foreground"],
+            [charts?.latency.targets ?? "-", t("admin_dashboard.monitor_targets"), "text-[var(--accent-11)]"],
+            [warningCount, t("admin_dashboard.packet_loss_alerts"), "text-[var(--orange-11)]"],
+          ].map(([value, label, color], index) => (
+            <div key={String(label)} className={index === 0 ? "pr-3" : "px-3"}>
+              <div className={`text-xl font-semibold leading-none tabular-nums ${color}`}>{value}</div>
+              <div className="mt-1.5 text-[11px] text-muted-foreground">{label}</div>
+            </div>
+          ))}
+        </div>
+        {requestError || charts?.latency.error ? (
+          <div className="flex h-[78px] items-center justify-center text-xs text-[var(--red-11)]">
+            {t("admin_dashboard.data_unavailable")}
+          </div>
+        ) : charts ? (
+          <ChartContainer
+            config={{ average: { label: t("admin_dashboard.average_latency"), color: "var(--accent-9)" } }}
+            className="h-[78px] w-full aspect-auto"
+          >
+            <LineChart data={points} margin={{ top: 3, right: 3, left: 0, bottom: 0 }}>
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={44} />
+              <YAxis hide domain={["auto", "auto"]} />
+              <Tooltip
+                content={({ active, payload, label }) => active && payload?.length ? (
+                  <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-sm">
+                    <div className="text-muted-foreground">{label}</div>
+                    <div className="mt-1 font-medium">{Number(payload[0]?.value ?? 0).toFixed(1)} ms</div>
+                  </div>
+                ) : null}
+              />
+              <Line type="monotone" dataKey="average" stroke="var(--color-average)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+            </LineChart>
+          </ChartContainer>
+        ) : (
+          <Skeleton className="h-[78px] w-full" />
+        )}
+      </div>
+    </section>
+  );
+}
+
 function ReturnRouteStatusPanel({ data, locale }: { data: DashboardData; locale: string }) {
   const { t } = useTranslation();
   const status = data.return_route;
@@ -180,9 +370,9 @@ function ReturnRouteStatusPanel({ data, locale }: { data: DashboardData; locale:
   return (
     <Link
       to="/admin/return-route"
-      className="group block h-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]"
+      className="group block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]"
     >
-      <section className="h-full min-h-[296px] rounded-md border bg-[var(--color-panel-solid)] p-4 transition-colors group-hover:border-[var(--accent-a7)]">
+      <section className="min-h-[286px] rounded-md border bg-[var(--color-panel-solid)] p-3 transition-colors group-hover:border-[var(--accent-a7)]">
         <PanelHeader
           title={t("admin_dashboard.return_route_status")}
           description={t("admin_dashboard.return_route_status_hint")}
@@ -281,23 +471,22 @@ function StoragePanel({ data, locale }: { data: DashboardData; locale: string })
   ];
 
   return (
-    <section className="h-full rounded-md border bg-[var(--color-panel-solid)] p-4">
+    <section className="h-full rounded-md border bg-[var(--color-panel-solid)] p-3">
       <PanelHeader
         title={t("admin_dashboard.database_usage")}
-        description={t("admin_dashboard.database_composition")}
-        trailing={<Database size={18} className="mt-0.5 text-muted-foreground" />}
+        trailing={<span className="text-sm font-semibold tabular-nums text-foreground">{formatBytes(storageTotal)}</span>}
       />
-      <div className="space-y-3 text-sm">
-        <div className="space-y-3">
+      <div className="space-y-2 text-xs">
+        <div className="space-y-2">
           {storageParts.map((part) => {
             const share = storageTotal > 0 ? (part.value / storageTotal) * 100 : 0;
             return (
               <div
                 key={part.label}
-                className="grid grid-cols-[minmax(5.5rem,auto)_minmax(3rem,1fr)_6.5rem] items-center gap-3"
+                className="grid grid-cols-[minmax(4.5rem,auto)_minmax(2.5rem,1fr)_5.5rem] items-center gap-2"
               >
                 <span className={part.labelClass}>{part.label}</span>
-                <div className="h-2 overflow-hidden rounded-full bg-[var(--gray-a4)]">
+                <div className="h-1.5 overflow-hidden rounded-full bg-[var(--gray-a4)]">
                   <div
                     className={`h-full rounded-full ${part.barClass}`}
                     style={{ width: `${share}%` }}
@@ -310,20 +499,20 @@ function StoragePanel({ data, locale }: { data: DashboardData; locale: string })
             );
           })}
         </div>
-        <div className="border-t pt-3">
-          <div className="flex items-center justify-between gap-3">
+        <div className="grid grid-cols-2 gap-3 border-t pt-2">
+          <div className="min-w-0">
             <span>{t("admin_dashboard.retention_period")}</span>
-            <span className="tabular-nums">
+            <div className="mt-0.5 truncate tabular-nums text-muted-foreground">
               {data.storage.retention_days > 0
                 ? t("admin_dashboard.days", { count: data.storage.retention_days })
                 : t("admin_dashboard.not_available")}
-            </span>
+            </div>
           </div>
-          <div className="mt-3 flex items-center justify-between gap-3">
+          <div className="min-w-0 text-right">
             <span>{t("admin_dashboard.last_compaction")}</span>
-            <span className="tabular-nums text-muted-foreground">
+            <div className="mt-0.5 truncate tabular-nums text-muted-foreground">
               {relativeTime(data.storage.last_compacted_at, locale, t("admin_dashboard.not_available"))}
-            </span>
+            </div>
           </div>
         </div>
       </div>
@@ -336,10 +525,12 @@ function StoragePanel({ data, locale }: { data: DashboardData; locale: string })
 export default function AdminDashboard() {
   const { t, i18n } = useTranslation();
   const [data, setData] = React.useState<DashboardData | null>(dashboardSnapshot);
+  const [charts, setCharts] = React.useState<DashboardChartsData | null>(dashboardChartsSnapshot);
   const [loading, setLoading] = React.useState(!dashboardSnapshot);
   const [error, setError] = React.useState<string | null>(null);
+  const [chartsError, setChartsError] = React.useState<string | null>(null);
 
-  const load = React.useCallback(async (silent = false) => {
+  const loadSummary = React.useCallback(async (silent = false) => {
     if (!silent && !dashboardSnapshot) setLoading(true);
     try {
       const next = await requestDashboard();
@@ -352,20 +543,40 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  const loadCharts = React.useCallback(async () => {
+    try {
+      const next = await requestDashboardCharts();
+      setCharts(next);
+      setChartsError(null);
+    } catch (reason) {
+      setChartsError(reason instanceof Error ? reason.message : String(reason));
+    }
+  }, []);
+
+  const refreshAll = React.useCallback(() => {
+    void loadSummary(false);
+    void loadCharts();
+  }, [loadCharts, loadSummary]);
+
   React.useEffect(() => {
-    void load(Boolean(dashboardSnapshot));
-    const interval = window.setInterval(() => void load(true), REFRESH_INTERVAL_MS);
-    return () => window.clearInterval(interval);
-  }, [load]);
+    void loadSummary(Boolean(dashboardSnapshot));
+    void loadCharts();
+    const summaryInterval = window.setInterval(() => void loadSummary(true), SUMMARY_REFRESH_INTERVAL_MS);
+    const chartInterval = window.setInterval(() => void loadCharts(), CHART_REFRESH_INTERVAL_MS);
+    return () => {
+      window.clearInterval(summaryInterval);
+      window.clearInterval(chartInterval);
+    };
+  }, [loadCharts, loadSummary]);
 
   const locale = i18n.resolvedLanguage || i18n.language || "zh-CN";
   const dailyChartData = React.useMemo(
     () =>
-      (data?.traffic.daily ?? []).map((item) => ({
+      (charts?.traffic.daily ?? []).map((item) => ({
         ...item,
         label: shortDashboardDay(item.day, locale),
       })),
-    [data?.traffic.daily, locale],
+    [charts?.traffic.daily, locale],
   );
 
   return (
@@ -375,7 +586,7 @@ export default function AdminDashboard() {
           {t("admin_dashboard.title")}
         </AdminPageTitle>
         {data?.generated_at ? (
-          <Button style={{ marginRight: 0 }} variant="ghost" color="gray" size="1" onClick={() => void load(false)}>
+          <Button style={{ marginRight: 0 }} variant="ghost" color="gray" size="1" onClick={refreshAll}>
             <RefreshCw size={14} />
             {t("admin_dashboard.updated_at", {
               time: new Intl.DateTimeFormat(locale, {
@@ -395,7 +606,7 @@ export default function AdminDashboard() {
           </Callout.Icon>
           <Callout.Text className="flex flex-wrap items-center gap-2">
             <span>{t("admin_dashboard.load_failed")}: {error}</span>
-            <Button size="1" variant="soft" onClick={() => void load(false)}>
+            <Button size="1" variant="soft" onClick={refreshAll}>
               <RefreshCw size={14} />
               {t("common.retry")}
             </Button>
@@ -425,18 +636,20 @@ export default function AdminDashboard() {
             <SummaryPanel
               icon={<WalletCards size={18} />}
               label={t("admin_dashboard.today_billable")}
-              value={formatBytes(data.traffic.today_billable)}
+              value={charts && !charts.traffic.error ? formatBytes(charts.traffic.today_billable) : "-"}
             >
-              <div className="grid grid-cols-2 gap-3">
+              {charts && !charts.traffic.error ? <div className="grid grid-cols-2 gap-3">
                 <span className="flex min-w-0 items-center gap-1.5">
                   <ArrowUpFromLine size={14} className="shrink-0 text-[var(--accent-11)]" />
-                  <span className="truncate">{t("admin_dashboard.upload")} {formatBytes(data.traffic.today_up)}</span>
+                  <span className="truncate">{t("admin_dashboard.upload")} {formatBytes(charts.traffic.today_up)}</span>
                 </span>
                 <span className="flex min-w-0 items-center justify-end gap-1.5 text-right">
                   <ArrowDownToLine size={14} className="shrink-0 text-[var(--orange-11)]" />
-                  <span className="truncate">{t("admin_dashboard.download")} {formatBytes(data.traffic.today_down)}</span>
+                  <span className="truncate">{t("admin_dashboard.download")} {formatBytes(charts.traffic.today_down)}</span>
                 </span>
-              </div>
+              </div> : (
+                <span>{chartsError || charts?.traffic.error ? t("admin_dashboard.data_unavailable") : t("admin_dashboard.chart_loading")}</span>
+              )}
             </SummaryPanel>
 
             <SummaryPanel
@@ -451,77 +664,94 @@ export default function AdminDashboard() {
             </SummaryPanel>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.85fr)]">
-            <section className="min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-4">
-              <PanelHeader
-                title={t("admin_dashboard.today_traffic")}
-                description={t("admin_dashboard.hourly_traffic_hint")}
-                trailing={(
-                  <div className="mt-0.5 flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-[var(--accent-9)]" />{t("admin_dashboard.upload")}</span>
-                    <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-[var(--orange-9)]" />{t("admin_dashboard.download")}</span>
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(24rem,0.95fr)]">
+            <div className="flex min-w-0 flex-col gap-3">
+              <LatencyPanel
+                charts={charts}
+                locale={locale}
+                requestError={chartsError}
+                warningCount={data.alerts.latency_loss.error ? 0 : data.alerts.latency_loss.current}
+              />
+
+              <section className="min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+                <PanelHeader
+                  title={t("admin_dashboard.today_traffic")}
+                  description={t("admin_dashboard.hourly_traffic_hint")}
+                  trailing={(
+                    <div className="mt-0.5 flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-[var(--accent-9)]" />{t("admin_dashboard.upload")}</span>
+                      <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-[var(--orange-9)]" />{t("admin_dashboard.download")}</span>
+                    </div>
+                  )}
+                />
+                {chartsError || charts?.traffic.error ? (
+                  <div className="flex h-[220px] items-center justify-center text-sm text-[var(--red-11)]">
+                    {t("admin_dashboard.data_unavailable")}
                   </div>
-                )}
-              />
-              <ChartContainer
-                config={{
-                  up: { label: t("admin_dashboard.upload"), color: "var(--accent-9)" },
-                  down: { label: t("admin_dashboard.download"), color: "var(--orange-9)" },
-                }}
-                className="h-[220px] w-full aspect-auto"
-              >
-                <LineChart data={data.traffic.hourly} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis dataKey="hour" tickLine={false} axisLine={false} minTickGap={28} />
-                  <YAxis tickLine={false} axisLine={false} width={58} tickFormatter={(value) => formatBytes(Number(value)).replace(" ", "")} />
-                  <Tooltip
-                    content={({ active, payload, label }) => active && payload?.length ? (
-                      <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-lg">
-                        <div className="mb-1.5 text-muted-foreground">{label}</div>
-                        <div className="font-medium text-[var(--accent-11)]">{t("admin_dashboard.upload")}: {formatBytes(Number(payload[0]?.value ?? 0))}</div>
-                        <div className="mt-1 font-medium text-[var(--orange-11)]">{t("admin_dashboard.download")}: {formatBytes(Number(payload[1]?.value ?? 0))}</div>
-                      </div>
-                    ) : null}
-                  />
-                  <Line type="monotone" dataKey="up" stroke="var(--color-up)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="down" stroke="var(--color-down)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
-                </LineChart>
-              </ChartContainer>
-            </section>
+                ) : charts ? <ChartContainer
+                  config={{
+                    up: { label: t("admin_dashboard.upload"), color: "var(--accent-9)" },
+                    down: { label: t("admin_dashboard.download"), color: "var(--orange-9)" },
+                  }}
+                  className="h-[220px] w-full aspect-auto"
+                >
+                  <LineChart data={charts.traffic.hourly} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                    <XAxis dataKey="hour" tickLine={false} axisLine={false} minTickGap={28} />
+                    <YAxis tickLine={false} axisLine={false} width={58} tickFormatter={(value) => formatBytes(Number(value)).replace(" ", "")} />
+                    <Tooltip
+                      content={({ active, payload, label }) => active && payload?.length ? (
+                        <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-lg">
+                          <div className="mb-1.5 text-muted-foreground">{label}</div>
+                          <div className="font-medium text-[var(--accent-11)]">{t("admin_dashboard.upload")}: {formatBytes(Number(payload[0]?.value ?? 0))}</div>
+                          <div className="mt-1 font-medium text-[var(--orange-11)]">{t("admin_dashboard.download")}: {formatBytes(Number(payload[1]?.value ?? 0))}</div>
+                        </div>
+                      ) : null}
+                    />
+                    <Line type="monotone" dataKey="up" stroke="var(--color-up)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="down" stroke="var(--color-down)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+                  </LineChart>
+                </ChartContainer> : <Skeleton className="h-[220px] w-full" />}
+              </section>
 
-            <ReturnRouteStatusPanel data={data} locale={locale} />
-          </div>
+              <section className="min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+                <PanelHeader
+                  title={t("admin_dashboard.daily_billable")}
+                  description={t("admin_dashboard.daily_billable_hint")}
+                  trailing={<span className="rounded-full bg-[var(--accent-a3)] px-2.5 py-1 text-xs font-medium text-[var(--accent-11)]">{t("admin_dashboard.recent_month")}</span>}
+                />
+                {charts && !charts.traffic.error && !charts.traffic.history_ready ? (
+                  <p className="mb-2 text-xs text-muted-foreground">{t("admin_dashboard.history_preparing")}</p>
+                ) : null}
+                {chartsError || charts?.traffic.error ? (
+                  <div className="flex h-[220px] items-center justify-center text-sm text-[var(--red-11)]">
+                    {t("admin_dashboard.data_unavailable")}
+                  </div>
+                ) : charts ? <ChartContainer config={{ billable: { label: t("admin_dashboard.billable"), color: "var(--accent-9)" } }} className="h-[220px] w-full aspect-auto">
+                  <BarChart data={dailyChartData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                    <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} />
+                    <YAxis tickLine={false} axisLine={false} width={58} tickFormatter={(value) => formatBytes(Number(value)).replace(" ", "")} />
+                    <Tooltip
+                      cursor={{ fill: "var(--accent-a3)" }}
+                      content={({ active, payload, label }) => active && payload?.length ? (
+                        <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-lg">
+                          <div className="mb-1 text-muted-foreground">{label}</div>
+                          <div className="font-medium">{t("admin_dashboard.billable")}: {formatBytes(Number(payload[0]?.value ?? 0))}</div>
+                        </div>
+                      ) : null}
+                    />
+                    <Bar dataKey="billable" fill="var(--color-billable)" radius={[2, 2, 0, 0]} maxBarSize={24} />
+                  </BarChart>
+                </ChartContainer> : <Skeleton className="h-[220px] w-full" />}
+              </section>
+            </div>
 
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.85fr)]">
-            <section className="min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-4">
-              <PanelHeader
-                title={t("admin_dashboard.daily_billable")}
-                description={t("admin_dashboard.daily_billable_hint")}
-                trailing={<span className="rounded-full bg-[var(--accent-a3)] px-2.5 py-1 text-xs font-medium text-[var(--accent-11)]">{t("admin_dashboard.recent_month")}</span>}
-              />
-              {!data.traffic.history_ready ? (
-                <p className="mb-2 text-xs text-muted-foreground">{t("admin_dashboard.history_preparing")}</p>
-              ) : null}
-              <ChartContainer config={{ billable: { label: t("admin_dashboard.billable"), color: "var(--accent-9)" } }} className="h-[220px] w-full aspect-auto">
-                <BarChart data={dailyChartData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} />
-                  <YAxis tickLine={false} axisLine={false} width={58} tickFormatter={(value) => formatBytes(Number(value)).replace(" ", "")} />
-                  <Tooltip
-                    cursor={{ fill: "var(--accent-a3)" }}
-                    content={({ active, payload, label }) => active && payload?.length ? (
-                      <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-lg">
-                        <div className="mb-1 text-muted-foreground">{label}</div>
-                        <div className="font-medium">{t("admin_dashboard.billable")}: {formatBytes(Number(payload[0]?.value ?? 0))}</div>
-                      </div>
-                    ) : null}
-                  />
-                  <Bar dataKey="billable" fill="var(--color-billable)" radius={[2, 2, 0, 0]} maxBarSize={24} />
-                </BarChart>
-              </ChartContainer>
-            </section>
-
-            <StoragePanel data={data} locale={locale} />
+            <div className="flex min-w-0 flex-col gap-3">
+              <ReturnRouteStatusPanel data={data} locale={locale} />
+              <AlertOverviewPanel data={data} locale={locale} />
+              <StoragePanel data={data} locale={locale} />
+            </div>
           </div>
         </>
       ) : null}
