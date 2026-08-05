@@ -1139,6 +1139,12 @@ const SortableRow = React.memo(({
     navigator.clipboard.writeText(text);
     toast.success(t("copy_success"));
   }
+  const networkAddresses = ([
+    ["IPv4", node.ipv4?.trim()],
+    ["IPv6", node.ipv6?.trim()],
+  ] as const).filter(
+    (entry): entry is readonly ["IPv4" | "IPv6", string] => Boolean(entry[1]),
+  );
   return (
     <TableRow
       ref={setNodeRef}
@@ -1146,7 +1152,7 @@ const SortableRow = React.memo(({
       className="text-sm hover:bg-[var(--accent-a2)] [&>td]:align-middle [&>td]:py-1.5"
       data-node-status={online ? "online" : "offline"}
     >
-      <TableCell className="w-16 !align-middle" data-label={t("common.sort", "排序")}>
+      <TableCell className="w-14 !align-middle" data-label={t("common.sort", "排序")}>
         <div className="flex items-center">
           <button
             type="button"
@@ -1170,41 +1176,31 @@ const SortableRow = React.memo(({
           </button>
         </div>
       </TableCell>
-      <TableCell className="overflow-hidden !align-middle" data-label={t("admin.nodeTable.name")}>
+      <TableCell
+        className="overflow-hidden !align-middle"
+        data-label={t("admin.nodeTable.name")}
+        title={node.name}
+      >
         <DetailView node={node} online={online} />
       </TableCell>
       <TableCell className="!align-middle" data-label={t("admin.nodeTable.network", "网络")}>
-        <div className="flex min-w-0 flex-col text-sm leading-[1.125rem] text-muted-foreground">
-          <div className="flex min-w-0 items-center gap-1">
-            <span className="truncate tabular-nums">IPv4 {node.ipv4 || "--"}</span>
-            {node.ipv4 && (
+        <div className="flex min-w-0 flex-col justify-center text-sm leading-[1.125rem] text-muted-foreground">
+          {networkAddresses.length > 0 ? networkAddresses.map(([type, address]) => (
+            <div key={type} className="flex min-w-0 items-center gap-1" title={address}>
+              <span className="whitespace-nowrap tabular-nums">
+                {type} {type === "IPv6" ? compactIPv6(address) : address}
+              </span>
               <button
                 type="button"
                 className="inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-[var(--accent-a3)] hover:text-[var(--accent-11)]"
-                onClick={() => copy(node.ipv4)}
+                onClick={() => copy(address)}
                 aria-label={t("copy", "复制")}
                 title={t("copy", "复制")}
               >
                 <Copy size={13} />
               </button>
-            )}
-          </div>
-          <div className="flex min-w-0 items-center gap-1" title={node.ipv6}>
-            <span className="truncate tabular-nums">
-              IPv6 {node.ipv6 ? compactIPv6(node.ipv6) : "--"}
-            </span>
-            {node.ipv6 && (
-              <button
-                type="button"
-                className="inline-flex size-5 shrink-0 items-center justify-center rounded hover:bg-[var(--accent-a3)] hover:text-[var(--accent-11)]"
-                onClick={() => copy(node.ipv6)}
-                aria-label={t("copy", "复制")}
-                title={t("copy", "复制")}
-              >
-                <Copy size={13} />
-              </button>
-            )}
-          </div>
+            </div>
+          )) : <span className="tabular-nums">--</span>}
         </div>
       </TableCell>
       <TableCell className="!align-middle" data-label={t("admin.nodeTable.agent", "Agent")}>
@@ -1367,27 +1363,27 @@ const NodeTable = ({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setIsDragging(false)}
       >
-        <Table className="admin-responsive-table admin-node-table min-w-[1136px] table-fixed text-sm">
+        <Table className="admin-responsive-table admin-node-table min-w-[1280px] table-fixed text-sm">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[4%]">
+              <TableHead className="w-[56px]">
                 <span className="sr-only">{t("common.sort", "排序")}</span>
               </TableHead>
-              <TableHead className="w-[12%]">{t("admin.nodeTable.name")}</TableHead>
-              <TableHead className="w-[12%]">
+              <TableHead className="w-[192px]">{t("admin.nodeTable.name")}</TableHead>
+              <TableHead className="w-[208px]">
                 {t("admin.nodeTable.network", "网络")}
               </TableHead>
-              <TableHead className="w-[7%]">
+              <TableHead className="w-[88px]">
                 {t("admin.nodeTable.agent", "Agent")}
               </TableHead>
-              <TableHead className="w-[7%]">
+              <TableHead className="w-[112px]">
                 {t("common.group", "分组")}
               </TableHead>
-              <TableHead className="w-[13%]">
+              <TableHead className="w-[160px]">
                 {t("common.remark", "备注")}
               </TableHead>
-              <TableHead className="w-[21%]">{t("admin.nodeTable.billing")}</TableHead>
-              <TableHead className="w-[24%]">{t("common.action", "操作")}</TableHead>
+              <TableHead className="w-[224px]">{t("admin.nodeTable.billing")}</TableHead>
+              <TableHead className="w-[240px]">{t("common.action", "操作")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

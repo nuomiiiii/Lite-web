@@ -172,6 +172,12 @@ export default function RemoteExecNodeSelector({
                   const selected = selectedSet.has(node.uuid);
                   const online = onlineSet.has(node.uuid);
                   const flag = node.region_override?.trim() || node.region?.trim() || "UN";
+                  const addresses = ([
+                    ["IPv4", node.ipv4?.trim()],
+                    ["IPv6", node.ipv6?.trim()],
+                  ] as const).filter(
+                    (entry): entry is readonly ["IPv4" | "IPv6", string] => Boolean(entry[1]),
+                  );
                   return (
                     <TableRow
                       key={node.uuid}
@@ -206,15 +212,12 @@ export default function RemoteExecNodeSelector({
                       </TableCell>
                       <TableCell data-label={t("terminal.ip_address")}>
                         <div className="remote-exec-node-addresses">
-                          {([
-                            ["IPv4", node.ipv4 || ""],
-                            ["IPv6", node.ipv6 || ""],
-                          ] as const).map(([type, address]) => (
+                          {addresses.length > 0 ? addresses.map(([type, address]) => (
                             <div key={type} className="remote-exec-node-address" title={address || undefined}>
                               <span>{type}</span>
-                              <code>{address ? (type === "IPv6" ? compactIPv6(address) : address) : "--"}</code>
+                              <code>{type === "IPv6" ? compactIPv6(address) : address}</code>
                             </div>
-                          ))}
+                          )) : <span className="text-muted-foreground">--</span>}
                         </div>
                       </TableCell>
                       <TableCell data-label={t("common.group")}>

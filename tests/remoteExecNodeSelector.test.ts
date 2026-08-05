@@ -72,6 +72,17 @@ test("does not expose address copy actions in remote execution", () => {
   assert.doesNotMatch(selectorSource, /<Copy\b/);
 });
 
+test("hides an unreported IPv6 row and vertically centers IPv4", () => {
+  assert.match(selectorSource, /\["IPv4", node\.ipv4\?\.trim\(\)\][\s\S]{0,80}\["IPv6", node\.ipv6\?\.trim\(\)\]/);
+  assert.match(selectorSource, /addresses\.length > 0 \? addresses\.map/);
+  assert.doesNotMatch(selectorSource, /\["IPv[46]", node\.ipv[46] \|\| ""\]/);
+  const selectorCss = readFileSync(
+    new URL("../src/components/remote/RemoteExecNodeSelector.css", import.meta.url),
+    "utf8",
+  );
+  assert.match(selectorCss, /\.remote-exec-node-addresses \{[\s\S]*height: 100%[\s\S]*justify-content: center/);
+});
+
 test("keeps one palette-aware select-all action without a redundant command shell", () => {
   const selectAllAction = selectorSource.match(
     /<Button\s+type="button"[\s\S]*?<\/Button>/,

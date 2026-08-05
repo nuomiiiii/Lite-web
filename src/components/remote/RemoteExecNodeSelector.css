@@ -71,7 +71,9 @@
 .remote-exec-node-addresses {
   display: flex;
   min-width: 0;
+  height: 100%;
   flex-direction: column;
+  justify-content: center;
   gap: 0.125rem;
 }
 

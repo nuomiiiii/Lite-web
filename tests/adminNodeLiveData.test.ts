@@ -38,7 +38,7 @@ test("admin node table keeps persisted ordering and prioritizes identity and bil
   assert.doesNotMatch(pageSource, /ResourceStatus|TrafficQuota|ResourceUsage/);
   assert.match(pageSource, /t\("common\.group", "分组"\)/);
   assert.match(pageSource, /t\("common\.remark", "备注"\)/);
-  assert.match(pageSource, /w-\[21%\].*admin\.nodeTable\.billing/);
+  assert.match(pageSource, /w-\[224px\].*admin\.nodeTable\.billing/);
   assert.match(pageSource, /nodeTable\.agent[\s\S]*publicVersion\(node\.version\)/);
   assert.match(pageSource, /admin-node-country-flag/);
   assert.match(pageSource, /reorderEnabled=\{!searchTerm\.trim\(\) && statusFilter === "all"\}/);
@@ -107,9 +107,9 @@ test("admin node toolbar aligns status left and search actions right", () => {
   assert.doesNotMatch(pageSource, /style=\{\{ height: "48px" \}\}/);
   assert.doesNotMatch(pageSource, /lastReportRecent|liveRefreshInterval/);
   assert.doesNotMatch(pageSource, /resourceFromLatestReport/);
-  assert.match(pageSource, /IPv4 \{node\.ipv4 \|\| "--"\}/);
-  assert.match(pageSource, /IPv6 \{node\.ipv6 \? compactIPv6/);
-  assert.match(pageSource, /flex min-w-0 flex-col text-sm leading-\[1\.125rem\] text-muted-foreground/);
+  assert.match(pageSource, /networkAddresses\.length > 0 \? networkAddresses\.map/);
+  assert.match(pageSource, /type === "IPv6" \? compactIPv6\(address\) : address/);
+  assert.match(pageSource, /flex min-w-0 flex-col justify-center text-sm leading-\[1\.125rem\] text-muted-foreground/);
   assert.match(statusSummarySource, /bg-\[var\(--color-panel-solid\)\]/);
   assert.doesNotMatch(pageSource, /md:inline-flex md:w-fit/);
 });
@@ -170,6 +170,20 @@ test("wide admin tables turn into labelled row cards on mobile", () => {
   assert.match(globalCssSource, /\.admin-responsive-table tbody tr \{[\s\S]*border-radius: calc\(var\(--radius\) - 2px\)/);
   assert.doesNotMatch(globalCssSource, /\.admin-selection-table tbody tr:first-child[\s\S]*border-top-left-radius: 0/);
   assert.match(globalCssSource, /content: attr\(data-label\)/);
+});
+
+test("desktop node table keeps readable name and network columns while resizing", () => {
+  assert.match(
+    pageSource,
+    /admin-responsive-table admin-node-table min-w-\[1280px\] table-fixed/,
+  );
+  assert.match(pageSource, /TableHead className="w-\[192px\]"/);
+  assert.match(pageSource, /TableHead className="w-\[208px\]"/);
+  assert.match(pageSource, /TableHead className="w-\[112px\]"/);
+  assert.match(pageSource, /data-label=\{t\("admin\.nodeTable\.name"\)\}[\s\S]{0,80}title=\{node\.name\}/);
+  assert.match(pageSource, /\["IPv4", node\.ipv4\?\.trim\(\)\][\s\S]{0,80}\["IPv6", node\.ipv6\?\.trim\(\)\]/);
+  assert.match(pageSource, /networkAddresses\.length > 0 \? networkAddresses\.map/);
+  assert.doesNotMatch(pageSource, /IPv[46] \{node\.ipv[46] \|\| "--"\}/);
 });
 
 test("admin tables align selection controls and use available text width", () => {
