@@ -328,7 +328,6 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     ? `https://github.com/nuomiiiii/komari/releases/tag/${encodeURIComponent(currentVersion)}`
     : undefined;
 
-  // 动态扩展菜单
   const [extraMenuItems, setExtraMenuItems] = useState<MenuItem[]>([]);
   const menuItems = useMemo(
     () => buildAdminMenuItems(baseMenuItems, extraMenuItems),
@@ -337,69 +336,75 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
 
   useEffect(() => {
     let ignore = false;
+
     async function loadThemeMenu() {
-      // 仅当 theme 存在且不等于 default 时扩展
       if (!currentTheme) {
         setExtraMenuItems([]);
         return;
       }
+
       try {
-        const resp = await fetch(`/themes/${currentTheme}/komari-theme.json`, {
-          cache: "no-cache",
-        });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
+        const response = await fetch(
+          `/themes/${encodeURIComponent(currentTheme)}/komari-theme.json`,
+          { cache: "no-cache" },
+        );
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const metadata = await response.json();
         if (ignore) return;
-        const cfg = data?.configuration;
-        if (!cfg) {
+        const configuration = metadata?.configuration;
+        if (!configuration) {
           setExtraMenuItems([]);
           return;
         }
 
-        const cfgType = getThemeConfigurationType(cfg);
+        const configurationType = getThemeConfigurationType(configuration);
         let itemPath: string | null = null;
         if (
-          cfgType === THEME_CONFIGURATION_MANAGED &&
-          Array.isArray(cfg.data) &&
-          cfg.data.length > 0
+          configurationType === THEME_CONFIGURATION_MANAGED &&
+          Array.isArray(configuration.data) &&
+          configuration.data.length > 0
         ) {
           itemPath = "/admin/theme_managed";
-        } else if (cfgType === THEME_CONFIGURATION_RAW) {
+        } else if (configurationType === THEME_CONFIGURATION_RAW) {
           itemPath = "/admin/theme_raw";
-        } else if (cfgType === THEME_CONFIGURATION_REDIRECT) {
-          itemPath = normalizeThemeRedirectTarget(cfg.data);
+        } else if (configurationType === THEME_CONFIGURATION_REDIRECT) {
+          itemPath = normalizeThemeRedirectTarget(configuration.data);
         }
 
         if (!itemPath) {
           setExtraMenuItems([]);
           return;
         }
-        const rawLabel: string =
-          resolveI18nText(cfg.name, currentLanguage) ??
+
+        const rawLabel =
+          resolveI18nText(configuration.name, currentLanguage) ??
           t("theme.manage_with_name", {
             name:
-              resolveI18nText(data?.name, currentLanguage) ??
-              (currentTheme === "default" ? "" : currentTheme),
+              resolveI18nText(metadata?.name, currentLanguage) ?? currentTheme,
           });
-        const icon: string = cfg.icon || "Palette"; // fallback icon
-        const item: MenuItem = {
-          labelKey: rawLabel,
-          rawLabel,
-          path: itemPath,
-          icon,
-          reloadDocument: cfgType === THEME_CONFIGURATION_REDIRECT,
-        };
-        setExtraMenuItems([item]);
-      } catch (e) {
-        console.warn("加载主题配置失败，将不扩展主题菜单:", e);
+        setExtraMenuItems([
+          {
+            labelKey: rawLabel,
+            rawLabel,
+            path: itemPath,
+            icon: configuration.icon || "Palette",
+            reloadDocument:
+              configurationType === THEME_CONFIGURATION_REDIRECT,
+          },
+        ]);
+      } catch (error) {
+        console.warn("Failed to load the active theme configuration menu:", error);
         if (!ignore) setExtraMenuItems([]);
       }
     }
+
     loadThemeMenu();
     return () => {
       ignore = true;
     };
-  }, [currentTheme]);
+  }, [currentLanguage, currentTheme, t]);
+
   useEffect(() => {
     const fetchVersionInfo = async () => {
       try {
@@ -1078,6 +1083,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
           }}
         >
           <div
+            data-admin-scroll-container
             style={{
               backgroundColor: "var(--accent-1)",
               height: "100%",

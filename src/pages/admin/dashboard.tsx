@@ -22,6 +22,7 @@ import {
   LatencyJitterRankingPanel,
   LatencyRankingPanel,
   OverviewSkeleton,
+  PacketLossRankingPanel,
   requestDashboard,
   requestDashboardCharts,
   ResourceRankingPanel,
@@ -268,6 +269,14 @@ export default function AdminDashboard() {
             limit={settings.ranking_limit}
           />
         );
+      case "packet_loss_ranking":
+        return (
+          <PacketLossRankingPanel
+            charts={charts}
+            error={chartsError}
+            limit={settings.ranking_limit}
+          />
+        );
       case "latency_trend":
         return (
           <LatencyPanel
@@ -313,17 +322,16 @@ export default function AdminDashboard() {
           <div key={module} className="min-w-0">{renderModule(module)}</div>
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(34rem,1fr)]">
-        <div className="flex min-w-0 flex-col gap-3">
-          {(["latency_trend", "traffic_trend", "billing_trend"] as const).map((module) => (
-            <div key={module} className="min-w-0">{renderModule(module)}</div>
-          ))}
-        </div>
-        <div className="flex min-w-0 flex-col gap-3">
-          {(["return_route", "alerts", "storage_detail"] as const).map((module) => (
-            <div key={module} className="min-w-0">{renderModule(module)}</div>
-          ))}
-        </div>
+      <div className="min-w-0">{renderModule("latency_trend")}</div>
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+        {(["traffic_trend", "billing_trend"] as const).map((module) => (
+          <div key={module} className="min-w-0 [&>*]:h-full">{renderModule(module)}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+        {(["return_route", "alerts"] as const).map((module) => (
+          <div key={module} className="min-w-0 [&>*]:h-full">{renderModule(module)}</div>
+        ))}
       </div>
     </>
   );

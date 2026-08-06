@@ -755,3 +755,58 @@ body, * {
     font-size: 16px !important;
   }
 }
+
+.km-theme-config-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin-inline: -0.25rem;
+  padding: 0.25rem 0.25rem 0;
+  border-bottom: 1px solid var(--gray-a5);
+  background: var(--accent-1);
+}
+
+.km-theme-config-tabs-list {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-a6) transparent;
+}
+
+.km-theme-config-tabs-list::-webkit-scrollbar {
+  height: 4px;
+}
+
+.km-theme-config-tabs-list::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background-color: var(--gray-a6);
+}
+
+.km-theme-config-tabs-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.km-theme-config-tabs-trigger {
+  min-height: 2.5rem;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.km-theme-config-section {
+  scroll-margin-top: 4rem;
+}
+
+@media (max-width: 767px) {
+  .km-theme-config-tabs {
+    margin-inline: -0.5rem;
+    padding-inline: 0.5rem;
+  }
+
+  .km-theme-config-tabs-trigger {
+    min-height: 2.75rem;
+    padding-inline: 0.75rem;
+  }
+}

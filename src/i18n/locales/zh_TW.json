@@ -59,6 +59,10 @@
     "return_route_recent_events": "24 小時事件",
     "return_route_status": "回程鏈路狀態",
     "return_route_status_hint": "監測任務健康度與最近線路變化",
+    "packet_loss_ranking": "近 15 分鐘丟包排行",
+    "packet_loss_ranking_hint": "每台伺服器取丟包率最高的任務，0% 和樣本不足不列入排行",
+    "packet_loss_all_normal": "近 15 分鐘網路正常",
+    "packet_loss_samples": "{{lost}} / {{total}} 次",
     "server_status": "伺服器狀態",
     "server_status_hint": "伺服器在線狀態與離線節點概覽",
     "servers": "伺服器狀態",
@@ -221,6 +225,7 @@
       "clientVersion": "客戶端版本",
       "confirm": "確認",
       "confirmDelete": "確認刪除",
+      "confirmDeleteQuestion": "確認刪除？",
       "currency": "貨幣",
       "currencyTips": "¥-人民幣，$-美元，€-歐元，£-英鎊，₽-盧布，₣-法郎，₹-盧比，₫-越南盾，฿-泰銖，C$-加元",
       "customColumns": "自定義列",
@@ -700,7 +705,7 @@
       "description": "按節點設定日報、週報與月報的推送週期和內容。"
     }
   },
-  "page_not_found": "真不巧，網頁被小鞠吃掉了。",
+  "page_not_found": "頁面不存在或已被移動。",
   "ping": {
     "all_servers": "全部伺服器",
     "all_servers_description": "勾選後，當前和後續新增的伺服器都會開啟該監測。",
@@ -1506,7 +1511,7 @@
     "light": "淺色",
     "load_config_failed": "加載主題配置失敗",
     "manage": "主題管理",
-    "manage_with_name": "{{name}} 主題管理",
+    "manage_with_name": "{{name}} 設定",
     "name": "名稱",
     "no_config": "該主題沒有聲明配置項。",
     "no_themes": "暫無主題",

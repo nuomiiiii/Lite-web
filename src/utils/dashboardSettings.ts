@@ -6,6 +6,7 @@ export const DASHBOARD_MODULE_IDS = [
   "daily_traffic_ranking",
   "latency_ranking",
   "latency_jitter_ranking",
+  "packet_loss_ranking",
   "latency_trend",
   "traffic_trend",
   "billing_trend",
@@ -56,7 +57,6 @@ export const FORMAL_DASHBOARD_MODULES: readonly DashboardModuleId[] = [
   "billing_trend",
   "return_route",
   "alerts",
-  "storage_detail",
 ];
 
 export const DASHBOARD_PRESETS: readonly DashboardPresetDefinition[] = [
@@ -77,6 +77,7 @@ export const DASHBOARD_PRESETS: readonly DashboardPresetDefinition[] = [
       "daily_traffic_ranking",
       "latency_ranking",
       "latency_jitter_ranking",
+      "packet_loss_ranking",
       "traffic_trend",
       "billing_trend",
       "return_route",
@@ -126,6 +127,7 @@ export const DASHBOARD_PRESETS: readonly DashboardPresetDefinition[] = [
       "storage_detail",
       "latency_ranking",
       "latency_jitter_ranking",
+      "packet_loss_ranking",
     ],
     refresh_seconds: 30,
     chart_refresh_seconds: 300,
@@ -183,6 +185,7 @@ const DASHBOARD_BASE_SPANS: Record<DashboardModuleId, DashboardModuleSpan> = {
   daily_traffic_ranking: 3,
   latency_ranking: 3,
   latency_jitter_ranking: 3,
+  packet_loss_ranking: 3,
   latency_trend: 6,
   traffic_trend: 3,
   billing_trend: 3,
@@ -310,5 +313,6 @@ export function dashboardChartSections(settings: DashboardSettings): string[] {
   }
   if (enabled.has("latency_trend") || enabled.has("latency_ranking")) sections.push("latency");
   if (enabled.has("latency_jitter_ranking")) sections.push("latency_jitter");
+  if (enabled.has("packet_loss_ranking")) sections.push("packet_loss");
   return sections;
 }

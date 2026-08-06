@@ -5,12 +5,14 @@ import {
   ArrowRight,
   ArrowUpDown,
   BellRing,
+  CheckCircle2,
   Clock3,
   Cpu,
   HardDrive,
   MemoryStick,
   Route,
   Timer,
+  WifiOff,
 } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
@@ -167,6 +169,66 @@ function PanelHeader({
         {description ? <p className="mt-0.5 text-sm text-muted-foreground">{description}</p> : null}
       </div>
       {trailing}
+    </div>
+  );
+}
+
+function DashboardRankingItemLink({ href, children }: { href?: string; children: React.ReactNode }) {
+  const className = "block min-w-0 rounded px-1.5 py-0.5 text-inherit no-underline transition-colors hover:bg-[var(--gray-a2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]";
+  if (!href) return <div className={className}>{children}</div>;
+  return (
+    <a
+      href={href}
+      className={className}
+    >
+      {children}
+    </a>
+  );
+}
+
+function DashboardRankingGrid({ limit, children }: { limit: number; children: React.ReactNode }) {
+  return (
+    <div className="@container">
+      <div className={limit >= 15
+        ? "grid grid-cols-1 gap-y-2 @min-[34rem]:grid-cols-2 @min-[34rem]:gap-x-5"
+        : "grid grid-cols-1 gap-y-2"}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function DashboardRankingItem({
+  index,
+  name,
+  value,
+  valueClassName = "",
+  progress,
+  detail,
+}: {
+  index: number;
+  name: string;
+  value: React.ReactNode;
+  valueClassName?: string;
+  progress: React.ReactNode;
+  detail?: React.ReactNode;
+}) {
+  return (
+    <div className="grid min-h-[3.5rem] min-w-0 grid-rows-[1rem_0.375rem_1rem] gap-y-1.5">
+      <div className="flex min-w-0 items-center justify-between gap-3 text-xs leading-4">
+        <span className="min-w-0 truncate text-foreground">
+          <span className="mr-1 text-muted-foreground">{index + 1}.</span>
+          <span className="font-medium">{name}</span>
+        </span>
+        <strong className={`shrink-0 font-semibold tabular-nums ${valueClassName}`}>{value}</strong>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--gray-a4)]">
+        {progress}
+      </div>
+      <div className="flex min-w-0 items-center justify-end text-[11px] leading-4 text-muted-foreground">
+        {detail ?? <span aria-hidden="true">&nbsp;</span>}
+      </div>
     </div>
   );
 }
@@ -593,7 +655,7 @@ export function ResourceRankingPanel({ data, limit }: { data: DashboardData; lim
                 {group.items.map((item, index) => {
                   const value = Math.max(0, Math.min(100, item[group.key]));
                   return (
-                    <div key={item.uuid} className="min-w-0">
+                    <DashboardRankingItemLink key={item.uuid} href={item.detail_url}>
                       <div className="mb-1 flex items-center justify-between gap-2 text-xs">
                         <span className="min-w-0 truncate text-foreground">
                           <span className="mr-1 text-muted-foreground">{index + 1}.</span>
@@ -604,7 +666,7 @@ export function ResourceRankingPanel({ data, limit }: { data: DashboardData; lim
                       <div className="h-1.5 overflow-hidden rounded-full bg-[var(--gray-a4)]">
                         <div className={`h-full rounded-full ${group.color}`} style={{ width: `${value}%` }} />
                       </div>
-                    </div>
+                    </DashboardRankingItemLink>
                   );
                 })}
               </div>
@@ -755,48 +817,44 @@ export function DailyTrafficRankingPanel({
           {t("admin_dashboard.no_daily_traffic_data")}
         </div>
       ) : (
-        <div
-          className={limit >= 15 ? "grid gap-x-5 gap-y-3" : "space-y-3"}
-          style={limit >= 15 ? {
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 30rem), 1fr))",
-          } : undefined}
-        >
+        <DashboardRankingGrid limit={limit}>
           {items.map((item, index) => (
-            <div key={item.uuid} className="min-w-0">
-              <div className="flex items-center justify-between gap-3 text-xs">
-                <span className="min-w-0 truncate text-foreground">
-                  <span className="mr-1 text-muted-foreground">{index + 1}.</span>{item.name}
-                </span>
-                <strong className="shrink-0 font-semibold tabular-nums">{formatBytes(item.billable)}</strong>
-              </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--gray-a4)]">
-                <div
-                  className="flex h-full overflow-hidden rounded-full"
-                  style={{ width: `${maximum > 0 ? (item.billable / maximum) * 100 : 0}%` }}
-                >
-                  <span
-                    className="h-full bg-[var(--orange-9)]"
-                    style={{ width: `${item.up + item.down > 0 ? (item.up / (item.up + item.down)) * 100 : 0}%` }}
-                  />
-                  <span
-                    className="h-full bg-[var(--blue-9)]"
-                    style={{ width: `${item.up + item.down > 0 ? (item.down / (item.up + item.down)) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-              <div className="mt-1 flex flex-wrap items-center justify-end gap-y-1 text-[11px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5 pr-2">
-                  <span className="size-1.5 rounded-full bg-[var(--orange-9)]" />
-                  {t("admin_dashboard.upload")} {formatBytes(item.up)}
-                </span>
-                <span className="inline-flex items-center gap-1.5 border-l border-[var(--gray-a6)] pl-2">
-                  <span className="size-1.5 rounded-full bg-[var(--blue-9)]" />
-                  {t("admin_dashboard.download")} {formatBytes(item.down)}
-                </span>
-              </div>
-            </div>
+            <DashboardRankingItemLink key={item.uuid} href={item.detail_url}>
+              <DashboardRankingItem
+                index={index}
+                name={item.name}
+                value={formatBytes(item.billable)}
+                progress={(
+                  <div
+                    className="flex h-full overflow-hidden rounded-full"
+                    style={{ width: `${maximum > 0 ? (item.billable / maximum) * 100 : 0}%` }}
+                  >
+                    <span
+                      className="h-full bg-[var(--orange-9)]"
+                      style={{ width: `${item.up + item.down > 0 ? (item.up / (item.up + item.down)) * 100 : 0}%` }}
+                    />
+                    <span
+                      className="h-full bg-[var(--blue-9)]"
+                      style={{ width: `${item.up + item.down > 0 ? (item.down / (item.up + item.down)) * 100 : 0}%` }}
+                    />
+                  </div>
+                )}
+                detail={(
+                  <div className="flex min-w-0 flex-wrap items-center justify-end gap-y-1">
+                    <span className="inline-flex items-center gap-1.5 pr-2">
+                      <span className="size-1.5 rounded-full bg-[var(--orange-9)]" />
+                      {t("admin_dashboard.upload")} {formatBytes(item.up)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 border-l border-[var(--gray-a6)] pl-2">
+                      <span className="size-1.5 rounded-full bg-[var(--blue-9)]" />
+                      {t("admin_dashboard.download")} {formatBytes(item.down)}
+                    </span>
+                  </div>
+                )}
+              />
+            </DashboardRankingItemLink>
           ))}
-        </div>
+        </DashboardRankingGrid>
       )}
     </section>
   );
@@ -836,29 +894,23 @@ export function LatencyRankingPanel({
           {t("admin_dashboard.no_latency_ranking_data")}
         </div>
       ) : (
-        <div
-          className={limit >= 15 ? "grid gap-x-5 gap-y-3" : "space-y-3.5"}
-          style={limit >= 15 ? {
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 30rem), 1fr))",
-          } : undefined}
-        >
+        <DashboardRankingGrid limit={limit}>
           {items.map((item, index) => (
-            <div key={item.uuid} className="min-w-0">
-              <div className="flex items-center justify-between gap-3 text-xs">
-                <span className="min-w-0 truncate text-foreground">
-                  <span className="mr-1 text-muted-foreground">{index + 1}.</span>{item.name}
-                </span>
-                <strong className="shrink-0 font-semibold tabular-nums">{item.average.toFixed(1)} ms</strong>
-              </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--gray-a4)]">
+            <DashboardRankingItemLink key={item.uuid} href={item.detail_url}>
+              <DashboardRankingItem
+                index={index}
+                name={item.name}
+                value={`${item.average.toFixed(1)} ms`}
+                progress={(
                 <div
                   className="h-full rounded-full bg-[var(--orange-9)]"
                   style={{ width: `${maximum > 0 ? (item.average / maximum) * 100 : 0}%` }}
                 />
-              </div>
-            </div>
+                )}
+              />
+            </DashboardRankingItemLink>
           ))}
-        </div>
+        </DashboardRankingGrid>
       )}
     </section>
   );
@@ -898,45 +950,115 @@ export function LatencyJitterRankingPanel({
           {t("admin_dashboard.no_latency_jitter_data")}
         </div>
       ) : (
-        <div
-          className={limit >= 15 ? "grid gap-x-5 gap-y-2" : "space-y-2"}
-          style={limit >= 15 ? {
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 30rem), 1fr))",
-          } : undefined}
-        >
+        <DashboardRankingGrid limit={limit}>
           {items.map((item, index) => {
             const increased = item.delta > 0;
             return (
-              <Link
+              <DashboardRankingItemLink
                 key={item.uuid}
-                to={`/instance/${encodeURIComponent(item.uuid)}`}
-                className="block min-w-0 rounded px-1.5 py-1.5 transition-colors hover:bg-[var(--gray-a3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]"
+                href={item.detail_url}
               >
-                <div className="flex items-center justify-between gap-3 text-xs">
-                  <span className="min-w-0 truncate text-foreground">
-                    <span className="mr-1 text-muted-foreground">{index + 1}.</span>{item.name}
-                  </span>
-                  <strong className={`shrink-0 font-semibold tabular-nums ${
-                    increased ? "text-[var(--orange-11)]" : item.delta < 0 ? "text-[var(--green-11)]" : ""
-                  }`}>
-                    {item.delta > 0 ? "+" : ""}{item.delta.toFixed(1)} ms
-                  </strong>
-                </div>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--gray-a4)]">
-                  <div
-                    className={`h-full rounded-full ${increased ? "bg-[var(--orange-9)]" : "bg-[var(--green-9)]"}`}
-                    style={{ width: `${maximum > 0 ? (Math.abs(item.delta) / maximum) * 100 : 0}%` }}
-                  />
-                </div>
-                <div className="mt-1 flex items-center justify-end gap-1 text-[11px] tabular-nums text-muted-foreground">
-                  <span>{t("admin_dashboard.previous_minute")} {item.previous.toFixed(1)} ms</span>
-                  <ArrowRight size={11} aria-hidden="true" />
-                  <span>{t("admin_dashboard.current_minute")} {item.current.toFixed(1)} ms</span>
-                </div>
-              </Link>
+                <DashboardRankingItem
+                  index={index}
+                  name={item.name}
+                  value={`${item.delta > 0 ? "+" : ""}${item.delta.toFixed(1)} ms`}
+                  valueClassName={increased ? "text-[var(--orange-11)]" : item.delta < 0 ? "text-[var(--green-11)]" : ""}
+                  progress={(
+                    <div
+                      className={`h-full rounded-full ${increased ? "bg-[var(--orange-9)]" : "bg-[var(--green-9)]"}`}
+                      style={{ width: `${maximum > 0 ? (Math.abs(item.delta) / maximum) * 100 : 0}%` }}
+                    />
+                  )}
+                  detail={(
+                    <div className="flex items-center justify-end gap-1 tabular-nums">
+                      <span>{t("admin_dashboard.previous_minute")} {item.previous.toFixed(1)} ms</span>
+                      <ArrowRight size={11} aria-hidden="true" />
+                      <span>{t("admin_dashboard.current_minute")} {item.current.toFixed(1)} ms</span>
+                    </div>
+                  )}
+                />
+              </DashboardRankingItemLink>
             );
           })}
+        </DashboardRankingGrid>
+      )}
+    </section>
+  );
+}
+
+export function PacketLossRankingPanel({
+  charts,
+  error,
+  limit,
+}: {
+  charts: DashboardChartsData | null;
+  error: string | null;
+  limit: number;
+}) {
+  const { t } = useTranslation();
+  const items = charts?.packet_loss?.ranking ?? [];
+  const maximum = items[0]?.loss_rate ?? 0;
+  return (
+    <section className="h-full min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+      <PanelHeader
+        title={t("admin_dashboard.packet_loss_ranking")}
+        description={t("admin_dashboard.packet_loss_ranking_hint")}
+        trailing={(
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--red-a3)] px-2.5 py-1 text-xs font-medium text-[var(--red-11)]">
+            <WifiOff size={13} /> Top {limit}
+          </span>
+        )}
+      />
+      {error || charts?.packet_loss?.error ? (
+        <div className="flex min-h-44 items-center justify-center text-sm text-[var(--red-11)]">
+          {t("admin_dashboard.data_unavailable")}
         </div>
+      ) : !charts ? (
+        <Skeleton className="h-[220px] w-full" />
+      ) : items.length === 0 ? (
+        <div className="flex min-h-44 items-center justify-center gap-2 text-sm font-medium text-[var(--green-11)]">
+          <CheckCircle2 className="shrink-0" size={18} aria-hidden="true" />
+          {t("admin_dashboard.packet_loss_all_normal")}
+        </div>
+      ) : (
+        <DashboardRankingGrid limit={limit}>
+          {items.map((item, index) => {
+            const tone = item.loss_rate >= 50
+              ? "bg-[var(--red-9)]"
+              : item.loss_rate >= 10
+                ? "bg-[var(--orange-9)]"
+                : "bg-[var(--accent-9)]";
+            const textTone = item.loss_rate >= 50
+              ? "text-[var(--red-11)]"
+              : item.loss_rate >= 10
+                ? "text-[var(--orange-11)]"
+                : "text-[var(--accent-11)]";
+            return (
+              <DashboardRankingItemLink key={`${item.uuid}:${item.task_id}`} href={item.detail_url}>
+                <DashboardRankingItem
+                  index={index}
+                  name={item.name}
+                  value={`${item.loss_rate.toFixed(1)}%`}
+                  valueClassName={textTone}
+                  progress={(
+                    <div
+                      className={`h-full rounded-full ${tone}`}
+                      style={{ width: `${maximum > 0 ? (item.loss_rate / maximum) * 100 : 0}%` }}
+                    />
+                  )}
+                  detail={(
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                      <span className="min-w-0 truncate">{item.task_name}</span>
+                      <span className="shrink-0 tabular-nums">
+                        {t("admin_dashboard.packet_loss_samples", { lost: item.lost, total: item.total })}
+                      </span>
+                    </div>
+                  )}
+                />
+              </DashboardRankingItemLink>
+            );
+          })}
+        </DashboardRankingGrid>
       )}
     </section>
   );
