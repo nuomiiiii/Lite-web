@@ -18,6 +18,14 @@ export interface DashboardTrafficHour {
   down: number;
 }
 
+export interface DashboardTrafficRankItem {
+  uuid: string;
+  name: string;
+  up: number;
+  down: number;
+  billable: number;
+}
+
 export interface DashboardDatabaseFiles {
   database: number;
   wal: number;
@@ -86,7 +94,38 @@ export interface DashboardLatencySummary {
   average: number;
   targets: number;
   points: DashboardLatencyPoint[];
+  ranking: DashboardLatencyRankItem[];
+  jitter_ranking: DashboardLatencyJitterRankItem[];
+  jitter_error?: string;
   error?: string;
+}
+
+export interface DashboardLatencyRankItem {
+  uuid: string;
+  name: string;
+  average: number;
+}
+
+export interface DashboardLatencyJitterRankItem {
+  uuid: string;
+  name: string;
+  previous: number;
+  current: number;
+  delta: number;
+}
+
+export interface DashboardResourceRankItem {
+  uuid: string;
+  name: string;
+  cpu: number;
+  memory: number;
+  disk: number;
+}
+
+export interface DashboardResourceSummary {
+  cpu: DashboardResourceRankItem[];
+  memory: DashboardResourceRankItem[];
+  disk: DashboardResourceRankItem[];
 }
 
 export interface DashboardData {
@@ -96,6 +135,7 @@ export interface DashboardData {
     offline: number;
     offline_nodes: DashboardOfflineNode[];
   };
+  resources: DashboardResourceSummary;
   database: {
     type: string;
     size: number;
@@ -122,6 +162,7 @@ export interface DashboardChartsData {
     today_billable: number;
     hourly: DashboardTrafficHour[];
     daily: DashboardTrafficDay[];
+    ranking: DashboardTrafficRankItem[];
     history_ready: boolean;
     error?: string;
   };

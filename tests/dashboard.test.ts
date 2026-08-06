@@ -12,6 +12,7 @@ import {
 
 const sample = {
   servers: { total: 4, online: 3, offline: 1, offline_nodes: [] },
+  resources: { cpu: [], memory: [], disk: [] },
   traffic: {
     today_up: 1,
     today_down: 2,

@@ -16,6 +16,7 @@ const adminPanelSource = readFileSync(
   new URL("../src/components/admin/AdminPanelBar.tsx", import.meta.url),
   "utf8",
 );
+const routesSource = readFileSync(new URL("../src/routes.ts", import.meta.url), "utf8");
 
 function allPaths(items: MenuItem[]): string[] {
   return items.flatMap((item) => [item.path, ...allPaths(item.children ?? [])]);
@@ -42,6 +43,7 @@ test("keeps the admin navigation in the intended groups", () => {
     systemSettings?.children?.map((item) => item.path),
     [
       "/admin/settings/site",
+      "/admin/settings/dashboard",
       "/admin/settings/reverse-proxy",
       "/admin/settings/metrics",
       "/admin/settings/account-security",
@@ -122,4 +124,9 @@ test("does not create an implicit second grid column on mobile", () => {
   assert.match(adminPanelSource, /open: \{\s+x: 0,\s+opacity: 1,/);
   assert.match(adminPanelSource, /closed: \{\s+x: 0,\s+opacity: 1,/);
   assert.match(adminPanelSource, /sidebarOpen\s+\? `\$\{DESKTOP_SIDEBAR_WIDTH\}px`\s+: "0px"/);
+});
+
+test("registers the dashboard settings route", () => {
+  assert.match(routesSource, /path:\s*["']dashboard["']/);
+  assert.match(routesSource, /pages\/admin\/settings\/dashboard/);
 });
