@@ -102,5 +102,9 @@ test("Agent command copy uses the Edge-compatible clipboard fallback", () => {
   const copyStart = source.indexOf("writeClipboardText(generateCommand())");
   const saveStart = source.indexOf("const response = await fetch(", copyStart);
   assert.ok(copyStart >= 0 && saveStart > copyStart);
+  assert.match(source, /\(value\) => \(\{ ok: true as const, value \}\)/);
+  assert.match(source, /copyResult\.value\.confirmed/);
+  assert.match(source, /installCommandCopyDenied/);
+  assert.match(source, /installCommandCopyUnconfirmed/);
   assert.doesNotMatch(source, /navigator\.clipboard\.writeText\(generateCommand\(\)\)/);
 });

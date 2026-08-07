@@ -3,6 +3,11 @@ export type ClipboardEnvironment = {
   document?: Document;
 };
 
+export type ClipboardWriteResult = {
+  confirmed: boolean;
+  method: "clipboard" | "legacy";
+};
+
 function browserClipboardEnvironment(): ClipboardEnvironment {
   return {
     navigator: typeof navigator === "undefined" ? undefined : navigator,
@@ -39,16 +44,17 @@ function copyWithTemporaryTextarea(text: string, documentObject?: Document): boo
 export async function writeClipboardText(
   text: string,
   environment: ClipboardEnvironment = browserClipboardEnvironment(),
-) {
-  // Keep the copy inside the original click gesture. Edge can block the
-  // asynchronous Clipboard API before the request fallback gets a chance.
-  if (copyWithTemporaryTextarea(text, environment.document)) {
-    return;
-  }
-
+): Promise<ClipboardWriteResult> {
+  // This function is called before the save request so Edge still sees the
+  // original click gesture. A resolved Clipboard API write is the only path
+  // that can positively confirm the system clipboard was updated.
   if (environment.navigator?.clipboard?.writeText) {
     await environment.navigator.clipboard.writeText(text);
-    return;
+    return { confirmed: true, method: "clipboard" };
+  }
+
+  if (copyWithTemporaryTextarea(text, environment.document)) {
+    return { confirmed: false, method: "legacy" };
   }
 
   throw new Error("clipboard unavailable");

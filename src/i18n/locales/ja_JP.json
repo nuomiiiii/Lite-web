@@ -301,6 +301,8 @@
         "resetDayRequired": "先にサーバー編集でトラフィックのリセット日を設定してください"
       },
       "description": "ノードの接続、ネットワーク、グループ、備考、請求情報をまとめて確認し、ドラッグで全体の表示順を変更できます。",
+      "installCommandCopyDenied": "ブラウザーがクリップボードへのアクセスを拒否しました。サイトの権限を確認して再試行してください",
+      "installCommandCopyUnconfirmed": "ブラウザーでコピーを確認できませんでした。上のコマンド欄から手動でコピーしてください",
       "installCommandSaveFailed": "インストールコマンド設定の保存に失敗しました",
       "installCommandSaved": "インストールコマンド設定を保存しました",
       "invalidMonthRotate": "トラフィックのリセット日は 0～31 で指定してください",

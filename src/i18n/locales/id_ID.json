@@ -301,6 +301,8 @@
         "resetDayRequired": "Atur tanggal reset trafik di editor server terlebih dahulu"
       },
       "description": "Tinjau koneksi node, sumber daya, trafik, dan tagihan di satu tempat. Seret baris untuk mengatur urutan tampilan global.",
+      "installCommandCopyDenied": "Browser menolak akses papan klip. Periksa izin situs ini lalu coba lagi",
+      "installCommandCopyUnconfirmed": "Browser tidak dapat memastikan penyalinan. Salin perintah secara manual dari kolom di atas",
       "installCommandSaveFailed": "Gagal menyimpan pengaturan perintah instalasi",
       "installCommandSaved": "Pengaturan perintah instalasi disimpan",
       "invalidMonthRotate": "Tanggal reset trafik harus antara 0 dan 31",

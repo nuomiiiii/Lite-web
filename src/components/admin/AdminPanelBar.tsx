@@ -1116,12 +1116,12 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             <motion.div
               key={location.pathname}
               data-admin-page-content
-              initial={prefersReducedMotion ? false : { opacity: 0.86 }}
-              animate={{ opacity: 1 }}
+              initial={prefersReducedMotion ? false : { opacity: 0.62, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={
                 prefersReducedMotion
                   ? { duration: 0 }
-                  : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }
+                  : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }
               }
             >
               {content}

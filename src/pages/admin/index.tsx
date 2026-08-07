@@ -2410,7 +2410,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
     setProfileAction(action);
     const copyAttempt = copyCommand
       ? writeClipboardText(generateCommand()).then(
-          () => ({ ok: true as const }),
+          (value) => ({ ok: true as const, value }),
           (error: unknown) => ({ ok: false as const, error }),
         )
       : null;
@@ -2429,12 +2429,6 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
       }
       const result = (await response.json()) as DeploymentProfileResponse;
       setDeliveryState(result.delivery_state);
-
-      if (copyAttempt) {
-        const copyResult = await copyAttempt;
-        if (!copyResult.ok) throw copyResult.error;
-      }
-      refresh();
       const deliveryMessage = result.delivery_state?.status === "applied"
         ? t("admin.nodeTable.deliveryApplied", "已生效")
         : result.delivery_state?.status === "failed"
@@ -2444,6 +2438,31 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
         : result.delivery === "agent_upgrade_required"
           ? t("admin.nodeTable.runtimeConfigUpgradeRequired", "配置已保存，Agent 升级后应用")
           : t("admin.nodeTable.deliverySaved", "已保存");
+
+      if (copyAttempt) {
+        const copyResult = await copyAttempt;
+        if (!copyResult.ok) {
+          refresh();
+          toast.warning(
+            `${deliveryMessage}；${t(
+              "admin.nodeTable.installCommandCopyDenied",
+              "浏览器拒绝访问剪贴板，请检查网站权限后重试",
+            )}`,
+          );
+          return;
+        }
+        if (!copyResult.value.confirmed) {
+          refresh();
+          toast.warning(
+            `${deliveryMessage}；${t(
+              "admin.nodeTable.installCommandCopyUnconfirmed",
+              "浏览器无法确认复制，请从上方指令框手动复制",
+            )}`,
+          );
+          return;
+        }
+      }
+      refresh();
       toast.success(
         copyCommand
           ? `${deliveryMessage}；${t(
@@ -3111,10 +3130,11 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
             </label>
             <div className="relative">
               <TextArea
-                disabled
+                readOnly
                 className="w-full"
                 style={{ minHeight: "80px" }}
                 value={generateCommand()}
+                onFocus={(event) => event.currentTarget.select()}
               />
             </div>
           </Flex>

@@ -142,7 +142,7 @@ test("softens admin page changes without animating the fixed navigation", () => 
   assert.match(adminPanelSource, /useReducedMotion\(\)/);
   assert.match(
     adminPanelSource,
-    /<motion\.div\s+key=\{location\.pathname\}\s+data-admin-page-content[\s\S]+?duration: 0\.16/,
+    /<motion\.div\s+key=\{location\.pathname\}\s+data-admin-page-content[\s\S]+?opacity: 0\.62, y: 5[\s\S]+?duration: 0\.18/,
   );
   assert.match(adminPanelSource, /prefersReducedMotion\s+\? \{ duration: 0 \}/);
 });

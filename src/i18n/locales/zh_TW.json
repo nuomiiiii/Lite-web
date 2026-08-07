@@ -302,6 +302,8 @@
       },
       "description": "集中查看節點連線、網路、群組、備註與帳單資訊，拖曳可調整全域顯示順序。",
       "installCommandSaveFailed": "一鍵部署設定儲存失敗",
+      "installCommandCopyDenied": "瀏覽器拒絕存取剪貼簿，請檢查網站權限後重試",
+      "installCommandCopyUnconfirmed": "瀏覽器無法確認複製，請從上方指令框手動複製",
       "installCommandSaved": "一鍵部署設定已儲存",
       "invalidMonthRotate": "流量重置日必須為 0-31",
       "deliveryApplied": "已生效",

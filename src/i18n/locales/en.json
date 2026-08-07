@@ -333,6 +333,8 @@
         "resetDayRequired": "Set a traffic reset day in the server editor first"
       },
       "description": "Review node connectivity, network details, groups, notes, and billing in one place. Drag rows to set the global display order.",
+      "installCommandCopyDenied": "The browser denied clipboard access. Check this site's permissions and try again",
+      "installCommandCopyUnconfirmed": "The browser could not confirm the copy. Copy the command manually from the field above",
       "installCommandSaveFailed": "Failed to save installation command settings",
       "installCommandSaved": "Deployment command copied",
       "invalidMonthRotate": "The traffic reset day must be between 0 and 31",
