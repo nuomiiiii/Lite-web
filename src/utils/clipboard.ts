@@ -45,15 +45,40 @@ export async function writeClipboardText(
   text: string,
   environment: ClipboardEnvironment = browserClipboardEnvironment(),
 ): Promise<ClipboardWriteResult> {
-  // This function is called before the save request so Edge still sees the
-  // original click gesture. A resolved Clipboard API write is the only path
-  // that can positively confirm the system clipboard was updated.
+  // Keep the synchronous path inside the original click gesture. Some Edge
+  // profiles resolve writeText without updating the Windows clipboard, so a
+  // resolved write is not treated as confirmation until it can be read back.
+  const legacyCopied = copyWithTemporaryTextarea(text, environment.document);
   if (environment.navigator?.clipboard?.writeText) {
-    await environment.navigator.clipboard.writeText(text);
-    return { confirmed: true, method: "clipboard" };
+    let writeError: unknown;
+    try {
+      await environment.navigator.clipboard.writeText(text);
+    } catch (error) {
+      writeError = error;
+    }
+
+    if (environment.navigator.clipboard.readText) {
+      try {
+        const copiedText = await environment.navigator.clipboard.readText();
+        if (copiedText === text) {
+          return { confirmed: true, method: "clipboard" };
+        }
+      } catch {
+        // Clipboard read permission is separate from write permission. An
+        // unreadable result remains unconfirmed instead of reporting success.
+      }
+    }
+
+    if (legacyCopied || writeError === undefined) {
+      return {
+        confirmed: false,
+        method: legacyCopied ? "legacy" : "clipboard",
+      };
+    }
+    throw writeError;
   }
 
-  if (copyWithTemporaryTextarea(text, environment.document)) {
+  if (legacyCopied) {
     return { confirmed: false, method: "legacy" };
   }
 

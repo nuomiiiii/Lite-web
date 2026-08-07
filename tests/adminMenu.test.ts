@@ -138,13 +138,10 @@ test("does not create an implicit second grid column on mobile", () => {
   assert.match(adminPanelSource, /sidebarOpen\s+\? `\$\{DESKTOP_SIDEBAR_WIDTH\}px`\s+: "0px"/);
 });
 
-test("softens admin page changes without animating the fixed navigation", () => {
-  assert.match(adminPanelSource, /useReducedMotion\(\)/);
-  assert.match(
-    adminPanelSource,
-    /<motion\.div\s+key=\{location\.pathname\}\s+data-admin-page-content[\s\S]+?opacity: 0\.62, y: 5[\s\S]+?duration: 0\.18/,
-  );
-  assert.match(adminPanelSource, /prefersReducedMotion\s+\? \{ duration: 0 \}/);
+test("admin route changes do not animate the main content or fixed navigation", () => {
+  assert.match(adminPanelSource, /<div data-admin-page-content>/);
+  assert.doesNotMatch(adminPanelSource, /opacity: 0\.62, y: 5/);
+  assert.doesNotMatch(adminPanelSource, /useReducedMotion/);
 });
 
 test("registers the dashboard settings route", () => {

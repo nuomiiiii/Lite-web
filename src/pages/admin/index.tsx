@@ -2068,6 +2068,7 @@ type DeploymentDeliveryState = {
 function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings: any }) {
   const { t } = useTranslation();
   const { refresh } = useNodeDetails();
+  const isMobile = useIsMobile();
   const configuredResetDay = Number(node.traffic_reset_day);
   const initialResetDay =
     Number.isInteger(configuredResetDay) &&
@@ -2110,6 +2111,11 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
   const [loadingProfile, setLoadingProfile] = React.useState(false);
   const [profileAction, setProfileAction] = React.useState<"dispatch" | "copy" | null>(null);
   const [deliveryState, setDeliveryState] = React.useState<DeploymentDeliveryState>();
+  const [copyFeedback, setCopyFeedback] = React.useState<{
+    kind: "success" | "warning" | "error";
+    message: string;
+  }>();
+  const commandTextAreaRef = React.useRef<HTMLTextAreaElement>(null);
   const deliveryStatus = deliveryState?.status;
 
   React.useEffect(() => {
@@ -2385,6 +2391,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
 
   const saveProfile = async (copyCommand: boolean) => {
     if (profileAction) return;
+    setCopyFeedback(undefined);
     const trafficResetDay = selectedTrafficResetDay();
     if (trafficResetDay === null) {
       toast.error(
@@ -2443,41 +2450,51 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
         const copyResult = await copyAttempt;
         if (!copyResult.ok) {
           refresh();
-          toast.warning(
-            `${deliveryMessage}；${t(
+          const message = `${deliveryMessage}；${t(
               "admin.nodeTable.installCommandCopyDenied",
               "浏览器拒绝访问剪贴板，请检查网站权限后重试",
-            )}`,
-          );
+            )}`;
+          setCopyFeedback({ kind: "error", message });
+          commandTextAreaRef.current?.focus();
+          commandTextAreaRef.current?.select();
+          toast.warning(message);
           return;
         }
         if (!copyResult.value.confirmed) {
           refresh();
-          toast.warning(
-            `${deliveryMessage}；${t(
+          const message = `${deliveryMessage}；${t(
               "admin.nodeTable.installCommandCopyUnconfirmed",
               "浏览器无法确认复制，请从上方指令框手动复制",
-            )}`,
-          );
+            )}`;
+          setCopyFeedback({ kind: "warning", message });
+          commandTextAreaRef.current?.focus();
+          commandTextAreaRef.current?.select();
+          toast.warning(message);
           return;
         }
       }
       refresh();
-      toast.success(
-        copyCommand
+      const message = copyCommand
           ? `${deliveryMessage}；${t(
               "admin.nodeTable.installCommandSaved",
               "部署指令已复制到剪贴板",
             )}`
-          : deliveryMessage,
-      );
+          : deliveryMessage;
+      if (copyCommand) {
+        setCopyFeedback({ kind: "success", message });
+      }
+      toast.success(message);
     } catch (err) {
       console.error("Failed to save install options or copy command:", err);
-      toast.error(
-        err instanceof Error
+      const message = err instanceof Error
           ? err.message
-          : t("admin.nodeTable.installCommandSaveFailed", "保存配置失败"),
-      );
+          : t("admin.nodeTable.installCommandSaveFailed", "保存配置失败");
+      if (copyCommand) {
+        setCopyFeedback({ kind: "error", message });
+        commandTextAreaRef.current?.focus();
+        commandTextAreaRef.current?.select();
+      }
+      toast.error(message);
     } finally {
       setProfileAction(null);
     }
@@ -3130,6 +3147,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
             </label>
             <div className="relative">
               <TextArea
+                ref={commandTextAreaRef}
                 readOnly
                 className="w-full"
                 style={{ minHeight: "80px" }}
@@ -3138,7 +3156,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
               />
             </div>
           </Flex>
-          <Flex justify="center">
+          <Flex direction="column" gap="2">
             <Button
               style={{ width: "100%" }}
               aria-busy={profileAction === "copy"}
@@ -3151,6 +3169,25 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
               <Copy size={16} />
               {t("admin.nodeTable.saveAndCopyCommand", "保存并复制部署指令")}
             </Button>
+            {isMobile && copyFeedback && (
+              <Text
+                as="div"
+                size="2"
+                weight="medium"
+                color={
+                  copyFeedback.kind === "success"
+                    ? "green"
+                    : copyFeedback.kind === "warning"
+                      ? "amber"
+                      : "red"
+                }
+                role="status"
+                aria-live="polite"
+                className="px-1"
+              >
+                {copyFeedback.message}
+              </Text>
+            )}
           </Flex>
         </div>
       </Dialog.Content>

@@ -31,11 +31,14 @@ function fallbackEnvironment(copyResult = true) {
   };
 }
 
-test("uses the secure clipboard API when the synchronous copy is unavailable", async () => {
+test("confirms the secure clipboard API only after reading back the same text", async () => {
   const writes: string[] = [];
   const result = await writeClipboardText("agent command", {
     navigator: {
-      clipboard: { writeText: async (text: string) => { writes.push(text); } },
+      clipboard: {
+        writeText: async (text: string) => { writes.push(text); },
+        readText: async () => writes.at(-1) || "",
+      },
     } as unknown as Navigator,
   });
   assert.deepEqual(writes, ["agent command"]);
@@ -47,27 +50,57 @@ test("prefers the confirmable Edge clipboard API over the legacy fallback", asyn
   let asyncWriteAttempted = false;
   const result = await writeClipboardText("agent command", {
     navigator: {
-      clipboard: { writeText: async () => { asyncWriteAttempted = true; } },
+      clipboard: {
+        writeText: async () => { asyncWriteAttempted = true; },
+        readText: async () => "agent command",
+      },
     } as unknown as Navigator,
     ...fallback.environment,
   });
   assert.deepEqual(result, { confirmed: true, method: "clipboard" });
-  assert.deepEqual(fallback.state(), { appendedValue: "", removed: false });
+  assert.deepEqual(fallback.state(), { appendedValue: "agent command", removed: true });
   assert.equal(asyncWriteAttempted, true);
 });
 
-test("does not mask an Edge clipboard rejection with an unverified fallback", async () => {
+test("does not report success when Edge resolves a write but read-back differs", async () => {
   const fallback = fallbackEnvironment();
+  const result = await writeClipboardText("agent command", {
+    navigator: {
+      clipboard: {
+        writeText: async () => {},
+        readText: async () => "previous clipboard value",
+      },
+    } as unknown as Navigator,
+    ...fallback.environment,
+  });
+  assert.deepEqual(result, { confirmed: false, method: "legacy" });
+  assert.deepEqual(fallback.state(), { appendedValue: "agent command", removed: true });
+});
+
+test("does not mask a rejected Edge write when no fallback is available", async () => {
   await assert.rejects(
     () => writeClipboardText("agent command", {
       navigator: {
-        clipboard: { writeText: async () => { throw new Error("permission denied"); } },
+        clipboard: {
+          writeText: async () => { throw new Error("permission denied"); },
+          readText: async () => "previous clipboard value",
+        },
       } as unknown as Navigator,
-      ...fallback.environment,
     }),
     /permission denied/,
   );
-  assert.deepEqual(fallback.state(), { appendedValue: "", removed: false });
+});
+
+test("leaves an unreadable clipboard result unconfirmed", async () => {
+  const result = await writeClipboardText("agent command", {
+    navigator: {
+      clipboard: {
+        writeText: async () => {},
+        readText: async () => { throw new Error("read denied"); },
+      },
+    } as unknown as Navigator,
+  });
+  assert.deepEqual(result, { confirmed: false, method: "clipboard" });
 });
 
 test("marks the legacy fallback as unconfirmed when the Clipboard API is unavailable", async () => {

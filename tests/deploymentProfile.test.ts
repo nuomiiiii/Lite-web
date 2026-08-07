@@ -108,3 +108,13 @@ test("Agent command copy uses the Edge-compatible clipboard fallback", () => {
   assert.match(source, /installCommandCopyUnconfirmed/);
   assert.doesNotMatch(source, /navigator\.clipboard\.writeText\(generateCommand\(\)\)/);
 });
+
+test("mobile deployment copy shows an inline confirmed or failed result", () => {
+  assert.match(source, /const isMobile = useIsMobile\(\)/);
+  assert.match(source, /copyFeedback, setCopyFeedback/);
+  assert.match(source, /isMobile && copyFeedback/);
+  assert.match(source, /copyFeedback\.kind === "success"/);
+  assert.match(source, /role="status"/);
+  assert.match(source, /aria-live="polite"/);
+  assert.match(source, /commandTextAreaRef\.current\?\.select\(\)/);
+});
