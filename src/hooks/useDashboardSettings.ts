@@ -5,9 +5,24 @@ import {
   sanitizeDashboardSettings,
   type DashboardSettings,
 } from "@/utils/dashboardSettings";
+import { readDashboardSession, writeDashboardSession } from "@/utils/dashboardSession";
 
-let dashboardSettingsSnapshot: DashboardSettings | null = null;
-let pendingDashboardSettingsRequest: Promise<DashboardSettings> | null = null;
+const dashboardSettingsSnapshots = new Map<string, DashboardSettings>();
+const pendingDashboardSettingsRequests = new Map<string, Promise<DashboardSettings>>();
+
+function normalizedAccountKey(accountKey?: string): string {
+  return accountKey?.trim() || "authenticated";
+}
+
+function cachedDashboardSettings(accountKey: string): DashboardSettings | null {
+  const memory = dashboardSettingsSnapshots.get(accountKey);
+  if (memory) return memory;
+  const stored = readDashboardSession<DashboardSettings>("settings", accountKey, "active");
+  if (!stored) return null;
+  const settings = sanitizeDashboardSettings(stored);
+  dashboardSettingsSnapshots.set(accountKey, settings);
+  return settings;
+}
 
 function readEnvelope(value: unknown): { data?: unknown; message?: unknown; status?: unknown } {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -26,9 +41,13 @@ async function responseError(response: Response, payload: unknown): Promise<Erro
 export async function fetchDashboardSettings(options?: {
   signal?: AbortSignal;
   force?: boolean;
+  accountKey?: string;
 }): Promise<DashboardSettings> {
-  if (!options?.force && dashboardSettingsSnapshot) return dashboardSettingsSnapshot;
-  if (!options?.force && pendingDashboardSettingsRequest) return pendingDashboardSettingsRequest;
+  const accountKey = normalizedAccountKey(options?.accountKey);
+  const snapshot = cachedDashboardSettings(accountKey);
+  if (!options?.force && snapshot) return snapshot;
+  const pending = pendingDashboardSettingsRequests.get(accountKey);
+  if (pending) return pending;
 
   const request = fetch("/api/admin/settings/dashboard", {
     cache: "no-store",
@@ -44,20 +63,23 @@ export async function fetchDashboardSettings(options?: {
     const envelope = readEnvelope(payload);
     if (envelope.status !== "success") throw await responseError(response, payload);
     const settings = sanitizeDashboardSettings(envelope.data);
-    dashboardSettingsSnapshot = settings;
+    dashboardSettingsSnapshots.set(accountKey, settings);
+    writeDashboardSession("settings", accountKey, "active", settings);
     return settings;
   });
 
-  pendingDashboardSettingsRequest = request.finally(() => {
-    pendingDashboardSettingsRequest = null;
+  const tracked = request.finally(() => {
+    pendingDashboardSettingsRequests.delete(accountKey);
   });
-  return pendingDashboardSettingsRequest;
+  pendingDashboardSettingsRequests.set(accountKey, tracked);
+  return tracked;
 }
 
 export async function saveDashboardSettings(
   settings: DashboardSettings,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; accountKey?: string },
 ): Promise<DashboardSettings> {
+  const accountKey = normalizedAccountKey(options?.accountKey);
   const normalized = sanitizeDashboardSettings(settings);
   const response = await fetch("/api/admin/settings/dashboard", {
     method: "POST",
@@ -75,25 +97,27 @@ export async function saveDashboardSettings(
   const envelope = readEnvelope(payload);
   if (envelope.status !== "success") throw await responseError(response, payload);
   const confirmed = sanitizeDashboardSettings(envelope.data);
-  dashboardSettingsSnapshot = confirmed;
+  dashboardSettingsSnapshots.set(accountKey, confirmed);
+  writeDashboardSession("settings", accountKey, "active", confirmed);
   return confirmed;
 }
 
-export function getDashboardSettingsSnapshot(): DashboardSettings | null {
-  return dashboardSettingsSnapshot;
+export function getDashboardSettingsSnapshot(accountKey?: string): DashboardSettings | null {
+  return cachedDashboardSettings(normalizedAccountKey(accountKey));
 }
 
-export function useDashboardSettings() {
+export function useDashboardSettings(accountKeyInput?: string) {
+  const accountKey = normalizedAccountKey(accountKeyInput);
   const [settings, setSettings] = React.useState<DashboardSettings>(
-    () => dashboardSettingsSnapshot ?? DEFAULT_DASHBOARD_SETTINGS,
+    () => getDashboardSettingsSnapshot(accountKey) ?? DEFAULT_DASHBOARD_SETTINGS,
   );
-  const [loading, setLoading] = React.useState(dashboardSettingsSnapshot === null);
+  const [loading, setLoading] = React.useState(getDashboardSettingsSnapshot(accountKey) === null);
   const [error, setError] = React.useState<Error | null>(null);
 
   const refetch = React.useCallback(async (force = false) => {
     setLoading(true);
     try {
-      const next = await fetchDashboardSettings({ force });
+      const next = await fetchDashboardSettings({ force, accountKey });
       setSettings(next);
       setError(null);
       return next;
@@ -104,12 +128,23 @@ export function useDashboardSettings() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [accountKey]);
 
   React.useEffect(() => {
-    if (dashboardSettingsSnapshot) return;
-    void refetch().catch(() => {});
-  }, [refetch]);
+    const cached = getDashboardSettingsSnapshot(accountKey);
+    setSettings(cached ?? DEFAULT_DASHBOARD_SETTINGS);
+    setLoading(cached === null);
+    if (!cached) {
+      void refetch().catch(() => {});
+      return;
+    }
+    void fetchDashboardSettings({ force: true, accountKey })
+      .then((next) => {
+        setSettings(next);
+        setError(null);
+      })
+      .catch((reason) => setError(reason instanceof Error ? reason : new Error(String(reason))));
+  }, [accountKey, refetch]);
 
   return { settings, loading, error, refetch };
 }

@@ -18,6 +18,10 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
+  restrictToFirstScrollableAncestor,
+  restrictToVerticalAxis,
+} from "@dnd-kit/modifiers";
+import {
   SortableContext,
   arrayMove,
   sortableKeyboardCoordinates,
@@ -50,6 +54,7 @@ import { toast } from "sonner";
 
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
+import { useAccount } from "@/contexts/AccountContext";
 import {
   saveDashboardSettings,
   useDashboardSettings,
@@ -73,6 +78,7 @@ const moduleIcons: Record<DashboardModuleId, React.ComponentType<{ size?: number
   daily_traffic_ranking: ArrowUpDown,
   latency_ranking: Timer,
   latency_jitter_ranking: Activity,
+  packet_loss_ranking: Activity,
   latency_trend: Activity,
   traffic_trend: ChartNoAxesCombined,
   billing_trend: CircleGauge,
@@ -83,11 +89,11 @@ const moduleIcons: Record<DashboardModuleId, React.ComponentType<{ size?: number
 
 const previewSpan: Record<number, string> = {
   1: "col-span-1",
-  2: "col-span-2",
-  3: "col-span-3",
-  4: "col-span-4",
-  5: "col-span-5",
-  6: "col-span-6",
+  2: "col-span-1 sm:col-span-2",
+  3: "col-span-1 sm:col-span-3",
+  4: "col-span-1 sm:col-span-4",
+  5: "col-span-1 sm:col-span-5",
+  6: "col-span-1 sm:col-span-6",
 };
 
 type SortableModuleRowProps = {
@@ -216,7 +222,9 @@ function cloneSettings(settings: DashboardSettings): DashboardSettings {
 
 export default function DashboardSettingsPage() {
   const { t } = useTranslation();
-  const { settings, loading, error, refetch } = useDashboardSettings();
+  const { account } = useAccount();
+  const accountKey = account?.uuid || account?.username || "authenticated";
+  const { settings, loading, error, refetch } = useDashboardSettings(accountKey);
   const [draft, setDraft] = React.useState<DashboardSettings>(() => cloneSettings(settings));
   const [saved, setSaved] = React.useState<DashboardSettings>(() => cloneSettings(settings));
   const [saving, setSaving] = React.useState(false);
@@ -286,7 +294,7 @@ export default function DashboardSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const confirmed = await saveDashboardSettings(draft);
+      const confirmed = await saveDashboardSettings(draft, { accountKey });
       setDraft(cloneSettings(confirmed));
       setSaved(cloneSettings(confirmed));
       toast.success(t("settings.settings_saved"));
@@ -392,7 +400,7 @@ export default function DashboardSettingsPage() {
             >
               <Select.Trigger className="w-24" />
               <Select.Content>
-                {[30, 60, 120].map((seconds) => (
+                {[15, 30, 60, 120].map((seconds) => (
                   <Select.Item key={seconds} value={String(seconds)}>{seconds}s</Select.Item>
                 ))}
               </Select.Content>
@@ -410,7 +418,7 @@ export default function DashboardSettingsPage() {
             >
               <Select.Trigger className="w-24" />
               <Select.Content>
-                {[60, 120, 300].map((seconds) => (
+                {[15, 30, 60, 120].map((seconds) => (
                   <Select.Item key={seconds} value={String(seconds)}>{seconds}s</Select.Item>
                 ))}
               </Select.Content>
@@ -451,6 +459,8 @@ export default function DashboardSettingsPage() {
           <DndContext
             sensors={moduleSensors}
             collisionDetection={closestCenter}
+            autoScroll={false}
+            modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
             onDragEnd={handleModuleDragEnd}
           >
             <SortableContext
@@ -488,20 +498,21 @@ export default function DashboardSettingsPage() {
 
           <div className="min-w-0">
             <div className="mb-2 text-xs font-medium text-muted-foreground">{t("settings.dashboard.preview")}</div>
-            <div className="grid min-h-[260px] grid-cols-6 content-start gap-2 rounded-md border bg-[var(--gray-a2)] p-3">
+            <div className="grid min-h-[260px] grid-cols-1 content-start gap-2 rounded-md border bg-[var(--gray-a2)] p-3 sm:grid-cols-6">
               {draft.preset === "overview" ? (
                 <>
-                  {(["server_status", "traffic_summary", "storage_summary"] as const)
-                    .map((id) => previewModule(id, "col-span-2"))}
-                  <div className="col-span-6 grid grid-cols-5 gap-2">
-                    <div className="col-span-3 flex min-w-0 flex-col gap-2">
-                      {(["latency_trend", "traffic_trend", "billing_trend"] as const)
-                        .map((id) => previewModule(id))}
-                    </div>
-                    <div className="col-span-2 flex min-w-0 flex-col gap-2">
-                      {(["return_route", "alerts", "storage_detail"] as const)
-                        .map((id) => previewModule(id))}
-                    </div>
+                  <div className="col-span-1 grid grid-cols-1 gap-2 sm:col-span-6 sm:grid-cols-3">
+                    {(["server_status", "traffic_summary", "storage_summary"] as const)
+                      .map((id) => previewModule(id))}
+                  </div>
+                  {previewModule("latency_trend", "col-span-1 sm:col-span-6")}
+                  <div className="col-span-1 grid grid-cols-1 gap-2 sm:col-span-6 sm:grid-cols-2">
+                    {(["traffic_trend", "billing_trend"] as const)
+                      .map((id) => previewModule(id))}
+                  </div>
+                  <div className="col-span-1 grid grid-cols-1 gap-2 sm:col-span-6 sm:grid-cols-2">
+                    {(["return_route", "alerts"] as const)
+                      .map((id) => previewModule(id))}
                   </div>
                 </>
               ) : packedPreview.map(({ id, span }) => previewModule(id, previewSpan[span]))}

@@ -17,6 +17,9 @@ const adminPanelSource = readFileSync(
   "utf8",
 );
 const routesSource = readFileSync(new URL("../src/routes.ts", import.meta.url), "utf8");
+const zhCN = JSON.parse(
+  readFileSync(new URL("../src/i18n/locales/zh_CN.json", import.meta.url), "utf8"),
+);
 
 function allPaths(items: MenuItem[]): string[] {
   return items.flatMap((item) => [item.path, ...allPaths(item.children ?? [])]);
@@ -105,6 +108,15 @@ test("places dynamic theme configuration inside the appearance group", () => {
     appearance?.children?.at(-1)?.path,
     dynamicTheme.path,
   );
+});
+
+test("loads the active theme configuration into the sidebar", () => {
+  assert.match(adminPanelSource, /buildAdminMenuItems\(baseMenuItems, extraMenuItems\)/);
+  assert.match(adminPanelSource, /\/themes\/\$\{encodeURIComponent\(currentTheme\)\}\/komari-theme\.json/);
+  assert.match(adminPanelSource, /itemPath = "\/admin\/theme_managed"/);
+  assert.match(adminPanelSource, /itemPath = "\/admin\/theme_raw"/);
+  assert.match(adminPanelSource, /normalizeThemeRedirectTarget\(configuration\.data\)/);
+  assert.equal(zhCN.theme.manage_with_name, "{{name}} 设置");
 });
 
 test("keeps only one sidebar group expanded", () => {

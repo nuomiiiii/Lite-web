@@ -1904,7 +1904,8 @@ function DeleteButton({ node }: { node: NodeDetail }) {
       <Dialog.Content className="admin-install-dialog">
         <Dialog.Title>{t("delete")}</Dialog.Title>
         <Dialog.Description>
-          {t("admin.nodeTable.confirmDelete")}
+          <Text as="span" weight="bold">{node.name}</Text>{" "}
+          {t("admin.nodeTable.confirmDeleteQuestion")}
         </Dialog.Description>
         <Flex justify="end" gap="2" mt="4">
           <Dialog.Trigger>
@@ -3295,7 +3296,7 @@ function EditButton({ node }: { node: NodeDetail }) {
             <SettingCardSelect
               bordless
               title={t("admin.nodeEdit.trafficLimitType")}
-              defaultValue={node.traffic_limit_type || "max"}
+              defaultValue={node.traffic_limit_type || "sum"}
               options={[
                 {
                   label: t("admin.nodeEdit.trafficLimitType_sum"),

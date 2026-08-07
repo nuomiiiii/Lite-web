@@ -130,6 +130,10 @@ test("server details use a centered read-only form dialog", () => {
   assert.match(globalCssSource, /\.admin-node-detail-country-flag > span \{[\s\S]*width: 36px[\s\S]*height: 27px/);
 });
 
+test("delete confirmation names the server before the question", () => {
+  assert.match(pageSource, /<Dialog\.Description>[\s\S]*<Text as="span" weight="bold">\{node\.name\}<\/Text>[\s\S]*confirmDeleteQuestion/);
+});
+
 test("admin tables share one header color and mobile actions stay compact", () => {
   assert.match(tableSource, /admin-table-header/);
   assert.match(globalCssSource, /\.admin-table-header/);

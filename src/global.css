@@ -755,3 +755,142 @@ body, * {
     font-size: 16px !important;
   }
 }
+
+.km-page-admin-theme-managed,
+.km-theme-config-form,
+.km-theme-config-section,
+.km-theme-config-tabs-root,
+.km-theme-config-tabs-viewport {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.km-theme-config-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  margin-inline: -0.25rem;
+  padding: 0.25rem 0.25rem 0;
+  border-bottom: 1px solid var(--gray-a5);
+  background: var(--accent-1);
+}
+
+.km-theme-config-tabs-viewport {
+  position: relative;
+  overflow: hidden;
+}
+
+.km-theme-config-tabs-viewport::before,
+.km-theme-config-tabs-viewport::after {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 4px;
+  width: 2rem;
+  pointer-events: none;
+  content: "";
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.km-theme-config-tabs-viewport::before {
+  left: 0;
+  background: linear-gradient(to right, var(--accent-1) 30%, transparent);
+}
+
+.km-theme-config-tabs-viewport::after {
+  right: 0;
+  background: linear-gradient(to left, var(--accent-1) 30%, transparent);
+}
+
+.km-theme-config-tabs-viewport.can-scroll-left::before,
+.km-theme-config-tabs-viewport.can-scroll-right::after {
+  opacity: 1;
+}
+
+.km-theme-config-tabs-list {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+  scroll-padding-inline: 2.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-a6) transparent;
+}
+
+.km-theme-config-tabs-list::-webkit-scrollbar {
+  height: 4px;
+}
+
+.km-theme-config-tabs-list::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background-color: var(--gray-a6);
+}
+
+.km-theme-config-tabs-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.km-theme-config-tabs-trigger {
+  min-height: 2.5rem;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.km-theme-config-scroll-button {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--gray-a5);
+  border-radius: 50%;
+  background: var(--color-panel-solid);
+  color: var(--gray-11);
+  box-shadow: var(--shadow-2);
+  transform: translateY(-50%);
+}
+
+.km-theme-config-scroll-button:hover {
+  color: var(--accent-11);
+}
+
+.km-theme-config-scroll-button.is-left {
+  left: 0.125rem;
+}
+
+.km-theme-config-scroll-button.is-right {
+  right: 0.125rem;
+}
+
+.km-theme-config-section {
+  scroll-margin-top: 4rem;
+}
+
+@media (max-width: 767px) {
+  .km-theme-config-tabs {
+    margin-inline: -0.5rem;
+    padding-inline: 0.5rem;
+  }
+
+  .km-theme-config-tabs-trigger {
+    min-height: 2.75rem;
+    padding-inline: 0.75rem;
+  }
+
+  .km-theme-config-scroll-button {
+    display: none;
+  }
+}

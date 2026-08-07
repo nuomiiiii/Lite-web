@@ -6,6 +6,7 @@ export const DASHBOARD_MODULE_IDS = [
   "daily_traffic_ranking",
   "latency_ranking",
   "latency_jitter_ranking",
+  "packet_loss_ranking",
   "latency_trend",
   "traffic_trend",
   "billing_trend",
@@ -34,8 +35,8 @@ export interface DashboardModuleSetting {
 export interface DashboardSettings {
   preset: DashboardPresetId;
   modules: DashboardModuleSetting[];
-  refresh_seconds: 30 | 60 | 120;
-  chart_refresh_seconds: 60 | 120 | 300;
+  refresh_seconds: 15 | 30 | 60 | 120;
+  chart_refresh_seconds: 15 | 30 | 60 | 120;
   ranking_limit: 5 | 10 | 15 | 20;
 }
 
@@ -56,7 +57,6 @@ export const FORMAL_DASHBOARD_MODULES: readonly DashboardModuleId[] = [
   "billing_trend",
   "return_route",
   "alerts",
-  "storage_detail",
 ];
 
 export const DASHBOARD_PRESETS: readonly DashboardPresetDefinition[] = [
@@ -64,7 +64,7 @@ export const DASHBOARD_PRESETS: readonly DashboardPresetDefinition[] = [
     id: "overview",
     enabled: FORMAL_DASHBOARD_MODULES,
     refresh_seconds: 30,
-    chart_refresh_seconds: 120,
+    chart_refresh_seconds: 30,
     ranking_limit: 5,
   },
   {
@@ -77,6 +77,7 @@ export const DASHBOARD_PRESETS: readonly DashboardPresetDefinition[] = [
       "daily_traffic_ranking",
       "latency_ranking",
       "latency_jitter_ranking",
+      "packet_loss_ranking",
       "traffic_trend",
       "billing_trend",
       "return_route",
@@ -96,7 +97,7 @@ export const DASHBOARD_PRESETS: readonly DashboardPresetDefinition[] = [
       "storage_detail",
     ],
     refresh_seconds: 30,
-    chart_refresh_seconds: 300,
+    chart_refresh_seconds: 120,
     ranking_limit: 5,
   },
   {
@@ -126,9 +127,10 @@ export const DASHBOARD_PRESETS: readonly DashboardPresetDefinition[] = [
       "storage_detail",
       "latency_ranking",
       "latency_jitter_ranking",
+      "packet_loss_ranking",
     ],
     refresh_seconds: 30,
-    chart_refresh_seconds: 300,
+    chart_refresh_seconds: 120,
     ranking_limit: 5,
   },
   {
@@ -141,7 +143,7 @@ export const DASHBOARD_PRESETS: readonly DashboardPresetDefinition[] = [
       "storage_detail",
     ],
     refresh_seconds: 60,
-    chart_refresh_seconds: 300,
+    chart_refresh_seconds: 120,
     ranking_limit: 5,
   },
 ] as const;
@@ -183,6 +185,7 @@ const DASHBOARD_BASE_SPANS: Record<DashboardModuleId, DashboardModuleSpan> = {
   daily_traffic_ranking: 3,
   latency_ranking: 3,
   latency_jitter_ranking: 3,
+  packet_loss_ranking: 3,
   latency_trend: 6,
   traffic_trend: 3,
   billing_trend: 3,
@@ -257,12 +260,19 @@ export function sanitizeDashboardSettings(value: unknown): DashboardSettings {
     ? value.preset as DashboardPresetId
     : "custom";
   if (preset !== "custom") return dashboardSettingsForPreset(preset);
-  const refresh = value.refresh_seconds === 60 || value.refresh_seconds === 120
+  const refresh = value.refresh_seconds === 15
+    || value.refresh_seconds === 60
+    || value.refresh_seconds === 120
     ? value.refresh_seconds
     : 30;
-  const chartRefresh = value.chart_refresh_seconds === 60 || value.chart_refresh_seconds === 300
+  const chartRefresh = value.chart_refresh_seconds === 15
+    || value.chart_refresh_seconds === 30
+    || value.chart_refresh_seconds === 60
+    || value.chart_refresh_seconds === 120
     ? value.chart_refresh_seconds
-    : 120;
+    : value.chart_refresh_seconds === 300
+      ? 120
+      : 30;
   const rankingLimit = value.ranking_limit === 10
     || value.ranking_limit === 15
     || value.ranking_limit === 20
@@ -310,5 +320,6 @@ export function dashboardChartSections(settings: DashboardSettings): string[] {
   }
   if (enabled.has("latency_trend") || enabled.has("latency_ranking")) sections.push("latency");
   if (enabled.has("latency_jitter_ranking")) sections.push("latency_jitter");
+  if (enabled.has("packet_loss_ranking")) sections.push("packet_loss");
   return sections;
 }

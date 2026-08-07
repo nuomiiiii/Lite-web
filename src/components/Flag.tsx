@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Box } from "@radix-ui/themes";
 import { getRegionCode } from "@/utils/regionHelper";
+import { getAppAssetUrl } from "@/utils/assetUrl";
 
 interface FlagProps {
   flag?: string | null; // 地区代码 (例如 "SG", "US") 或旗帜 emoji (例如 "🇸🇬", "🇺🇳")
@@ -48,7 +49,7 @@ const getCountryCodeFromFlagEmoji = (emoji?: string | null): string | null => {
 
 const Flag = React.memo(({ flag, size, compact = false }: FlagProps) => {
   const resolvedFlagFileName = getCountryCodeFromFlagEmoji(flag) ?? getRegionCode(flag);
-  const imgSrc = `/assets/flags/${resolvedFlagFileName}.svg`;
+  const imgSrc = getAppAssetUrl(`assets/flags/${resolvedFlagFileName}.svg`);
   const altText = `地区旗帜: ${resolvedFlagFileName}`;
 
   return (

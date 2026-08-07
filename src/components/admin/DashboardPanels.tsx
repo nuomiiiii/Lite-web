@@ -5,12 +5,14 @@ import {
   ArrowRight,
   ArrowUpDown,
   BellRing,
+  CheckCircle2,
   Clock3,
   Cpu,
   HardDrive,
   MemoryStick,
   Route,
   Timer,
+  WifiOff,
 } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
@@ -35,15 +37,22 @@ import {
   type DashboardResourceRankItem,
 } from "@/utils/dashboard";
 import { formatBytes } from "@/utils/unitHelper";
+import { readDashboardSession, writeDashboardSession } from "@/utils/dashboardSession";
 
-let dashboardSnapshot: { key: string; data: DashboardData } | null = null;
-let pendingDashboardRequest: { key: string; request: Promise<DashboardData> } | null = null;
-let dashboardChartsSnapshot: { key: string; data: DashboardChartsData } | null = null;
-let pendingDashboardChartsRequest: { key: string; request: Promise<DashboardChartsData> } | null = null;
+let dashboardSnapshot: { accountKey: string; key: string; data: DashboardData } | null = null;
+let pendingDashboardRequest: { accountKey: string; key: string; request: Promise<DashboardData> } | null = null;
+let dashboardChartsSnapshot: { accountKey: string; key: string; data: DashboardChartsData } | null = null;
+let pendingDashboardChartsRequest: { accountKey: string; key: string; request: Promise<DashboardChartsData> } | null = null;
 
-export async function requestDashboard(sections: string[], rankingLimit: number): Promise<DashboardData> {
+export async function requestDashboard(
+  sections: string[],
+  rankingLimit: number,
+  accountKey = "authenticated",
+): Promise<DashboardData> {
   const key = `${sections.join(",")}:${rankingLimit}`;
-  if (pendingDashboardRequest?.key === key) return pendingDashboardRequest.request;
+  if (pendingDashboardRequest?.accountKey === accountKey && pendingDashboardRequest.key === key) {
+    return pendingDashboardRequest.request;
+  }
   const params = new URLSearchParams({ sections: sections.join(","), limit: String(rankingLimit) });
   const request = fetch(`/api/admin/dashboard?${params}`, { cache: "no-store" })
     .then(async (response) => {
@@ -60,19 +69,28 @@ export async function requestDashboard(sections: string[], rankingLimit: number)
       return response.json() as Promise<DashboardData>;
     })
     .then((data) => {
-      dashboardSnapshot = { key, data };
+      dashboardSnapshot = { accountKey, key, data };
+      writeDashboardSession("summary", accountKey, key, data);
       return data;
     })
     .finally(() => {
-      if (pendingDashboardRequest?.key === key) pendingDashboardRequest = null;
+      if (pendingDashboardRequest?.accountKey === accountKey && pendingDashboardRequest.key === key) {
+        pendingDashboardRequest = null;
+      }
     });
-  pendingDashboardRequest = { key, request };
+  pendingDashboardRequest = { accountKey, key, request };
   return request;
 }
 
-export async function requestDashboardCharts(sections: string[], rankingLimit: number): Promise<DashboardChartsData> {
+export async function requestDashboardCharts(
+  sections: string[],
+  rankingLimit: number,
+  accountKey = "authenticated",
+): Promise<DashboardChartsData> {
   const key = `${sections.join(",")}:${rankingLimit}`;
-  if (pendingDashboardChartsRequest?.key === key) return pendingDashboardChartsRequest.request;
+  if (pendingDashboardChartsRequest?.accountKey === accountKey && pendingDashboardChartsRequest.key === key) {
+    return pendingDashboardChartsRequest.request;
+  }
   const params = new URLSearchParams({ sections: sections.join(","), limit: String(rankingLimit) });
   const request = fetch(`/api/admin/dashboard/charts?${params}`, { cache: "no-store" })
     .then(async (response) => {
@@ -89,22 +107,35 @@ export async function requestDashboardCharts(sections: string[], rankingLimit: n
       return response.json() as Promise<DashboardChartsData>;
     })
     .then((data) => {
-      dashboardChartsSnapshot = { key, data };
+      dashboardChartsSnapshot = { accountKey, key, data };
+      writeDashboardSession("charts", accountKey, key, data);
       return data;
     })
     .finally(() => {
-      if (pendingDashboardChartsRequest?.key === key) pendingDashboardChartsRequest = null;
+      if (pendingDashboardChartsRequest?.accountKey === accountKey && pendingDashboardChartsRequest.key === key) {
+        pendingDashboardChartsRequest = null;
+      }
     });
-  pendingDashboardChartsRequest = { key, request };
+  pendingDashboardChartsRequest = { accountKey, key, request };
   return request;
 }
 
-export function getDashboardSnapshot(key: string): DashboardData | null {
-  return dashboardSnapshot?.key === key ? dashboardSnapshot.data : null;
+export function getDashboardSnapshot(key: string, accountKey = "authenticated"): DashboardData | null {
+  if (dashboardSnapshot?.accountKey === accountKey && dashboardSnapshot.key === key) {
+    return dashboardSnapshot.data;
+  }
+  const data = readDashboardSession<DashboardData>("summary", accountKey, key);
+  if (data) dashboardSnapshot = { accountKey, key, data };
+  return data;
 }
 
-export function getDashboardChartsSnapshot(key: string): DashboardChartsData | null {
-  return dashboardChartsSnapshot?.key === key ? dashboardChartsSnapshot.data : null;
+export function getDashboardChartsSnapshot(key: string, accountKey = "authenticated"): DashboardChartsData | null {
+  if (dashboardChartsSnapshot?.accountKey === accountKey && dashboardChartsSnapshot.key === key) {
+    return dashboardChartsSnapshot.data;
+  }
+  const data = readDashboardSession<DashboardChartsData>("charts", accountKey, key);
+  if (data) dashboardChartsSnapshot = { accountKey, key, data };
+  return data;
 }
 
 export function OverviewSkeleton() {
@@ -155,18 +186,80 @@ function PanelHeader({
   title,
   description,
   trailing,
+  responsive = false,
 }: {
   title: string;
   description?: string;
   trailing?: React.ReactNode;
+  responsive?: boolean;
 }) {
   return (
-    <div className="mb-3 flex items-start justify-between gap-3">
+    <div className={`mb-3 flex items-start justify-between gap-3 ${responsive ? "@max-[28rem]:flex-col @max-[28rem]:gap-2" : ""}`}>
       <div className="min-w-0">
         <h2 className="text-base font-semibold text-foreground">{title}</h2>
         {description ? <p className="mt-0.5 text-sm text-muted-foreground">{description}</p> : null}
       </div>
-      {trailing}
+      {responsive && trailing ? <div className="@max-[28rem]:ml-auto">{trailing}</div> : trailing}
+    </div>
+  );
+}
+
+function DashboardRankingItemLink({ href, children }: { href?: string; children: React.ReactNode }) {
+  const className = "block min-w-0 rounded px-1.5 py-0.5 text-inherit no-underline transition-colors hover:bg-[var(--gray-a2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]";
+  if (!href) return <div className={className}>{children}</div>;
+  return (
+    <a
+      href={href}
+      className={className}
+    >
+      {children}
+    </a>
+  );
+}
+
+function DashboardRankingGrid({ limit, children }: { limit: number; children: React.ReactNode }) {
+  return (
+    <div className="@container">
+      <div className={limit >= 15
+        ? "grid grid-cols-1 gap-y-2 @min-[34rem]:grid-cols-2 @min-[34rem]:gap-x-5"
+        : "grid grid-cols-1 gap-y-2"}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function DashboardRankingItem({
+  index,
+  name,
+  value,
+  valueClassName = "",
+  progress,
+  detail,
+}: {
+  index: number;
+  name: string;
+  value: React.ReactNode;
+  valueClassName?: string;
+  progress: React.ReactNode;
+  detail?: React.ReactNode;
+}) {
+  return (
+    <div className="grid min-h-[3.5rem] min-w-0 grid-rows-[1rem_0.375rem_1rem] gap-y-1.5">
+      <div className="flex min-w-0 items-center justify-between gap-3 text-xs leading-4">
+        <span className="min-w-0 truncate text-foreground">
+          <span className="mr-1 text-muted-foreground">{index + 1}.</span>
+          <span className="font-medium">{name}</span>
+        </span>
+        <strong className={`shrink-0 font-semibold tabular-nums ${valueClassName}`}>{value}</strong>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--gray-a4)]">
+        {progress}
+      </div>
+      <div className="flex min-w-0 items-center justify-end text-[11px] leading-4 text-muted-foreground">
+        {detail ?? <span aria-hidden="true">&nbsp;</span>}
+      </div>
     </div>
   );
 }
@@ -379,9 +472,9 @@ export function ReturnRouteStatusPanel({ data, locale }: { data: DashboardData; 
   return (
     <Link
       to="/admin/return-route"
-      className="group block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]"
+      className="group block h-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]"
     >
-      <section className="min-h-[286px] rounded-md border bg-[var(--color-panel-solid)] p-3 transition-colors group-hover:border-[var(--accent-a7)]">
+      <section className="h-full min-h-[286px] rounded-md border bg-[var(--color-panel-solid)] p-3 transition-colors group-hover:border-[var(--accent-a7)]">
         <PanelHeader
           title={t("admin_dashboard.return_route_status")}
           description={t("admin_dashboard.return_route_status_hint")}
@@ -593,7 +686,7 @@ export function ResourceRankingPanel({ data, limit }: { data: DashboardData; lim
                 {group.items.map((item, index) => {
                   const value = Math.max(0, Math.min(100, item[group.key]));
                   return (
-                    <div key={item.uuid} className="min-w-0">
+                    <DashboardRankingItemLink key={item.uuid} href={item.detail_url}>
                       <div className="mb-1 flex items-center justify-between gap-2 text-xs">
                         <span className="min-w-0 truncate text-foreground">
                           <span className="mr-1 text-muted-foreground">{index + 1}.</span>
@@ -604,7 +697,7 @@ export function ResourceRankingPanel({ data, limit }: { data: DashboardData; lim
                       <div className="h-1.5 overflow-hidden rounded-full bg-[var(--gray-a4)]">
                         <div className={`h-full rounded-full ${group.color}`} style={{ width: `${value}%` }} />
                       </div>
-                    </div>
+                    </DashboardRankingItemLink>
                   );
                 })}
               </div>
@@ -627,10 +720,11 @@ export function TrafficTrendPanel({
 }) {
   const { t } = useTranslation();
   return (
-    <section className="h-full min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="@container flex h-full min-w-0 flex-col rounded-md border bg-[var(--color-panel-solid)] p-3">
       <PanelHeader
         title={t("admin_dashboard.today_traffic")}
         description={t("admin_dashboard.hourly_traffic_hint")}
+        responsive
         trailing={(
           <div className="mt-0.5 flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-[var(--accent-9)]" />{t("admin_dashboard.upload")}</span>
@@ -639,7 +733,7 @@ export function TrafficTrendPanel({
         )}
       />
       {error || charts?.traffic.error ? (
-        <div className="flex h-[220px] items-center justify-center text-sm text-[var(--red-11)]">
+        <div className="flex min-h-[220px] flex-1 items-center justify-center text-sm text-[var(--red-11)]">
           {t("admin_dashboard.data_unavailable")}
         </div>
       ) : charts ? (
@@ -648,7 +742,7 @@ export function TrafficTrendPanel({
             up: { label: t("admin_dashboard.upload"), color: "var(--accent-9)" },
             down: { label: t("admin_dashboard.download"), color: "var(--orange-9)" },
           }}
-          className="h-[220px] w-full aspect-auto"
+          className="min-h-[220px] w-full flex-1 aspect-auto"
         >
           <LineChart data={charts.traffic.hourly} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -667,7 +761,7 @@ export function TrafficTrendPanel({
             <Line type="monotone" dataKey="down" stroke="var(--color-down)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
           </LineChart>
         </ChartContainer>
-      ) : <Skeleton className="h-[220px] w-full" />}
+      ) : <Skeleton className="min-h-[220px] w-full flex-1" />}
     </section>
   );
 }
@@ -685,21 +779,22 @@ export function BillingTrendPanel({
 }) {
   const { t } = useTranslation();
   return (
-    <section className="h-full min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="@container flex h-full min-w-0 flex-col rounded-md border bg-[var(--color-panel-solid)] p-3">
       <PanelHeader
         title={t("admin_dashboard.daily_billable")}
         description={t("admin_dashboard.daily_billable_hint")}
+        responsive
         trailing={<span className="rounded-full bg-[var(--accent-a3)] px-2.5 py-1 text-xs font-medium text-[var(--accent-11)]">{t("admin_dashboard.recent_month")}</span>}
       />
       {charts && !charts.traffic.error && !charts.traffic.history_ready ? (
         <p className="mb-2 text-xs text-muted-foreground">{t("admin_dashboard.history_preparing")}</p>
       ) : null}
       {error || charts?.traffic.error ? (
-        <div className="flex h-[220px] items-center justify-center text-sm text-[var(--red-11)]">
+        <div className="flex min-h-[220px] flex-1 items-center justify-center text-sm text-[var(--red-11)]">
           {t("admin_dashboard.data_unavailable")}
         </div>
       ) : charts ? (
-        <ChartContainer config={{ billable: { label: t("admin_dashboard.billable"), color: "var(--accent-9)" } }} className="h-[220px] w-full aspect-auto">
+        <ChartContainer config={{ billable: { label: t("admin_dashboard.billable"), color: "var(--accent-9)" } }} className="min-h-[220px] w-full flex-1 aspect-auto">
           <BarChart data={data} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} />
@@ -716,7 +811,7 @@ export function BillingTrendPanel({
             <Bar dataKey="billable" fill="var(--color-billable)" radius={[2, 2, 0, 0]} maxBarSize={24} isAnimationActive={false} />
           </BarChart>
         </ChartContainer>
-      ) : <Skeleton className="h-[220px] w-full" />}
+      ) : <Skeleton className="min-h-[220px] w-full flex-1" />}
     </section>
   );
 }
@@ -755,48 +850,44 @@ export function DailyTrafficRankingPanel({
           {t("admin_dashboard.no_daily_traffic_data")}
         </div>
       ) : (
-        <div
-          className={limit >= 15 ? "grid gap-x-5 gap-y-3" : "space-y-3"}
-          style={limit >= 15 ? {
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 30rem), 1fr))",
-          } : undefined}
-        >
+        <DashboardRankingGrid limit={limit}>
           {items.map((item, index) => (
-            <div key={item.uuid} className="min-w-0">
-              <div className="flex items-center justify-between gap-3 text-xs">
-                <span className="min-w-0 truncate text-foreground">
-                  <span className="mr-1 text-muted-foreground">{index + 1}.</span>{item.name}
-                </span>
-                <strong className="shrink-0 font-semibold tabular-nums">{formatBytes(item.billable)}</strong>
-              </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--gray-a4)]">
-                <div
-                  className="flex h-full overflow-hidden rounded-full"
-                  style={{ width: `${maximum > 0 ? (item.billable / maximum) * 100 : 0}%` }}
-                >
-                  <span
-                    className="h-full bg-[var(--orange-9)]"
-                    style={{ width: `${item.up + item.down > 0 ? (item.up / (item.up + item.down)) * 100 : 0}%` }}
-                  />
-                  <span
-                    className="h-full bg-[var(--blue-9)]"
-                    style={{ width: `${item.up + item.down > 0 ? (item.down / (item.up + item.down)) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-              <div className="mt-1 flex flex-wrap items-center justify-end gap-y-1 text-[11px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5 pr-2">
-                  <span className="size-1.5 rounded-full bg-[var(--orange-9)]" />
-                  {t("admin_dashboard.upload")} {formatBytes(item.up)}
-                </span>
-                <span className="inline-flex items-center gap-1.5 border-l border-[var(--gray-a6)] pl-2">
-                  <span className="size-1.5 rounded-full bg-[var(--blue-9)]" />
-                  {t("admin_dashboard.download")} {formatBytes(item.down)}
-                </span>
-              </div>
-            </div>
+            <DashboardRankingItemLink key={item.uuid} href={item.detail_url}>
+              <DashboardRankingItem
+                index={index}
+                name={item.name}
+                value={formatBytes(item.billable)}
+                progress={(
+                  <div
+                    className="flex h-full overflow-hidden rounded-full"
+                    style={{ width: `${maximum > 0 ? (item.billable / maximum) * 100 : 0}%` }}
+                  >
+                    <span
+                      className="h-full bg-[var(--orange-9)]"
+                      style={{ width: `${item.up + item.down > 0 ? (item.up / (item.up + item.down)) * 100 : 0}%` }}
+                    />
+                    <span
+                      className="h-full bg-[var(--blue-9)]"
+                      style={{ width: `${item.up + item.down > 0 ? (item.down / (item.up + item.down)) * 100 : 0}%` }}
+                    />
+                  </div>
+                )}
+                detail={(
+                  <div className="flex min-w-0 flex-wrap items-center justify-end gap-y-1">
+                    <span className="inline-flex items-center gap-1.5 pr-2">
+                      <span className="size-1.5 rounded-full bg-[var(--orange-9)]" />
+                      {t("admin_dashboard.upload")} {formatBytes(item.up)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 border-l border-[var(--gray-a6)] pl-2">
+                      <span className="size-1.5 rounded-full bg-[var(--blue-9)]" />
+                      {t("admin_dashboard.download")} {formatBytes(item.down)}
+                    </span>
+                  </div>
+                )}
+              />
+            </DashboardRankingItemLink>
           ))}
-        </div>
+        </DashboardRankingGrid>
       )}
     </section>
   );
@@ -836,29 +927,23 @@ export function LatencyRankingPanel({
           {t("admin_dashboard.no_latency_ranking_data")}
         </div>
       ) : (
-        <div
-          className={limit >= 15 ? "grid gap-x-5 gap-y-3" : "space-y-3.5"}
-          style={limit >= 15 ? {
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 30rem), 1fr))",
-          } : undefined}
-        >
+        <DashboardRankingGrid limit={limit}>
           {items.map((item, index) => (
-            <div key={item.uuid} className="min-w-0">
-              <div className="flex items-center justify-between gap-3 text-xs">
-                <span className="min-w-0 truncate text-foreground">
-                  <span className="mr-1 text-muted-foreground">{index + 1}.</span>{item.name}
-                </span>
-                <strong className="shrink-0 font-semibold tabular-nums">{item.average.toFixed(1)} ms</strong>
-              </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--gray-a4)]">
+            <DashboardRankingItemLink key={item.uuid} href={item.detail_url}>
+              <DashboardRankingItem
+                index={index}
+                name={item.name}
+                value={`${item.average.toFixed(1)} ms`}
+                progress={(
                 <div
                   className="h-full rounded-full bg-[var(--orange-9)]"
                   style={{ width: `${maximum > 0 ? (item.average / maximum) * 100 : 0}%` }}
                 />
-              </div>
-            </div>
+                )}
+              />
+            </DashboardRankingItemLink>
           ))}
-        </div>
+        </DashboardRankingGrid>
       )}
     </section>
   );
@@ -898,45 +983,115 @@ export function LatencyJitterRankingPanel({
           {t("admin_dashboard.no_latency_jitter_data")}
         </div>
       ) : (
-        <div
-          className={limit >= 15 ? "grid gap-x-5 gap-y-2" : "space-y-2"}
-          style={limit >= 15 ? {
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 30rem), 1fr))",
-          } : undefined}
-        >
+        <DashboardRankingGrid limit={limit}>
           {items.map((item, index) => {
             const increased = item.delta > 0;
             return (
-              <Link
+              <DashboardRankingItemLink
                 key={item.uuid}
-                to={`/instance/${encodeURIComponent(item.uuid)}`}
-                className="block min-w-0 rounded px-1.5 py-1.5 transition-colors hover:bg-[var(--gray-a3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]"
+                href={item.detail_url}
               >
-                <div className="flex items-center justify-between gap-3 text-xs">
-                  <span className="min-w-0 truncate text-foreground">
-                    <span className="mr-1 text-muted-foreground">{index + 1}.</span>{item.name}
-                  </span>
-                  <strong className={`shrink-0 font-semibold tabular-nums ${
-                    increased ? "text-[var(--orange-11)]" : item.delta < 0 ? "text-[var(--green-11)]" : ""
-                  }`}>
-                    {item.delta > 0 ? "+" : ""}{item.delta.toFixed(1)} ms
-                  </strong>
-                </div>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--gray-a4)]">
-                  <div
-                    className={`h-full rounded-full ${increased ? "bg-[var(--orange-9)]" : "bg-[var(--green-9)]"}`}
-                    style={{ width: `${maximum > 0 ? (Math.abs(item.delta) / maximum) * 100 : 0}%` }}
-                  />
-                </div>
-                <div className="mt-1 flex items-center justify-end gap-1 text-[11px] tabular-nums text-muted-foreground">
-                  <span>{t("admin_dashboard.previous_minute")} {item.previous.toFixed(1)} ms</span>
-                  <ArrowRight size={11} aria-hidden="true" />
-                  <span>{t("admin_dashboard.current_minute")} {item.current.toFixed(1)} ms</span>
-                </div>
-              </Link>
+                <DashboardRankingItem
+                  index={index}
+                  name={item.name}
+                  value={`${item.delta > 0 ? "+" : ""}${item.delta.toFixed(1)} ms`}
+                  valueClassName={increased ? "text-[var(--orange-11)]" : item.delta < 0 ? "text-[var(--green-11)]" : ""}
+                  progress={(
+                    <div
+                      className={`h-full rounded-full ${increased ? "bg-[var(--orange-9)]" : "bg-[var(--green-9)]"}`}
+                      style={{ width: `${maximum > 0 ? (Math.abs(item.delta) / maximum) * 100 : 0}%` }}
+                    />
+                  )}
+                  detail={(
+                    <div className="flex items-center justify-end gap-1 tabular-nums">
+                      <span>{t("admin_dashboard.previous_minute")} {item.previous.toFixed(1)} ms</span>
+                      <ArrowRight size={11} aria-hidden="true" />
+                      <span>{t("admin_dashboard.current_minute")} {item.current.toFixed(1)} ms</span>
+                    </div>
+                  )}
+                />
+              </DashboardRankingItemLink>
             );
           })}
+        </DashboardRankingGrid>
+      )}
+    </section>
+  );
+}
+
+export function PacketLossRankingPanel({
+  charts,
+  error,
+  limit,
+}: {
+  charts: DashboardChartsData | null;
+  error: string | null;
+  limit: number;
+}) {
+  const { t } = useTranslation();
+  const items = charts?.packet_loss?.ranking ?? [];
+  const maximum = items[0]?.loss_rate ?? 0;
+  return (
+    <section className="h-full min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+      <PanelHeader
+        title={t("admin_dashboard.packet_loss_ranking")}
+        description={t("admin_dashboard.packet_loss_ranking_hint")}
+        trailing={(
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--red-a3)] px-2.5 py-1 text-xs font-medium text-[var(--red-11)]">
+            <WifiOff size={13} /> Top {limit}
+          </span>
+        )}
+      />
+      {error || charts?.packet_loss?.error ? (
+        <div className="flex min-h-44 items-center justify-center text-sm text-[var(--red-11)]">
+          {t("admin_dashboard.data_unavailable")}
         </div>
+      ) : !charts ? (
+        <Skeleton className="h-[220px] w-full" />
+      ) : items.length === 0 ? (
+        <div className="flex min-h-44 items-center justify-center gap-2 text-sm font-medium text-[var(--green-11)]">
+          <CheckCircle2 className="shrink-0" size={18} aria-hidden="true" />
+          {t("admin_dashboard.packet_loss_all_normal")}
+        </div>
+      ) : (
+        <DashboardRankingGrid limit={limit}>
+          {items.map((item, index) => {
+            const tone = item.loss_rate >= 50
+              ? "bg-[var(--red-9)]"
+              : item.loss_rate >= 10
+                ? "bg-[var(--orange-9)]"
+                : "bg-[var(--accent-9)]";
+            const textTone = item.loss_rate >= 50
+              ? "text-[var(--red-11)]"
+              : item.loss_rate >= 10
+                ? "text-[var(--orange-11)]"
+                : "text-[var(--accent-11)]";
+            return (
+              <DashboardRankingItemLink key={`${item.uuid}:${item.task_id}`} href={item.detail_url}>
+                <DashboardRankingItem
+                  index={index}
+                  name={item.name}
+                  value={`${item.loss_rate.toFixed(1)}%`}
+                  valueClassName={textTone}
+                  progress={(
+                    <div
+                      className={`h-full rounded-full ${tone}`}
+                      style={{ width: `${maximum > 0 ? (item.loss_rate / maximum) * 100 : 0}%` }}
+                    />
+                  )}
+                  detail={(
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                      <span className="min-w-0 truncate">{item.task_name}</span>
+                      <span className="shrink-0 tabular-nums">
+                        {t("admin_dashboard.packet_loss_samples", { lost: item.lost, total: item.total })}
+                      </span>
+                    </div>
+                  )}
+                />
+              </DashboardRankingItemLink>
+            );
+          })}
+        </DashboardRankingGrid>
       )}
     </section>
   );
@@ -1004,17 +1159,15 @@ function LegacyAdminDashboard() {
     () =>
       dashboardTrafficAxisWidth(
         (charts?.traffic.hourly ?? []).flatMap((item) => [item.up, item.down]),
-        isMobile,
       ),
-    [charts?.traffic.hourly, isMobile],
+    [charts?.traffic.hourly],
   );
   const dailyTrafficAxisWidth = React.useMemo(
     () =>
       dashboardTrafficAxisWidth(
         (charts?.traffic.daily ?? []).map((item) => item.billable),
-        isMobile,
       ),
-    [charts?.traffic.daily, isMobile],
+    [charts?.traffic.daily],
   );
 
   return (

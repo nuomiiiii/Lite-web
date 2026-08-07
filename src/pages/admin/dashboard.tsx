@@ -12,6 +12,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import { useAccount } from "@/contexts/AccountContext";
 import {
   AlertOverviewPanel,
   BillingTrendPanel,
@@ -22,6 +23,7 @@ import {
   LatencyJitterRankingPanel,
   LatencyRankingPanel,
   OverviewSkeleton,
+  PacketLossRankingPanel,
   requestDashboard,
   requestDashboardCharts,
   ResourceRankingPanel,
@@ -30,7 +32,6 @@ import {
   SummaryPanel,
   TrafficTrendPanel,
 } from "@/components/admin/DashboardPanels";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useDashboardSettings } from "@/hooks/useDashboardSettings";
 import {
   dashboardLocalStorageTotal,
@@ -61,13 +62,14 @@ const moduleGridClass: Record<number, string> = {
 
 export default function AdminDashboard() {
   const { t, i18n } = useTranslation();
-  const isMobile = useIsMobile();
+  const { account } = useAccount();
+  const accountKey = account?.uuid || account?.username || "authenticated";
   const {
     settings,
     loading: settingsLoading,
     error: settingsError,
     refetch: refetchSettings,
-  } = useDashboardSettings();
+  } = useDashboardSettings(accountKey);
 
   const summarySections = React.useMemo(() => dashboardSummarySections(settings), [settings]);
   const chartSections = React.useMemo(() => dashboardChartSections(settings), [settings]);
@@ -80,9 +82,9 @@ export default function AdminDashboard() {
     [moduleSpans, settings.preset, visibleModules],
   );
 
-  const [data, setData] = React.useState<DashboardData | null>(() => getDashboardSnapshot(summaryKey));
-  const [charts, setCharts] = React.useState<DashboardChartsData | null>(() => getDashboardChartsSnapshot(chartKey));
-  const [loading, setLoading] = React.useState(true);
+  const [data, setData] = React.useState<DashboardData | null>(() => getDashboardSnapshot(summaryKey, accountKey));
+  const [charts, setCharts] = React.useState<DashboardChartsData | null>(() => getDashboardChartsSnapshot(chartKey, accountKey));
+  const [loading, setLoading] = React.useState(() => getDashboardSnapshot(summaryKey, accountKey) === null);
   const [error, setError] = React.useState<string | null>(null);
   const [chartsError, setChartsError] = React.useState<string | null>(null);
 
@@ -92,9 +94,9 @@ export default function AdminDashboard() {
       if (!silent) setLoading(false);
       return;
     }
-    if (!silent && !getDashboardSnapshot(summaryKey)) setLoading(true);
+    if (!silent && !getDashboardSnapshot(summaryKey, accountKey)) setLoading(true);
     try {
-      const next = await requestDashboard(summarySections, settings.ranking_limit);
+      const next = await requestDashboard(summarySections, settings.ranking_limit, accountKey);
       setData(next);
       setError(null);
     } catch (reason) {
@@ -102,7 +104,7 @@ export default function AdminDashboard() {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [settings.ranking_limit, summaryKey, summarySections]);
+  }, [accountKey, settings.ranking_limit, summaryKey, summarySections]);
 
   const loadCharts = React.useCallback(async () => {
     if (chartSections.length === 0) {
@@ -111,13 +113,13 @@ export default function AdminDashboard() {
       return;
     }
     try {
-      const next = await requestDashboardCharts(chartSections, settings.ranking_limit);
+      const next = await requestDashboardCharts(chartSections, settings.ranking_limit, accountKey);
       setCharts(next);
       setChartsError(null);
     } catch (reason) {
       setChartsError(reason instanceof Error ? reason.message : String(reason));
     }
-  }, [chartSections, settings.ranking_limit]);
+  }, [accountKey, chartSections, settings.ranking_limit]);
 
   const refreshAll = React.useCallback(() => {
     void loadSummary(false);
@@ -127,9 +129,12 @@ export default function AdminDashboard() {
   React.useEffect(() => {
     if (settingsLoading) return;
 
-    setData(getDashboardSnapshot(summaryKey));
-    setCharts(getDashboardChartsSnapshot(chartKey));
-    void loadSummary(Boolean(getDashboardSnapshot(summaryKey)));
+    const cachedSummary = getDashboardSnapshot(summaryKey, accountKey);
+    const cachedCharts = getDashboardChartsSnapshot(chartKey, accountKey);
+    setData(cachedSummary);
+    setCharts(cachedCharts);
+    setLoading(!cachedSummary);
+    void loadSummary(Boolean(cachedSummary));
     void loadCharts();
 
     const refreshWhenVisible = (callback: () => void) => {
@@ -159,6 +164,7 @@ export default function AdminDashboard() {
     settings.chart_refresh_seconds,
     settings.refresh_seconds,
     settingsLoading,
+    accountKey,
     summaryKey,
     summarySections.length,
   ]);
@@ -174,16 +180,14 @@ export default function AdminDashboard() {
   const hourlyTrafficAxisWidth = React.useMemo(
     () => dashboardTrafficAxisWidth(
       (charts?.traffic.hourly ?? []).flatMap((item) => [item.up, item.down]),
-      isMobile,
     ),
-    [charts?.traffic.hourly, isMobile],
+    [charts?.traffic.hourly],
   );
   const dailyTrafficAxisWidth = React.useMemo(
     () => dashboardTrafficAxisWidth(
       (charts?.traffic.daily ?? []).map((item) => item.billable),
-      isMobile,
     ),
-    [charts?.traffic.daily, isMobile],
+    [charts?.traffic.daily],
   );
 
   const renderModule = (module: DashboardModuleId): React.ReactNode => {
@@ -268,6 +272,14 @@ export default function AdminDashboard() {
             limit={settings.ranking_limit}
           />
         );
+      case "packet_loss_ranking":
+        return (
+          <PacketLossRankingPanel
+            charts={charts}
+            error={chartsError}
+            limit={settings.ranking_limit}
+          />
+        );
       case "latency_trend":
         return (
           <LatencyPanel
@@ -313,17 +325,16 @@ export default function AdminDashboard() {
           <div key={module} className="min-w-0">{renderModule(module)}</div>
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(34rem,1fr)]">
-        <div className="flex min-w-0 flex-col gap-3">
-          {(["latency_trend", "traffic_trend", "billing_trend"] as const).map((module) => (
-            <div key={module} className="min-w-0">{renderModule(module)}</div>
-          ))}
-        </div>
-        <div className="flex min-w-0 flex-col gap-3">
-          {(["return_route", "alerts", "storage_detail"] as const).map((module) => (
-            <div key={module} className="min-w-0">{renderModule(module)}</div>
-          ))}
-        </div>
+      <div className="min-w-0">{renderModule("latency_trend")}</div>
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+        {(["traffic_trend", "billing_trend"] as const).map((module) => (
+          <div key={module} className="min-w-0 [&>*]:h-full">{renderModule(module)}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+        {(["return_route", "alerts"] as const).map((module) => (
+          <div key={module} className="min-w-0 [&>*]:h-full">{renderModule(module)}</div>
+        ))}
       </div>
     </>
   );
@@ -364,7 +375,7 @@ export default function AdminDashboard() {
         </Callout.Root>
       ) : null}
 
-      {settingsLoading || (loading && !data && chartSections.length === 0) ? (
+      {loading && !data && chartSections.length === 0 ? (
         <OverviewSkeleton />
       ) : settings.preset === "overview" ? formalLayout : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-6">

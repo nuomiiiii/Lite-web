@@ -59,6 +59,10 @@
     "return_route_recent_events": "24時間のイベント",
     "return_route_status": "復路経路の状態",
     "return_route_status_hint": "監視タスクの状態と最近の経路変更",
+    "packet_loss_ranking": "直近 15 分間のパケットロスランキング",
+    "packet_loss_ranking_hint": "サーバーごとに損失率が最も高いタスクを表示し、0% は除外します",
+    "packet_loss_all_normal": "直近 15 分間のネットワークは正常です",
+    "packet_loss_samples": "{{lost}} / {{total}} 回",
     "server_status": "サーバー状態",
     "server_status_hint": "サーバーの稼働状況とオフラインノードの概要",
     "servers": "サーバー状態",
@@ -221,6 +225,7 @@
       "clientVersion": "クライアントバージョン",
       "confirm": "確認",
       "confirmDelete": "削除を確認",
+      "confirmDeleteQuestion": "削除しますか？",
       "currency": "通貨",
       "currencyTips": "¥-人民元、$-米ドル、€-ユーロ、£-ポンド、₽-ルーブル、₣-フラン、₹-ルピー、₫-ベトナムドン、฿-バーツ、C$-カナダドル",
       "customColumns": "カスタム列",
@@ -700,7 +705,7 @@
       "description": "ノードごとに日次、週次、月次の通信量レポートを設定します。"
     }
   },
-  "page_not_found": "残念ながら、ページは小鞠に食べられてしまいました。",
+  "page_not_found": "ページが見つからないか、移動された可能性があります。",
   "ping": {
     "all_servers": "すべてのサーバー",
     "all_servers_description": "有効にすると、現在および今後追加されるサーバーでこの監視が実行されます。",
@@ -1506,7 +1511,7 @@
     "light": "ライトテーマ",
     "load_config_failed": "テーマ設定の読み込みに失敗しました",
     "manage": "テーマ管理",
-    "manage_with_name": "{{name}} テーマ管理",
+    "manage_with_name": "{{name}} 設定",
     "name": "名前",
     "no_config": "このテーマには設定項目が宣言されていません。",
     "no_themes": "テーマはありません",

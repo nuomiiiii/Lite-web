@@ -24,6 +24,7 @@ export interface DashboardTrafficRankItem {
   up: number;
   down: number;
   billable: number;
+  detail_url?: string;
 }
 
 export interface DashboardDatabaseFiles {
@@ -104,6 +105,7 @@ export interface DashboardLatencyRankItem {
   uuid: string;
   name: string;
   average: number;
+  detail_url?: string;
 }
 
 export interface DashboardLatencyJitterRankItem {
@@ -112,6 +114,19 @@ export interface DashboardLatencyJitterRankItem {
   previous: number;
   current: number;
   delta: number;
+  detail_url?: string;
+}
+
+export interface DashboardPacketLossRankItem {
+  uuid: string;
+  name: string;
+  task_id: number;
+  task_name: string;
+  loss_rate: number;
+  lost: number;
+  total: number;
+  valid: number;
+  detail_url?: string;
 }
 
 export interface DashboardResourceRankItem {
@@ -120,6 +135,7 @@ export interface DashboardResourceRankItem {
   cpu: number;
   memory: number;
   disk: number;
+  detail_url?: string;
 }
 
 export interface DashboardResourceSummary {
@@ -167,6 +183,11 @@ export interface DashboardChartsData {
     error?: string;
   };
   latency: DashboardLatencySummary;
+  packet_loss: {
+    window_minutes: number;
+    ranking: DashboardPacketLossRankItem[];
+    error?: string;
+  };
   generated_at: string;
 }
 
@@ -199,17 +220,12 @@ export function shortDashboardDay(day: string, locale: string): string {
   }).format(parsed);
 }
 
-export function dashboardTrafficAxisWidth(
-  values: readonly number[],
-  isMobile: boolean,
-): number {
-  if (!isMobile) return 58;
-
+export function dashboardTrafficAxisWidth(values: readonly number[]): number {
   const longestLabel = values.reduce((longest, value) => {
     if (!Number.isFinite(value)) return longest;
     const label = formatBytes(Math.max(0, value)).replace(" ", "");
     return Math.max(longest, label.length);
   }, 0);
-  return Math.min(92, Math.max(68, longestLabel * 7 + 16));
+  return Math.min(104, Math.max(68, longestLabel * 8 + 16));
 }
 import { formatBytes } from "./unitHelper.ts";
