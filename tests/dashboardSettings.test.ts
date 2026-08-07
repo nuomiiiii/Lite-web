@@ -62,6 +62,26 @@ test("formal dashboard stretches paired cards to equal row height", () => {
   );
 });
 
+test("traffic charts fill tall narrow grid cards without shrinking text", () => {
+  assert.equal(
+    dashboardPanelsSource.match(/@container flex h-full min-w-0 flex-col rounded-md/g)?.length,
+    2,
+  );
+  assert.equal(
+    dashboardPanelsSource.match(/className="min-h-\[220px\] w-full flex-1 aspect-auto"/g)?.length,
+    2,
+  );
+  assert.equal(dashboardPanelsSource.match(/<PanelHeader[\s\S]+?responsive/g)?.length >= 2, true);
+  assert.match(dashboardPanelsSource, /@max-\[28rem\]:flex-col/);
+});
+
+test("clickable route card fills its dashboard grid row", () => {
+  assert.match(
+    dashboardPanelsSource,
+    /to="\/admin\/return-route"[\s\S]+?className="group block h-full[\s\S]+?<section className="h-full min-h-\[286px\]/,
+  );
+});
+
 test("every built-in preset packs complete six-column rows", () => {
   for (const preset of DASHBOARD_PRESETS) {
     const packed = packDashboardModules(enabledDashboardModules(dashboardSettingsForPreset(preset.id)));

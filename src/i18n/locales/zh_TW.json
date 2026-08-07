@@ -60,7 +60,7 @@
     "return_route_status": "回程鏈路狀態",
     "return_route_status_hint": "監測任務健康度與最近線路變化",
     "packet_loss_ranking": "近 15 分鐘丟包排行",
-    "packet_loss_ranking_hint": "每台伺服器取丟包率最高的任務，0% 和樣本不足不列入排行",
+    "packet_loss_ranking_hint": "每台伺服器取丟包率最高的任務，0% 不列入排行",
     "packet_loss_all_normal": "近 15 分鐘網路正常",
     "packet_loss_samples": "{{lost}} / {{total}} 次",
     "server_status": "伺服器狀態",

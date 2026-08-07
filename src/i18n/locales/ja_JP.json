@@ -60,7 +60,7 @@
     "return_route_status": "復路経路の状態",
     "return_route_status_hint": "監視タスクの状態と最近の経路変更",
     "packet_loss_ranking": "直近 15 分間のパケットロスランキング",
-    "packet_loss_ranking_hint": "サーバーごとに損失率が最も高いタスクを表示し、0% とサンプル不足は除外します",
+    "packet_loss_ranking_hint": "サーバーごとに損失率が最も高いタスクを表示し、0% は除外します",
     "packet_loss_all_normal": "直近 15 分間のネットワークは正常です",
     "packet_loss_samples": "{{lost}} / {{total}} 回",
     "server_status": "サーバー状態",

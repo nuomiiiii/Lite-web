@@ -157,18 +157,20 @@ function PanelHeader({
   title,
   description,
   trailing,
+  responsive = false,
 }: {
   title: string;
   description?: string;
   trailing?: React.ReactNode;
+  responsive?: boolean;
 }) {
   return (
-    <div className="mb-3 flex items-start justify-between gap-3">
+    <div className={`mb-3 flex items-start justify-between gap-3 ${responsive ? "@max-[28rem]:flex-col @max-[28rem]:gap-2" : ""}`}>
       <div className="min-w-0">
         <h2 className="text-base font-semibold text-foreground">{title}</h2>
         {description ? <p className="mt-0.5 text-sm text-muted-foreground">{description}</p> : null}
       </div>
-      {trailing}
+      {responsive && trailing ? <div className="@max-[28rem]:ml-auto">{trailing}</div> : trailing}
     </div>
   );
 }
@@ -441,9 +443,9 @@ export function ReturnRouteStatusPanel({ data, locale }: { data: DashboardData; 
   return (
     <Link
       to="/admin/return-route"
-      className="group block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]"
+      className="group block h-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]"
     >
-      <section className="min-h-[286px] rounded-md border bg-[var(--color-panel-solid)] p-3 transition-colors group-hover:border-[var(--accent-a7)]">
+      <section className="h-full min-h-[286px] rounded-md border bg-[var(--color-panel-solid)] p-3 transition-colors group-hover:border-[var(--accent-a7)]">
         <PanelHeader
           title={t("admin_dashboard.return_route_status")}
           description={t("admin_dashboard.return_route_status_hint")}
@@ -689,10 +691,11 @@ export function TrafficTrendPanel({
 }) {
   const { t } = useTranslation();
   return (
-    <section className="h-full min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="@container flex h-full min-w-0 flex-col rounded-md border bg-[var(--color-panel-solid)] p-3">
       <PanelHeader
         title={t("admin_dashboard.today_traffic")}
         description={t("admin_dashboard.hourly_traffic_hint")}
+        responsive
         trailing={(
           <div className="mt-0.5 flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-[var(--accent-9)]" />{t("admin_dashboard.upload")}</span>
@@ -701,7 +704,7 @@ export function TrafficTrendPanel({
         )}
       />
       {error || charts?.traffic.error ? (
-        <div className="flex h-[220px] items-center justify-center text-sm text-[var(--red-11)]">
+        <div className="flex min-h-[220px] flex-1 items-center justify-center text-sm text-[var(--red-11)]">
           {t("admin_dashboard.data_unavailable")}
         </div>
       ) : charts ? (
@@ -710,7 +713,7 @@ export function TrafficTrendPanel({
             up: { label: t("admin_dashboard.upload"), color: "var(--accent-9)" },
             down: { label: t("admin_dashboard.download"), color: "var(--orange-9)" },
           }}
-          className="h-[220px] w-full aspect-auto"
+          className="min-h-[220px] w-full flex-1 aspect-auto"
         >
           <LineChart data={charts.traffic.hourly} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -729,7 +732,7 @@ export function TrafficTrendPanel({
             <Line type="monotone" dataKey="down" stroke="var(--color-down)" strokeWidth={2} dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
           </LineChart>
         </ChartContainer>
-      ) : <Skeleton className="h-[220px] w-full" />}
+      ) : <Skeleton className="min-h-[220px] w-full flex-1" />}
     </section>
   );
 }
@@ -747,21 +750,22 @@ export function BillingTrendPanel({
 }) {
   const { t } = useTranslation();
   return (
-    <section className="h-full min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="@container flex h-full min-w-0 flex-col rounded-md border bg-[var(--color-panel-solid)] p-3">
       <PanelHeader
         title={t("admin_dashboard.daily_billable")}
         description={t("admin_dashboard.daily_billable_hint")}
+        responsive
         trailing={<span className="rounded-full bg-[var(--accent-a3)] px-2.5 py-1 text-xs font-medium text-[var(--accent-11)]">{t("admin_dashboard.recent_month")}</span>}
       />
       {charts && !charts.traffic.error && !charts.traffic.history_ready ? (
         <p className="mb-2 text-xs text-muted-foreground">{t("admin_dashboard.history_preparing")}</p>
       ) : null}
       {error || charts?.traffic.error ? (
-        <div className="flex h-[220px] items-center justify-center text-sm text-[var(--red-11)]">
+        <div className="flex min-h-[220px] flex-1 items-center justify-center text-sm text-[var(--red-11)]">
           {t("admin_dashboard.data_unavailable")}
         </div>
       ) : charts ? (
-        <ChartContainer config={{ billable: { label: t("admin_dashboard.billable"), color: "var(--accent-9)" } }} className="h-[220px] w-full aspect-auto">
+        <ChartContainer config={{ billable: { label: t("admin_dashboard.billable"), color: "var(--accent-9)" } }} className="min-h-[220px] w-full flex-1 aspect-auto">
           <BarChart data={data} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} />
@@ -778,7 +782,7 @@ export function BillingTrendPanel({
             <Bar dataKey="billable" fill="var(--color-billable)" radius={[2, 2, 0, 0]} maxBarSize={24} isAnimationActive={false} />
           </BarChart>
         </ChartContainer>
-      ) : <Skeleton className="h-[220px] w-full" />}
+      ) : <Skeleton className="min-h-[220px] w-full flex-1" />}
     </section>
   );
 }

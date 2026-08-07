@@ -60,7 +60,7 @@
     "return_route_status": "Status rute balik",
     "return_route_status_hint": "Kesehatan tugas dan perubahan rute terbaru",
     "packet_loss_ranking": "Peringkat kehilangan paket 15 menit",
-    "packet_loss_ranking_hint": "Tugas terburuk per server online; kehilangan 0% dan sampel yang tidak cukup dikecualikan",
+    "packet_loss_ranking_hint": "Tugas terburuk per server online; kehilangan 0% dikecualikan",
     "packet_loss_all_normal": "Jaringan normal selama 15 menit terakhir",
     "packet_loss_samples": "{{lost}} / {{total}} probe",
     "server_status": "Status server",
