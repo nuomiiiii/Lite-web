@@ -40,16 +40,16 @@ export async function writeClipboardText(
   text: string,
   environment: ClipboardEnvironment = browserClipboardEnvironment(),
 ) {
-  if (environment.navigator?.clipboard?.writeText) {
-    try {
-      await environment.navigator.clipboard.writeText(text);
-      return;
-    } catch {
-      // Edge can reject the async API on HTTP origins; use the user-gesture fallback.
-    }
+  // Keep the copy inside the original click gesture. Edge can block the
+  // asynchronous Clipboard API before the request fallback gets a chance.
+  if (copyWithTemporaryTextarea(text, environment.document)) {
+    return;
   }
 
-  if (!copyWithTemporaryTextarea(text, environment.document)) {
-    throw new Error("clipboard unavailable");
+  if (environment.navigator?.clipboard?.writeText) {
+    await environment.navigator.clipboard.writeText(text);
+    return;
   }
+
+  throw new Error("clipboard unavailable");
 }

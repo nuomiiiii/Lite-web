@@ -31,7 +31,7 @@ function fallbackEnvironment(copyResult = true) {
   };
 }
 
-test("uses the secure clipboard API when Edge allows it", async () => {
+test("uses the secure clipboard API when the synchronous copy is unavailable", async () => {
   const writes: string[] = [];
   await writeClipboardText("agent command", {
     navigator: {
@@ -41,18 +41,33 @@ test("uses the secure clipboard API when Edge allows it", async () => {
   assert.deepEqual(writes, ["agent command"]);
 });
 
-test("falls back to a temporary textarea when Edge rejects the async API", async () => {
+test("prefers a synchronous temporary textarea before the Edge clipboard API", async () => {
   const fallback = fallbackEnvironment();
+  let asyncWriteAttempted = false;
   await writeClipboardText("agent command", {
     navigator: {
-      clipboard: { writeText: async () => { throw new Error("NotAllowedError"); } },
+      clipboard: { writeText: async () => { asyncWriteAttempted = true; } },
     } as unknown as Navigator,
     ...fallback.environment,
   });
   assert.deepEqual(fallback.state(), { appendedValue: "agent command", removed: true });
+  assert.equal(asyncWriteAttempted, false);
 });
 
-test("reports a copy failure and still removes the temporary textarea", async () => {
+test("falls back to the clipboard API after a synchronous copy failure", async () => {
+  const fallback = fallbackEnvironment(false);
+  const writes: string[] = [];
+  await writeClipboardText("agent command", {
+    navigator: {
+      clipboard: { writeText: async (text: string) => { writes.push(text); } },
+    } as unknown as Navigator,
+    ...fallback.environment,
+  });
+  assert.equal(fallback.state().removed, true);
+  assert.deepEqual(writes, ["agent command"]);
+});
+
+test("reports a copy failure when neither clipboard path is available", async () => {
   const fallback = fallbackEnvironment(false);
   await assert.rejects(() => writeClipboardText("agent command", fallback.environment));
   assert.equal(fallback.state().removed, true);

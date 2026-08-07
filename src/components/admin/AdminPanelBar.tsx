@@ -8,7 +8,7 @@ import {
   IconButton,
   Text,
 } from "@radix-ui/themes";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation /*useNavigate*/ } from "react-router-dom";
@@ -298,6 +298,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     // 默认所有子菜单关闭
   });
   const isMobile = useIsMobile();
+  const prefersReducedMotion = useReducedMotion();
   const ishttps = window.location.protocol === "https:";
   const [t, i18n] = useTranslation();
   const location = useLocation();
@@ -1112,7 +1113,19 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                 </Text>
               </Callout.Text>
             </Callout.Root>
-            {content}
+            <motion.div
+              key={location.pathname}
+              data-admin-page-content
+              initial={prefersReducedMotion ? false : { opacity: 0.86 }}
+              animate={{ opacity: 1 }}
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0 }
+                  : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }
+              }
+            >
+              {content}
+            </motion.div>
           </div>
         </motion.div>
       </Grid>
