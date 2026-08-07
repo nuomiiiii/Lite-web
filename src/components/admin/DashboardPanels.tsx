@@ -37,15 +37,22 @@ import {
   type DashboardResourceRankItem,
 } from "@/utils/dashboard";
 import { formatBytes } from "@/utils/unitHelper";
+import { readDashboardSession, writeDashboardSession } from "@/utils/dashboardSession";
 
-let dashboardSnapshot: { key: string; data: DashboardData } | null = null;
-let pendingDashboardRequest: { key: string; request: Promise<DashboardData> } | null = null;
-let dashboardChartsSnapshot: { key: string; data: DashboardChartsData } | null = null;
-let pendingDashboardChartsRequest: { key: string; request: Promise<DashboardChartsData> } | null = null;
+let dashboardSnapshot: { accountKey: string; key: string; data: DashboardData } | null = null;
+let pendingDashboardRequest: { accountKey: string; key: string; request: Promise<DashboardData> } | null = null;
+let dashboardChartsSnapshot: { accountKey: string; key: string; data: DashboardChartsData } | null = null;
+let pendingDashboardChartsRequest: { accountKey: string; key: string; request: Promise<DashboardChartsData> } | null = null;
 
-export async function requestDashboard(sections: string[], rankingLimit: number): Promise<DashboardData> {
+export async function requestDashboard(
+  sections: string[],
+  rankingLimit: number,
+  accountKey = "authenticated",
+): Promise<DashboardData> {
   const key = `${sections.join(",")}:${rankingLimit}`;
-  if (pendingDashboardRequest?.key === key) return pendingDashboardRequest.request;
+  if (pendingDashboardRequest?.accountKey === accountKey && pendingDashboardRequest.key === key) {
+    return pendingDashboardRequest.request;
+  }
   const params = new URLSearchParams({ sections: sections.join(","), limit: String(rankingLimit) });
   const request = fetch(`/api/admin/dashboard?${params}`, { cache: "no-store" })
     .then(async (response) => {
@@ -62,19 +69,28 @@ export async function requestDashboard(sections: string[], rankingLimit: number)
       return response.json() as Promise<DashboardData>;
     })
     .then((data) => {
-      dashboardSnapshot = { key, data };
+      dashboardSnapshot = { accountKey, key, data };
+      writeDashboardSession("summary", accountKey, key, data);
       return data;
     })
     .finally(() => {
-      if (pendingDashboardRequest?.key === key) pendingDashboardRequest = null;
+      if (pendingDashboardRequest?.accountKey === accountKey && pendingDashboardRequest.key === key) {
+        pendingDashboardRequest = null;
+      }
     });
-  pendingDashboardRequest = { key, request };
+  pendingDashboardRequest = { accountKey, key, request };
   return request;
 }
 
-export async function requestDashboardCharts(sections: string[], rankingLimit: number): Promise<DashboardChartsData> {
+export async function requestDashboardCharts(
+  sections: string[],
+  rankingLimit: number,
+  accountKey = "authenticated",
+): Promise<DashboardChartsData> {
   const key = `${sections.join(",")}:${rankingLimit}`;
-  if (pendingDashboardChartsRequest?.key === key) return pendingDashboardChartsRequest.request;
+  if (pendingDashboardChartsRequest?.accountKey === accountKey && pendingDashboardChartsRequest.key === key) {
+    return pendingDashboardChartsRequest.request;
+  }
   const params = new URLSearchParams({ sections: sections.join(","), limit: String(rankingLimit) });
   const request = fetch(`/api/admin/dashboard/charts?${params}`, { cache: "no-store" })
     .then(async (response) => {
@@ -91,22 +107,35 @@ export async function requestDashboardCharts(sections: string[], rankingLimit: n
       return response.json() as Promise<DashboardChartsData>;
     })
     .then((data) => {
-      dashboardChartsSnapshot = { key, data };
+      dashboardChartsSnapshot = { accountKey, key, data };
+      writeDashboardSession("charts", accountKey, key, data);
       return data;
     })
     .finally(() => {
-      if (pendingDashboardChartsRequest?.key === key) pendingDashboardChartsRequest = null;
+      if (pendingDashboardChartsRequest?.accountKey === accountKey && pendingDashboardChartsRequest.key === key) {
+        pendingDashboardChartsRequest = null;
+      }
     });
-  pendingDashboardChartsRequest = { key, request };
+  pendingDashboardChartsRequest = { accountKey, key, request };
   return request;
 }
 
-export function getDashboardSnapshot(key: string): DashboardData | null {
-  return dashboardSnapshot?.key === key ? dashboardSnapshot.data : null;
+export function getDashboardSnapshot(key: string, accountKey = "authenticated"): DashboardData | null {
+  if (dashboardSnapshot?.accountKey === accountKey && dashboardSnapshot.key === key) {
+    return dashboardSnapshot.data;
+  }
+  const data = readDashboardSession<DashboardData>("summary", accountKey, key);
+  if (data) dashboardSnapshot = { accountKey, key, data };
+  return data;
 }
 
-export function getDashboardChartsSnapshot(key: string): DashboardChartsData | null {
-  return dashboardChartsSnapshot?.key === key ? dashboardChartsSnapshot.data : null;
+export function getDashboardChartsSnapshot(key: string, accountKey = "authenticated"): DashboardChartsData | null {
+  if (dashboardChartsSnapshot?.accountKey === accountKey && dashboardChartsSnapshot.key === key) {
+    return dashboardChartsSnapshot.data;
+  }
+  const data = readDashboardSession<DashboardChartsData>("charts", accountKey, key);
+  if (data) dashboardChartsSnapshot = { accountKey, key, data };
+  return data;
 }
 
 export function OverviewSkeleton() {

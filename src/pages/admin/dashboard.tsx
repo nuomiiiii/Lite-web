@@ -12,6 +12,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import { useAccount } from "@/contexts/AccountContext";
 import {
   AlertOverviewPanel,
   BillingTrendPanel,
@@ -61,12 +62,14 @@ const moduleGridClass: Record<number, string> = {
 
 export default function AdminDashboard() {
   const { t, i18n } = useTranslation();
+  const { account } = useAccount();
+  const accountKey = account?.uuid || account?.username || "authenticated";
   const {
     settings,
     loading: settingsLoading,
     error: settingsError,
     refetch: refetchSettings,
-  } = useDashboardSettings();
+  } = useDashboardSettings(accountKey);
 
   const summarySections = React.useMemo(() => dashboardSummarySections(settings), [settings]);
   const chartSections = React.useMemo(() => dashboardChartSections(settings), [settings]);
@@ -79,9 +82,9 @@ export default function AdminDashboard() {
     [moduleSpans, settings.preset, visibleModules],
   );
 
-  const [data, setData] = React.useState<DashboardData | null>(() => getDashboardSnapshot(summaryKey));
-  const [charts, setCharts] = React.useState<DashboardChartsData | null>(() => getDashboardChartsSnapshot(chartKey));
-  const [loading, setLoading] = React.useState(true);
+  const [data, setData] = React.useState<DashboardData | null>(() => getDashboardSnapshot(summaryKey, accountKey));
+  const [charts, setCharts] = React.useState<DashboardChartsData | null>(() => getDashboardChartsSnapshot(chartKey, accountKey));
+  const [loading, setLoading] = React.useState(() => getDashboardSnapshot(summaryKey, accountKey) === null);
   const [error, setError] = React.useState<string | null>(null);
   const [chartsError, setChartsError] = React.useState<string | null>(null);
 
@@ -91,9 +94,9 @@ export default function AdminDashboard() {
       if (!silent) setLoading(false);
       return;
     }
-    if (!silent && !getDashboardSnapshot(summaryKey)) setLoading(true);
+    if (!silent && !getDashboardSnapshot(summaryKey, accountKey)) setLoading(true);
     try {
-      const next = await requestDashboard(summarySections, settings.ranking_limit);
+      const next = await requestDashboard(summarySections, settings.ranking_limit, accountKey);
       setData(next);
       setError(null);
     } catch (reason) {
@@ -101,7 +104,7 @@ export default function AdminDashboard() {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [settings.ranking_limit, summaryKey, summarySections]);
+  }, [accountKey, settings.ranking_limit, summaryKey, summarySections]);
 
   const loadCharts = React.useCallback(async () => {
     if (chartSections.length === 0) {
@@ -110,13 +113,13 @@ export default function AdminDashboard() {
       return;
     }
     try {
-      const next = await requestDashboardCharts(chartSections, settings.ranking_limit);
+      const next = await requestDashboardCharts(chartSections, settings.ranking_limit, accountKey);
       setCharts(next);
       setChartsError(null);
     } catch (reason) {
       setChartsError(reason instanceof Error ? reason.message : String(reason));
     }
-  }, [chartSections, settings.ranking_limit]);
+  }, [accountKey, chartSections, settings.ranking_limit]);
 
   const refreshAll = React.useCallback(() => {
     void loadSummary(false);
@@ -126,9 +129,12 @@ export default function AdminDashboard() {
   React.useEffect(() => {
     if (settingsLoading) return;
 
-    setData(getDashboardSnapshot(summaryKey));
-    setCharts(getDashboardChartsSnapshot(chartKey));
-    void loadSummary(Boolean(getDashboardSnapshot(summaryKey)));
+    const cachedSummary = getDashboardSnapshot(summaryKey, accountKey);
+    const cachedCharts = getDashboardChartsSnapshot(chartKey, accountKey);
+    setData(cachedSummary);
+    setCharts(cachedCharts);
+    setLoading(!cachedSummary);
+    void loadSummary(Boolean(cachedSummary));
     void loadCharts();
 
     const refreshWhenVisible = (callback: () => void) => {
@@ -158,6 +164,7 @@ export default function AdminDashboard() {
     settings.chart_refresh_seconds,
     settings.refresh_seconds,
     settingsLoading,
+    accountKey,
     summaryKey,
     summarySections.length,
   ]);
@@ -368,7 +375,7 @@ export default function AdminDashboard() {
         </Callout.Root>
       ) : null}
 
-      {settingsLoading || (loading && !data && chartSections.length === 0) ? (
+      {loading && !data && chartSections.length === 0 ? (
         <OverviewSkeleton />
       ) : settings.preset === "overview" ? formalLayout : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-6">

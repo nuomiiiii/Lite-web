@@ -54,6 +54,7 @@ import { toast } from "sonner";
 
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
+import { useAccount } from "@/contexts/AccountContext";
 import {
   saveDashboardSettings,
   useDashboardSettings,
@@ -221,7 +222,9 @@ function cloneSettings(settings: DashboardSettings): DashboardSettings {
 
 export default function DashboardSettingsPage() {
   const { t } = useTranslation();
-  const { settings, loading, error, refetch } = useDashboardSettings();
+  const { account } = useAccount();
+  const accountKey = account?.uuid || account?.username || "authenticated";
+  const { settings, loading, error, refetch } = useDashboardSettings(accountKey);
   const [draft, setDraft] = React.useState<DashboardSettings>(() => cloneSettings(settings));
   const [saved, setSaved] = React.useState<DashboardSettings>(() => cloneSettings(settings));
   const [saving, setSaving] = React.useState(false);
@@ -291,7 +294,7 @@ export default function DashboardSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const confirmed = await saveDashboardSettings(draft);
+      const confirmed = await saveDashboardSettings(draft, { accountKey });
       setDraft(cloneSettings(confirmed));
       setSaved(cloneSettings(confirmed));
       toast.success(t("settings.settings_saved"));
