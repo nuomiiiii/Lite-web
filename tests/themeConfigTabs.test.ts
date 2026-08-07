@@ -67,3 +67,9 @@ test("theme tabs switch only the content below the stable page heading", () => {
   assert.doesNotMatch(tabsSource, /overflow-y-auto/);
   assert.doesNotMatch(tabsSource, /plugin/i);
 });
+
+test("mobile admin drawer stays above sticky theme category tabs", () => {
+  assert.match(globalStyles, /\.km-theme-config-tabs\s*\{[\s\S]*?z-index:\s*10/);
+  assert.match(panelSource, /z-\[49\]/);
+  assert.match(panelSource, /zIndex:\s*isMobile\s*\?\s*50\s*:\s*1/);
+});

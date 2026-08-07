@@ -220,10 +220,7 @@ export function shortDashboardDay(day: string, locale: string): string {
   }).format(parsed);
 }
 
-export function dashboardTrafficAxisWidth(
-  values: readonly number[],
-  _isMobile: boolean,
-): number {
+export function dashboardTrafficAxisWidth(values: readonly number[]): number {
   const longestLabel = values.reduce((longest, value) => {
     if (!Number.isFinite(value)) return longest;
     const label = formatBytes(Math.max(0, value)).replace(" ", "");

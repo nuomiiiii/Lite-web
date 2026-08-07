@@ -45,7 +45,7 @@ test("overview preset exactly matches the default dashboard modules", () => {
     FORMAL_DASHBOARD_MODULES,
   );
   assert.equal(settings.refresh_seconds, 30);
-  assert.equal(settings.chart_refresh_seconds, 120);
+  assert.equal(settings.chart_refresh_seconds, 30);
   assert.equal(settings.modules.find((module) => module.id === "storage_detail")?.enabled, false);
 });
 
@@ -101,7 +101,7 @@ test("low resource preset avoids historical chart requests", () => {
   assert.deepEqual(dashboardChartSections(settings), []);
   assert.deepEqual(dashboardSummarySections(settings), ["servers", "resources", "storage", "alerts"]);
   assert.equal(settings.refresh_seconds, 60);
-  assert.equal(settings.chart_refresh_seconds, 300);
+  assert.equal(settings.chart_refresh_seconds, 120);
 });
 
 test("latency jitter ranking requests only its two-minute chart section", () => {
@@ -203,8 +203,57 @@ test("sanitizer preserves module order and rejects unsafe refresh values", () =>
   assert.equal(settings.modules[1].id, "server_status");
   assert.equal(settings.modules.length, DASHBOARD_MODULE_IDS.length);
   assert.equal(settings.refresh_seconds, 30);
-  assert.equal(settings.chart_refresh_seconds, 120);
+  assert.equal(settings.chart_refresh_seconds, 30);
   assert.equal(settings.ranking_limit, 5);
+});
+
+test("refresh controls expose 15 through 120 seconds without the removed 300 second option", () => {
+  assert.equal(
+    dashboardSettingsSource.match(/\{\[15, 30, 60, 120\]\.map\(\(seconds\) => \(/g)?.length,
+    2,
+  );
+  assert.doesNotMatch(dashboardSettingsSource, /\[60, 120, 300\]/);
+
+  for (const refresh of [15, 30, 60, 120] as const) {
+    const settings = sanitizeDashboardSettings({
+      preset: "custom",
+      modules: [{ id: "server_status", enabled: true }],
+      refresh_seconds: refresh,
+      chart_refresh_seconds: refresh,
+      ranking_limit: 5,
+    });
+    assert.equal(settings.refresh_seconds, refresh);
+    assert.equal(settings.chart_refresh_seconds, refresh);
+  }
+});
+
+test("legacy 300 second chart refresh is capped at 120 seconds", () => {
+  const settings = sanitizeDashboardSettings({
+    preset: "custom",
+    modules: [{ id: "latency_trend", enabled: true }],
+    refresh_seconds: 30,
+    chart_refresh_seconds: 300,
+    ranking_limit: 5,
+  });
+  assert.equal(settings.chart_refresh_seconds, 120);
+});
+
+test("every live and historical module follows its corresponding refresh group", () => {
+  const settings = sanitizeDashboardSettings({
+    preset: "custom",
+    modules: DASHBOARD_MODULE_IDS.map((id) => ({ id, enabled: true })),
+    refresh_seconds: 15,
+    chart_refresh_seconds: 15,
+    ranking_limit: 5,
+  });
+  assert.deepEqual(
+    dashboardSummarySections(settings),
+    ["servers", "resources", "storage", "return_route", "alerts"],
+  );
+  assert.deepEqual(
+    dashboardChartSections(settings),
+    ["traffic", "latency", "latency_jitter", "packet_loss"],
+  );
 });
 
 test("sanitizer preserves every supported ranking limit", () => {

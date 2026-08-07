@@ -397,7 +397,7 @@ export default function DashboardSettingsPage() {
             >
               <Select.Trigger className="w-24" />
               <Select.Content>
-                {[30, 60, 120].map((seconds) => (
+                {[15, 30, 60, 120].map((seconds) => (
                   <Select.Item key={seconds} value={String(seconds)}>{seconds}s</Select.Item>
                 ))}
               </Select.Content>
@@ -415,7 +415,7 @@ export default function DashboardSettingsPage() {
             >
               <Select.Trigger className="w-24" />
               <Select.Content>
-                {[60, 120, 300].map((seconds) => (
+                {[15, 30, 60, 120].map((seconds) => (
                   <Select.Item key={seconds} value={String(seconds)}>{seconds}s</Select.Item>
                 ))}
               </Select.Content>

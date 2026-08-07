@@ -85,15 +85,8 @@ test("formats Beijing ledger day keys for chart labels", () => {
 test("reserves enough chart space for complete traffic labels on desktop and mobile", () => {
   const value = 558.79 * 1024 ** 3;
   const sixDigitGigabytes = 1001.55 * 1024 ** 3;
-  assert.ok(dashboardTrafficAxisWidth([value], false) > 58);
-  assert.equal(
-    dashboardTrafficAxisWidth([value], false),
-    dashboardTrafficAxisWidth([value], true),
-  );
-  assert.equal(dashboardTrafficAxisWidth([], false), 68);
-  assert.equal(dashboardTrafficAxisWidth([], true), 68);
-  assert.ok(dashboardTrafficAxisWidth([sixDigitGigabytes], false) >= 88);
-  assert.ok(dashboardTrafficAxisWidth([sixDigitGigabytes], true) >= 88);
-  assert.ok(dashboardTrafficAxisWidth([Number.MAX_VALUE], false) <= 104);
-  assert.ok(dashboardTrafficAxisWidth([Number.MAX_VALUE], true) <= 104);
+  assert.ok(dashboardTrafficAxisWidth([value]) > 58);
+  assert.equal(dashboardTrafficAxisWidth([]), 68);
+  assert.ok(dashboardTrafficAxisWidth([sixDigitGigabytes]) >= 88);
+  assert.ok(dashboardTrafficAxisWidth([Number.MAX_VALUE]) <= 104);
 });

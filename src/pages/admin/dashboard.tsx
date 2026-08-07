@@ -31,7 +31,6 @@ import {
   SummaryPanel,
   TrafficTrendPanel,
 } from "@/components/admin/DashboardPanels";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useDashboardSettings } from "@/hooks/useDashboardSettings";
 import {
   dashboardLocalStorageTotal,
@@ -62,7 +61,6 @@ const moduleGridClass: Record<number, string> = {
 
 export default function AdminDashboard() {
   const { t, i18n } = useTranslation();
-  const isMobile = useIsMobile();
   const {
     settings,
     loading: settingsLoading,
@@ -175,16 +173,14 @@ export default function AdminDashboard() {
   const hourlyTrafficAxisWidth = React.useMemo(
     () => dashboardTrafficAxisWidth(
       (charts?.traffic.hourly ?? []).flatMap((item) => [item.up, item.down]),
-      isMobile,
     ),
-    [charts?.traffic.hourly, isMobile],
+    [charts?.traffic.hourly],
   );
   const dailyTrafficAxisWidth = React.useMemo(
     () => dashboardTrafficAxisWidth(
       (charts?.traffic.daily ?? []).map((item) => item.billable),
-      isMobile,
     ),
-    [charts?.traffic.daily, isMobile],
+    [charts?.traffic.daily],
   );
 
   const renderModule = (module: DashboardModuleId): React.ReactNode => {

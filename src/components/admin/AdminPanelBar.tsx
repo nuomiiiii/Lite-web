@@ -969,7 +969,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               onClick={() => setSidebarOpen(false)}
-              className="absolute inset-0 z-[9] cursor-default border-0 bg-[var(--black-a6)] p-0"
+              className="absolute inset-0 z-[49] cursor-default border-0 bg-[var(--black-a6)] p-0"
             />
           )}
           <motion.div
@@ -989,7 +989,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               position: isMobile ? "absolute" : "relative",
               top: isMobile ? 0 : undefined,
               left: isMobile ? 0 : undefined,
-              zIndex: isMobile ? 10 : 1,
+              zIndex: isMobile ? 50 : 1,
               overflowY: "auto",
               overflowX: "hidden",
               willChange: isMobile ? "transform" : undefined,
