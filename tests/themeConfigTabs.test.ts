@@ -59,6 +59,11 @@ test("theme tabs switch only the content below the stable page heading", () => {
   assert.doesNotMatch(tabsSource, /scrollIntoView/);
   assert.match(globalStyles, /overscroll-behavior-x:\s*contain/);
   assert.match(globalStyles, /min-height:\s*2\.75rem/);
+  assert.doesNotMatch(globalStyles, /width:\s*max-content/);
+  assert.match(globalStyles, /\.km-page-admin-theme-managed,[\s\S]*min-width:\s*0/);
+  assert.match(tabsSource, /list\.scrollWidth - list\.clientWidth/);
+  assert.match(tabsSource, /new ResizeObserver\(updateScrollEdges\)/);
+  assert.match(tabsSource, /km-theme-config-scroll-button/);
   assert.doesNotMatch(tabsSource, /overflow-y-auto/);
   assert.doesNotMatch(tabsSource, /plugin/i);
 });

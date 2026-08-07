@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -6,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { Box, Flex, Heading, Tabs } from "@radix-ui/themes";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   SettingCardLongTextInput,
@@ -37,6 +39,7 @@ const ThemeConfigTabs = ({
   const { t } = useTranslation();
   const groups = useMemo(() => groupThemeConfigFields(fields), [fields]);
   const [activeTab, setActiveTab] = useState(0);
+  const [scrollEdges, setScrollEdges] = useState({ left: false, right: false });
   const tabsListRef = useRef<HTMLDivElement | null>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -45,6 +48,31 @@ const ThemeConfigTabs = ({
     tabRefs.current = tabRefs.current.slice(0, groups.length);
   }, [groups]);
 
+  const updateScrollEdges = useCallback(() => {
+    const list = tabsListRef.current;
+    if (!list) return;
+    const maxScrollLeft = Math.max(0, list.scrollWidth - list.clientWidth);
+    setScrollEdges({
+      left: list.scrollLeft > 1,
+      right: list.scrollLeft < maxScrollLeft - 1,
+    });
+  }, []);
+
+  useEffect(() => {
+    const list = tabsListRef.current;
+    if (!list) return;
+    updateScrollEdges();
+    const observer = new ResizeObserver(updateScrollEdges);
+    observer.observe(list);
+    list.addEventListener("scroll", updateScrollEdges, { passive: true });
+    window.addEventListener("resize", updateScrollEdges);
+    return () => {
+      observer.disconnect();
+      list.removeEventListener("scroll", updateScrollEdges);
+      window.removeEventListener("resize", updateScrollEdges);
+    };
+  }, [groups, updateScrollEdges]);
+
   useEffect(() => {
     const list = tabsListRef.current;
     const tab = tabRefs.current[activeTab];
@@ -52,11 +80,21 @@ const ThemeConfigTabs = ({
     const listRect = list.getBoundingClientRect();
     const tabRect = tab.getBoundingClientRect();
     if (tabRect.left < listRect.left) {
-      list.scrollBy({ left: tabRect.left - listRect.left - 12 });
+      list.scrollBy({ left: tabRect.left - listRect.left - 12, behavior: "smooth" });
     } else if (tabRect.right > listRect.right) {
-      list.scrollBy({ left: tabRect.right - listRect.right + 12 });
+      list.scrollBy({ left: tabRect.right - listRect.right + 12, behavior: "smooth" });
     }
-  }, [activeTab]);
+    window.requestAnimationFrame(updateScrollEdges);
+  }, [activeTab, updateScrollEdges]);
+
+  const scrollTabs = (direction: -1 | 1) => {
+    const list = tabsListRef.current;
+    if (!list) return;
+    list.scrollBy({
+      left: direction * Math.max(160, list.clientWidth * 0.7),
+      behavior: "smooth",
+    });
+  };
 
   const handleTabChange = (value: string) => {
     const index = Number(value);
@@ -167,26 +205,53 @@ const ThemeConfigTabs = ({
           <Tabs.Root
             value={String(currentTab)}
             onValueChange={handleTabChange}
+            className="km-theme-config-tabs-root"
           >
-            <Tabs.List
-              ref={tabsListRef}
-              className="km-theme-config-tabs-list"
+            <div
+              className={`km-theme-config-tabs-viewport${scrollEdges.left ? " can-scroll-left" : ""}${scrollEdges.right ? " can-scroll-right" : ""}`}
             >
-              {groups.map((group, index) => (
-                <Tabs.Trigger
-                  key={index}
-                  ref={(element) => {
-                    tabRefs.current[index] = element;
-                  }}
-                  value={String(index)}
-                  className="km-theme-config-tabs-trigger"
+              <Tabs.List
+                ref={tabsListRef}
+                className="km-theme-config-tabs-list"
+              >
+                {groups.map((group, index) => (
+                  <Tabs.Trigger
+                    key={index}
+                    ref={(element) => {
+                      tabRefs.current[index] = element;
+                    }}
+                    value={String(index)}
+                    className="km-theme-config-tabs-trigger"
+                  >
+                    {group.title
+                      ? resolveText(group.title) || t("common.title")
+                      : t("settings.general.title")}
+                  </Tabs.Trigger>
+                ))}
+              </Tabs.List>
+              {scrollEdges.left ? (
+                <button
+                  type="button"
+                  className="km-theme-config-scroll-button is-left"
+                  title={t("common.previous", "向左滚动")}
+                  aria-label={t("common.previous", "向左滚动")}
+                  onClick={() => scrollTabs(-1)}
                 >
-                  {group.title
-                    ? resolveText(group.title) || t("common.title")
-                    : t("settings.general.title")}
-                </Tabs.Trigger>
-              ))}
-            </Tabs.List>
+                  <ChevronLeft size={16} aria-hidden="true" />
+                </button>
+              ) : null}
+              {scrollEdges.right ? (
+                <button
+                  type="button"
+                  className="km-theme-config-scroll-button is-right"
+                  title={t("common.next", "向右滚动")}
+                  aria-label={t("common.next", "向右滚动")}
+                  onClick={() => scrollTabs(1)}
+                >
+                  <ChevronRight size={16} aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
           </Tabs.Root>
         </Box>
       )}

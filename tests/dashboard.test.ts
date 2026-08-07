@@ -82,10 +82,18 @@ test("formats Beijing ledger day keys for chart labels", () => {
   assert.equal(shortDashboardDay("invalid", "zh-CN"), "invalid");
 });
 
-test("reserves enough mobile chart space for complete traffic labels", () => {
+test("reserves enough chart space for complete traffic labels on desktop and mobile", () => {
   const value = 558.79 * 1024 ** 3;
-  assert.equal(dashboardTrafficAxisWidth([value], false), 58);
-  assert.ok(dashboardTrafficAxisWidth([value], true) > 58);
+  const sixDigitGigabytes = 1001.55 * 1024 ** 3;
+  assert.ok(dashboardTrafficAxisWidth([value], false) > 58);
+  assert.equal(
+    dashboardTrafficAxisWidth([value], false),
+    dashboardTrafficAxisWidth([value], true),
+  );
+  assert.equal(dashboardTrafficAxisWidth([], false), 68);
   assert.equal(dashboardTrafficAxisWidth([], true), 68);
-  assert.ok(dashboardTrafficAxisWidth([Number.MAX_VALUE], true) <= 92);
+  assert.ok(dashboardTrafficAxisWidth([sixDigitGigabytes], false) >= 88);
+  assert.ok(dashboardTrafficAxisWidth([sixDigitGigabytes], true) >= 88);
+  assert.ok(dashboardTrafficAxisWidth([Number.MAX_VALUE], false) <= 104);
+  assert.ok(dashboardTrafficAxisWidth([Number.MAX_VALUE], true) <= 104);
 });
