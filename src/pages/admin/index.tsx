@@ -3296,7 +3296,7 @@ function EditButton({ node }: { node: NodeDetail }) {
             <SettingCardSelect
               bordless
               title={t("admin.nodeEdit.trafficLimitType")}
-              defaultValue={node.traffic_limit_type || "max"}
+              defaultValue={node.traffic_limit_type || "sum"}
               options={[
                 {
                   label: t("admin.nodeEdit.trafficLimitType_sum"),
