@@ -96,3 +96,11 @@ test("deployment actions keep stable button content while a request is pending",
   assert.doesNotMatch(source, /aria-disabled=\{Boolean\(profileAction\)\}/);
   assert.doesNotMatch(source, /savingProfile/);
 });
+
+test("Agent command copy uses the Edge-compatible clipboard fallback", () => {
+  assert.match(source, /import \{ writeClipboardText \} from "@\/utils\/clipboard"/);
+  const copyStart = source.indexOf("writeClipboardText(generateCommand())");
+  const saveStart = source.indexOf("const response = await fetch(", copyStart);
+  assert.ok(copyStart >= 0 && saveStart > copyStart);
+  assert.doesNotMatch(source, /navigator\.clipboard\.writeText\(generateCommand\(\)\)/);
+});

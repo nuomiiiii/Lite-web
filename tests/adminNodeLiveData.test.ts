@@ -41,7 +41,7 @@ test("admin node table keeps persisted ordering and prioritizes identity and bil
   assert.match(pageSource, /w-\[224px\].*admin\.nodeTable\.billing/);
   assert.match(pageSource, /nodeTable\.agent[\s\S]*publicVersion\(node\.version\)/);
   assert.match(pageSource, /admin-node-country-flag/);
-  assert.match(pageSource, /reorderEnabled=\{!searchTerm\.trim\(\) && statusFilter === "all"\}/);
+  assert.match(pageSource, /reorderEnabled=\{!searchTerm\.trim\(\) && statusFilter === "all" && !routeNode && !routeAlert\}/);
   assert.doesNotMatch(pageSource, /selectedNodes|handleSelectAll|handleSelectNode/);
 });
 

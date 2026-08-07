@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import AdminActiveFilter from "@/components/admin/AdminActiveFilter";
 import {
   AdminPagination,
 } from "@/components/admin/AdminPagination";
@@ -36,6 +37,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import Loading from "@/components/loading";
 import {
   NodeDetailsProvider,
@@ -383,6 +385,7 @@ function FormSection({ title, children }: { title: string; children: React.React
 
 function ReturnRouteContent() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const defaultPageSize = useAdminDefaultPageSize();
   const { nodeDetail, isLoading: nodesLoading } = useNodeDetails();
   const nodes = Array.isArray(nodeDetail) ? nodeDetail.map((node) => ({ uuid: node.uuid, name: node.name })) : [];
@@ -396,6 +399,8 @@ function ReturnRouteContent() {
   const [recordLoading, setRecordLoading] = useState(false);
   const [probingTasks, setProbingTasks] = useState<Set<number>>(new Set());
   const [ruleView, setRuleView] = useState<RuleView | null>(null);
+  const routeState = searchParams.get("state")?.trim() || "";
+  const routeTask = Number(searchParams.get("task") || 0);
   const [rulesLoading, setRulesLoading] = useState(false);
   const [rulesBusy, setRulesBusy] = useState<"reload" | "refresh" | "upload" | "">("");
   const ruleFileInput = useRef<HTMLInputElement>(null);
@@ -412,7 +417,11 @@ function ReturnRouteContent() {
   const loadTasks = useCallback(async (quiet = false) => {
     if (!quiet) setTaskLoading(true);
     try {
-      const data = await request("/tasks/query", taskQuery);
+      const data = await request("/tasks/query", {
+        ...taskQuery,
+        task_id: routeTask || undefined,
+        state: routeTask ? "" : routeState || taskQuery.state,
+      });
       const probingTaskIDs = data?.probing_task_ids || [];
       setTaskData({ tasks: data?.tasks || [], statuses: data?.statuses || [], probing_task_ids: probingTaskIDs, total: data?.total || 0, page: data?.page || 1, page_size: data?.page_size || taskQuery.page_size });
       setProbingTasks(new Set(probingTaskIDs));
@@ -421,7 +430,7 @@ function ReturnRouteContent() {
     } finally {
       if (!quiet) setTaskLoading(false);
     }
-  }, [taskQuery]);
+  }, [routeState, routeTask, taskQuery]);
 
   const loadRecords = useCallback(async (quiet = false) => {
     if (!quiet) setRecordLoading(true);
@@ -457,6 +466,16 @@ function ReturnRouteContent() {
   }, [defaultPageSize]);
 
   useEffect(() => {
+    if (!routeState && !routeTask) return;
+    setActiveTab("tasks");
+    setTaskQuery((current) => ({
+      ...current,
+      page: 1,
+      state: routeTask ? "" : routeState,
+    }));
+  }, [routeState, routeTask]);
+
+  useEffect(() => {
     if (activeTab !== "tasks") return;
     const timer = window.setTimeout(() => loadTasks(), taskQuery.keyword ? 300 : 0);
     return () => window.clearTimeout(timer);
@@ -490,6 +509,14 @@ function ReturnRouteContent() {
     if (taskQuery.page === 1) loadTasks();
     else updateTaskQuery({ page: 1 });
   };
+  const activeFilterLabel = useMemo(() => {
+    if (routeTask) {
+      const task = taskData.tasks.find((item) => item.id === routeTask);
+      return task?.name || `#${routeTask}`;
+    }
+    if (routeState === "switched") return "已确认切线";
+    return routeState;
+  }, [routeState, routeTask, taskData.tasks]);
 
   const runNow = async (id?: number) => {
     if (!id) return;
@@ -588,6 +615,10 @@ function ReturnRouteContent() {
         {t("return_route.title", "回程线路监测")}
       </AdminPageTitle>
 
+      {activeFilterLabel ? (
+        <AdminActiveFilter label={activeFilterLabel} clearTo="/admin/return-route" />
+      ) : null}
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Summary label="监测任务" value={summary.tasks} icon={<Route size={20} />} />
         <Summary label="线路正常" value={summary.healthy} tone="green" icon={<CheckCircle2 size={20} />} />
@@ -619,14 +650,14 @@ function ReturnRouteContent() {
                     </Select.Root>
                   </Field>
                   <Field label="状态">
-                    <Select.Root value={taskQuery.state || "all"} onValueChange={(state) => updateTaskQuery({ state: state === "all" ? "" : state })}>
+                    <Select.Root disabled={Boolean(routeState || routeTask)} value={(routeTask ? "" : routeState || taskQuery.state) || "all"} onValueChange={(state) => updateTaskQuery({ state: state === "all" ? "" : state })}>
                       <Select.Trigger className="min-w-[130px]" />
                       <Select.Content><Select.Item value="all">全部</Select.Item><Select.Item value="healthy">线路正常</Select.Item><Select.Item value="probing">探测中</Select.Item><Select.Item value="observing">确认中</Select.Item><Select.Item value="switched">已切线</Select.Item><Select.Item value="unknown">无法识别</Select.Item><Select.Item value="pending">等待探测</Select.Item><Select.Item value="disabled">已暂停</Select.Item></Select.Content>
                     </Select.Root>
                   </Field>
                 </div>
                 <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto sm:justify-end">
-                  <Button variant="soft" color="gray" disabled={!taskQuery.keyword && !taskQuery.carrier && !taskQuery.state} onClick={() => setTaskQuery((current) => ({ ...current, page: 1, keyword: "", carrier: "", state: "" }))}>重置</Button>
+                  <Button variant="soft" color="gray" disabled={!taskQuery.keyword && !taskQuery.carrier && (!taskQuery.state || Boolean(routeState || routeTask))} onClick={() => setTaskQuery((current) => ({ ...current, page: 1, keyword: "", carrier: "", state: routeTask ? "" : routeState }))}>重置</Button>
                   <RouteTaskDialog nodes={nodes} onSaved={refreshTasksAfterChange}><Button><Plus size={16} />新建任务</Button></RouteTaskDialog>
                 </div>
               </div>
@@ -647,7 +678,7 @@ function ReturnRouteContent() {
                             <td data-label="任务 / 节点" className="p-3"><div className="return-route-cell-pair"><div className="font-medium">{task.name}</div><div className="mt-1 text-xs text-gray-500">{task.client_info?.name || task.client}</div></div></td>
                             <td data-label="运营商 / 地区" className="p-3"><div className="return-route-cell-pair"><div>{carrierNames[task.carrier]}</div><div className="mt-1 text-xs text-gray-500">{task.region || "未标记"} · IPv{task.ip_version}</div></div></td>
                             <td data-label="线路" className="p-3"><div className="return-route-cell-pair"><div><span className="text-gray-500">当前 </span><strong>{status?.current_line || "-"}</strong></div><div className="mt-1 text-xs text-gray-500">预期 {task.expected_line}</div></div></td>
-                            <td data-label="状态" className="p-3"><div className="return-route-cell-content">{!task.enabled ? <Badge color="gray">已暂停</Badge> : probing ? <Badge color="blue"><RefreshCw size={12} className="mr-1 animate-spin" />探测中</Badge> : stateBadge(status)}{status?.candidate_line && <div className="mt-1 text-xs text-amber-600">{status.candidate_line} {status.candidate_count}/{needed}</div>}{(status?.confidence ?? 0) > 0 && <div className="mt-1 text-xs text-gray-500">置信度 {((status?.confidence ?? 0) * 100).toFixed(0)}%</div>}</div></td>
+                            <td data-label="状态" className="p-3"><div className="return-route-cell-content">{!task.enabled ? <Badge color="gray">已暂停</Badge> : probing ? <Badge color="blue"><RefreshCw size={12} className="mr-1 animate-spin" />探测中</Badge> : stateBadge(status)}{status?.candidate_line && <div className="mt-1 text-xs text-amber-600">{status.candidate_line}{status.candidate_line === "CN2 待确认" ? null : <> {status.candidate_count}/{needed}</>}</div>}{(status?.confidence ?? 0) > 0 && <div className="mt-1 text-xs text-gray-500">置信度 {((status?.confidence ?? 0) * 100).toFixed(0)}%</div>}</div></td>
                             <td data-label="关键 ASN" className="max-w-[320px] p-3"><div className="return-route-cell-content"><div className="flex flex-wrap gap-1">{status?.asn_path?.length ? status.asn_path.map((asn) => <Badge key={asn} color="gray" variant="soft">{asn}</Badge>) : <span className="text-gray-400">-</span>}</div>{status?.route_path?.length ? <details className="mt-2 text-xs text-gray-500"><summary className="cursor-pointer">查看完整路径</summary><div className="mt-2 max-h-48 overflow-auto whitespace-pre font-mono leading-5">{status.route_path.join("\n")}</div></details> : null}{status?.last_error && <div className="mt-2 max-w-xs text-xs text-red-600">{status.last_error}</div>}</div></td>
                             <td data-label="最后探测" className="p-3 text-gray-600"><div className="return-route-cell-pair"><span>{formatTime(status?.last_checked_at)}</span><div className="mt-1 text-xs text-gray-400">每 {Math.round(task.interval / 60)} 分钟</div></div></td>
                             <td data-label="操作" className="p-3"><Flex justify="start" gap="1" className="admin-card-actions"><IconButton variant="ghost" title={probing ? "探测中" : "立即探测"} disabled={probing || !task.enabled} onClick={() => runNow(task.id)}>{probing ? <RefreshCw size={16} className="animate-spin" /> : <Play size={16} />}</IconButton><RouteTaskDialog task={task} nodes={nodes} onSaved={refreshTasksAfterChange}><IconButton variant="ghost" title="编辑"><Pencil size={16} /></IconButton></RouteTaskDialog><IconButton variant="ghost" color="red" title="删除" onClick={() => remove(task)}><Trash2 size={16} /></IconButton></Flex></td>

@@ -5,6 +5,7 @@ import {
 } from "@/utils/shellQuote";
 import { publicVersion } from "@/utils/version";
 import { normalizeOptionalServiceUrl } from "@/utils/serviceUrl";
+import { writeClipboardText } from "@/utils/clipboard";
 import React, { useEffect, useState } from "react";
 import {
   NodeDetailsProvider,
@@ -43,7 +44,7 @@ import {
   Trash2Icon,
   XCircle,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import {
   DndContext,
@@ -91,6 +92,7 @@ import { openRemoteTerminal } from "@/utils/remoteLaunch";
 import { localizeTokenRotationError } from "@/utils/tokenRotation";
 import { SelectOrInput } from "@/components/ui/select-or-input";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import AdminActiveFilter from "@/components/admin/AdminActiveFilter";
 import AdminNodeStatusSummary, {
   type AdminNodeStatusFilter,
 } from "@/components/admin/AdminNodeStatusSummary";
@@ -99,6 +101,14 @@ import {
 } from "@/components/admin/AdminPagination";
 import { useAdminDefaultPageSize } from "@/hooks/useAdminDefaultPageSize";
 import { useAdminNodeLiveData } from "@/hooks/use-admin-node-live-data";
+import {
+  requestDashboardAlertItems,
+  serverAlertKinds,
+} from "@/utils/adminAlertFilters";
+import type {
+  DashboardAlertAffectedItem,
+  DashboardAlertKind,
+} from "@/utils/dashboard";
 import {
   getRegionCode,
   getRegionDisplayName,
@@ -118,18 +128,55 @@ const PREVIOUS_PAGE_DROP_ID = "admin-node-previous-page";
 const NEXT_PAGE_DROP_ID = "admin-node-next-page";
 
 const Layout = () => {
+  const { t } = useTranslation();
   const { nodeDetail, isLoading, error, refresh } = useNodeDetails();
   const { settings, loading: settingsLoading } = useSettings();
   const { liveData, available } = useAdminNodeLiveData();
+  const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<AdminNodeStatusFilter>("all");
+  const routeNode = searchParams.get("node")?.trim() || "";
+  const alertParam = searchParams.get("alert")?.trim() as DashboardAlertKind | null;
+  const routeAlert = alertParam && serverAlertKinds.has(alertParam) ? alertParam : null;
+  const [alertItems, setAlertItems] = useState<DashboardAlertAffectedItem[]>([]);
+  const [alertFilterLoading, setAlertFilterLoading] = useState(Boolean(routeAlert));
+  const [alertFilterError, setAlertFilterError] = useState("");
   const onlineSet = React.useMemo(
     () => new Set(liveData?.data.online ?? []),
     [liveData?.data.online],
   );
+
+  useEffect(() => {
+    if (!routeAlert) {
+      setAlertItems([]);
+      setAlertFilterLoading(false);
+      setAlertFilterError("");
+      return;
+    }
+    const controller = new AbortController();
+    setAlertFilterLoading(true);
+    setAlertFilterError("");
+    void requestDashboardAlertItems(routeAlert, controller.signal)
+      .then((response) => setAlertItems(response.items))
+      .catch((requestError) => {
+        if (requestError instanceof DOMException && requestError.name === "AbortError") return;
+        setAlertItems([]);
+        setAlertFilterError(requestError instanceof Error ? requestError.message : String(requestError));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setAlertFilterLoading(false);
+      });
+    return () => controller.abort();
+  }, [routeAlert]);
+
+  const alertItemOrder = React.useMemo(
+    () => new Map(alertItems.map((item, index) => [item.node_uuid, index])),
+    [alertItems],
+  );
   const filteredNodes = React.useMemo(
-    () => (Array.isArray(nodeDetail)
-      ? nodeDetail.filter((node) => {
+    () => {
+      if (!Array.isArray(nodeDetail)) return [];
+      const filtered = nodeDetail.filter((node) => {
         const matchesSearch = node.name
           .toLowerCase()
           .includes(searchTerm.toLowerCase());
@@ -138,11 +185,36 @@ const Layout = () => {
           statusFilter === "all" ||
           (statusFilter === "online" && isOnline) ||
           (statusFilter === "offline" && !isOnline);
-          return matchesSearch && matchesStatus;
-        })
-      : []),
-    [nodeDetail, onlineSet, searchTerm, statusFilter],
+        const matchesNode = !routeNode || node.uuid === routeNode;
+        const matchesAlert = !routeAlert || alertItemOrder.has(node.uuid);
+        return matchesSearch && matchesStatus && matchesNode && matchesAlert;
+      });
+      if (routeAlert === "billing") {
+        filtered.sort((left, right) => (
+          (alertItemOrder.get(left.uuid) ?? Number.MAX_SAFE_INTEGER)
+          - (alertItemOrder.get(right.uuid) ?? Number.MAX_SAFE_INTEGER)
+        ));
+      }
+      return filtered;
+    },
+    [alertItemOrder, nodeDetail, onlineSet, routeAlert, routeNode, searchTerm, statusFilter],
   );
+
+  const activeFilterLabel = React.useMemo(() => {
+    if (routeNode) {
+      return nodeDetail.find((node) => node.uuid === routeNode)?.name || routeNode;
+    }
+    if (!routeAlert) return "";
+    const keys: Record<DashboardAlertKind, string> = {
+      offline: "alert_offline",
+      resource: "alert_resource",
+      latency_loss: "alert_latency_loss",
+      traffic: "alert_traffic",
+      return_route: "alert_return_route",
+      billing: "alert_billing",
+    };
+    return t(`admin_dashboard.${keys[routeAlert]}`);
+  }, [nodeDetail, routeAlert, routeNode, t]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -151,7 +223,7 @@ const Layout = () => {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  if (isLoading) return <Loading text="" />;
+  if (isLoading || alertFilterLoading) return <Loading text="" />;
   if (error) return <div>{error}</div>;
 
   const isEmpty = Array.isArray(nodeDetail) && nodeDetail.length === 0;
@@ -171,15 +243,24 @@ const Layout = () => {
         setStatusFilter={setStatusFilter}
       />
 
+      {activeFilterLabel ? (
+        <AdminActiveFilter label={activeFilterLabel} clearTo="/admin/servers" />
+      ) : null}
+      {alertFilterError ? (
+        <Callout.Root color="red" size="1"><Callout.Text>{alertFilterError}</Callout.Text></Callout.Root>
+      ) : null}
+
       {isEmpty ? (
         <EmptyNodesGuide />
+      ) : filteredNodes.length === 0 ? (
+        <Callout.Root color="gray"><Callout.Text>{t("common.no_data", "没有符合当前筛选的服务器")}</Callout.Text></Callout.Root>
       ) : (
         <>
           <NodeTable
             nodes={filteredNodes}
             settings={settings}
             onlineSet={onlineSet}
-            reorderEnabled={!searchTerm.trim() && statusFilter === "all"}
+            reorderEnabled={!searchTerm.trim() && statusFilter === "all" && !routeNode && !routeAlert}
           />
         </>
       )}
@@ -426,7 +507,7 @@ const AutoDiscoverySection = ({
 
   const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text);
+      await writeClipboardText(text);
       toast.success(t("copy_success", "已复制到剪贴板"));
     } catch (err) {
       console.error("Failed to copy text: ", err);
@@ -1140,9 +1221,13 @@ const SortableRow = React.memo(({
     transition,
     borderColor: "var(--gray-a5)",
   };
-  function copy(text: string) {
-    navigator.clipboard.writeText(text);
-    toast.success(t("copy_success"));
+  async function copy(text: string) {
+    try {
+      await writeClipboardText(text);
+      toast.success(t("copy_success"));
+    } catch (err) {
+      console.error("Failed to copy text:", err);
+    }
   }
   const networkAddresses = ([
     ["IPv4", node.ipv4?.trim()],
@@ -2323,6 +2408,12 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
 
     const action = copyCommand ? "copy" : "dispatch";
     setProfileAction(action);
+    const copyAttempt = copyCommand
+      ? writeClipboardText(generateCommand()).then(
+          () => ({ ok: true as const }),
+          (error: unknown) => ({ ok: false as const, error }),
+        )
+      : null;
     try {
       const response = await fetch(
         `/api/admin/client/${node.uuid}/deployment-profile`,
@@ -2339,8 +2430,9 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
       const result = (await response.json()) as DeploymentProfileResponse;
       setDeliveryState(result.delivery_state);
 
-      if (copyCommand) {
-        await navigator.clipboard.writeText(generateCommand());
+      if (copyAttempt) {
+        const copyResult = await copyAttempt;
+        if (!copyResult.ok) throw copyResult.error;
       }
       refresh();
       const deliveryMessage = result.delivery_state?.status === "applied"
@@ -3422,9 +3514,13 @@ function ReadOnlyDetailField({
               color="gray"
               title={t("copy", "复制")}
               aria-label={t("copy", "复制")}
-              onClick={() => {
-                navigator.clipboard.writeText(displayValue);
-                toast.success(t("copy_success"));
+              onClick={async () => {
+                try {
+                  await writeClipboardText(displayValue);
+                  toast.success(t("copy_success"));
+                } catch (err) {
+                  console.error("Failed to copy text:", err);
+                }
               }}
             >
               <Copy size={14} />

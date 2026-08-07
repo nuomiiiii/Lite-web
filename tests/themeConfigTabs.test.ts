@@ -19,6 +19,10 @@ const globalStyles = readFileSync(
   new URL("../src/global.css", import.meta.url),
   "utf8",
 );
+const themePageSource = readFileSync(
+  new URL("../src/pages/admin/settings/theme.tsx", import.meta.url),
+  "utf8",
+);
 
 test("groups theme fields without exposing empty category tabs", () => {
   assert.deepEqual(
@@ -72,4 +76,10 @@ test("mobile admin drawer stays above sticky theme category tabs", () => {
   assert.match(globalStyles, /\.km-theme-config-tabs\s*\{[\s\S]*?z-index:\s*10/);
   assert.match(panelSource, /z-\[49\]/);
   assert.match(panelSource, /zIndex:\s*isMobile\s*\?\s*50\s*:\s*1/);
+});
+
+test("mobile theme preview actions keep close and update controls aligned", () => {
+  assert.match(themePageSource, /className="km-theme-preview-actions"/);
+  assert.match(globalStyles, /\.km-theme-preview-actions \{[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(globalStyles, /\.km-theme-preview-actions \.rt-Button \{[\s\S]*width: 100%/);
 });

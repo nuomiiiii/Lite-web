@@ -44,3 +44,8 @@ test("手机端回程任务把同一字段的主次信息保持在同一内容�
   assert.match(source, /data-label="最后探测"[\s\S]*return-route-cell-pair/);
   assert.match(source, /data-label="状态"[\s\S]*return-route-cell-content/);
 });
+
+test("CN2 待确认不显示切线确认次数", () => {
+  assert.match(source, /status\.candidate_line === "CN2 待确认" \? null/);
+  assert.match(source, /status\.candidate_count\}\/\{needed\}/);
+});
