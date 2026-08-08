@@ -3,7 +3,6 @@ import { lazy } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
 import React from "react";
 
-const Index = lazy(() => import("./pages/Index"));
 const importAdminLayout = () => import("./pages/admin/_layout");
 const importAdminDashboard = () => import("./pages/admin/dashboard");
 let adminLayoutModule: ReturnType<typeof importAdminLayout> | undefined;
@@ -62,17 +61,6 @@ const AdminDashboard = lazy(loadAdminDashboard);
 const NotFound = lazy(() => import("./pages/404"));
 
 export const routes: RouteObject[] = [
-  {
-    path: "/",
-    element: React.createElement(lazy(() => import("./pages/_layout"))),
-    children: [
-      { index: true, element: React.createElement(Index) },
-      {
-        path: "instance/:uuid",
-        element: React.createElement(lazy(() => import("./pages/instance"))),
-      },
-    ],
-  },
   {
     path: "/admin/update/1.2.7",
     element: React.createElement(
