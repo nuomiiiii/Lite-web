@@ -839,6 +839,27 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     items.map((item) => {
       const isOpen = openSubMenus[item.path];
       if (item.children?.length) {
+        const submenu = (
+          <Flex direction="column" className="ml-4 gap-1">
+            {item.children.map((child) => (
+              <SidebarItem
+                key={child.path}
+                to={child.path}
+                icon={renderIcon(
+                  child.icon,
+                  child.labelKey,
+                  "flex w-4 h-5 items-center justify-center",
+                )}
+                onClick={() => isMobile && setSidebarOpen(false)}
+                newTab={child.newTab}
+                reloadDocument={child.reloadDocument}
+              >
+                {child.rawLabel || t(child.labelKey)}
+              </SidebarItem>
+            ))}
+          </Flex>
+        );
+
         return (
           <div key={item.path}>
             <Flex
@@ -865,35 +886,28 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                 }}
               />
             </Flex>
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={
-                isOpen
-                  ? { height: "auto", opacity: 1 }
-                  : { height: 0, opacity: 0 }
-              }
-              transition={{ duration: 0.14 }}
-              style={{ overflow: "hidden" }}
-            >
-              <Flex direction="column" className="ml-4 gap-1">
-                {item.children.map((child) => (
-                  <SidebarItem
-                    key={child.path}
-                    to={child.path}
-                    icon={renderIcon(
-                      child.icon,
-                      child.labelKey,
-                      "flex w-4 h-5 items-center justify-center",
-                    )}
-                    onClick={() => isMobile && setSidebarOpen(false)}
-                    newTab={child.newTab}
-                    reloadDocument={child.reloadDocument}
-                  >
-                    {child.rawLabel || t(child.labelKey)}
-                  </SidebarItem>
-                ))}
-              </Flex>
-            </motion.div>
+            {isMobile ? (
+              <div
+                className="km-admin-mobile-submenu"
+                data-open={isOpen ? "true" : "false"}
+                aria-hidden={!isOpen}
+              >
+                <div className="km-admin-mobile-submenu-inner">{submenu}</div>
+              </div>
+            ) : (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={
+                  isOpen
+                    ? { height: "auto", opacity: 1 }
+                    : { height: 0, opacity: 0 }
+                }
+                transition={{ duration: 0.14 }}
+                style={{ overflow: "hidden" }}
+              >
+                {submenu}
+              </motion.div>
+            )}
           </div>
         );
       }

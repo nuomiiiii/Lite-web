@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import Pages from "vite-plugin-pages";
 import { visualizer } from "rollup-plugin-visualizer";
 import { VitePWA } from "vite-plugin-pwa";
 
@@ -25,10 +24,6 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      Pages({
-        dirs: "src/pages",
-        extensions: ["tsx", "jsx"],
-      }),
       ...(systemUiBuild ? [] : [VitePWA({
         registerType: "autoUpdate",
         includeManifestIcons: false,

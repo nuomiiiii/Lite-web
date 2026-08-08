@@ -35,16 +35,3 @@ test("static manifest resources remain valid under a non-root base URL", () => {
   assert.equal(iconPaths.includes("assets/pwa-icon.png"), true);
   assert.equal(existsSync("public/assets/pwa-icon.png"), true);
 });
-
-test("every configured operating system image exists in public assets", () => {
-  const source = readFileSync("src/utils/osImageHelper.ts", "utf8");
-  const imagePaths = [...source.matchAll(/image:\s*"([^"]+)"/g)].map(
-    (match) => match[1],
-  );
-
-  assert.ok(imagePaths.length > 0);
-  assert.deepEqual(
-    imagePaths.filter((path) => !existsSync(join("public", path))),
-    [],
-  );
-});

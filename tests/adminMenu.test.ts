@@ -146,6 +146,31 @@ test("does not create an implicit second grid column on mobile", () => {
   assert.match(adminPanelSource, /sidebarOpen\s+\? `\$\{DESKTOP_SIDEBAR_WIDTH\}px`\s+: "0px"/);
 });
 
+test("mobile submenus use a lightweight grid while desktop keeps motion", () => {
+  assert.match(
+    adminPanelSource,
+    /isMobile \? \([\s\S]*className="km-admin-mobile-submenu"[\s\S]*\) : \([\s\S]*<motion\.div/,
+  );
+  assert.match(globalCssSource, /\.km-admin-mobile-submenu \{[\s\S]*grid-template-rows: 0fr/);
+  assert.match(
+    globalCssSource,
+    /\.km-admin-mobile-submenu\[data-open="true"\] \{[\s\S]*grid-template-rows: 1fr/,
+  );
+  assert.match(
+    globalCssSource,
+    /data-reduce-motion="true"[\s\S]*\.km-admin-mobile-submenu/,
+  );
+});
+
+test("system UI routes do not embed the legacy public dashboard", () => {
+  assert.doesNotMatch(routesSource, /pages\/Index|pages\/_layout|pages\/instance/);
+  assert.doesNotMatch(routesSource, /path:\s*["']\/["']/);
+  assert.match(routesSource, /path:\s*["']\/admin["']/);
+  assert.match(routesSource, /path:\s*["']\/install["']/);
+  assert.match(routesSource, /path:\s*["']\/terminal["']/);
+  assert.match(routesSource, /path:\s*["']\/manage\/\*["']/);
+});
+
 test("admin route changes animate only the main content", () => {
   assert.doesNotMatch(adminPanelSource, /<AnimatePresence mode="wait"/);
   assert.match(
