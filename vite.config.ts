@@ -15,10 +15,15 @@ const configDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const buildTime = new Date().toISOString();
-  const systemUiBuild = process.env.VITE_SYSTEM_UI_BUILD === "1";
+  const systemUiBuild = mode !== "development" && process.env.VITE_SYSTEM_UI_BUILD !== "0";
 
-  // Supports configuring BASE_URL via environment variables, defaulting to the root path.
-  const base: string = process.env.VITE_BASE_URL ? process.env.VITE_BASE_URL : '/';
+  // Production builds are embedded into Komari. An explicit opt-out is required
+  // for a standalone root-path build.
+  const base: string = process.env.VITE_BASE_URL
+    ? process.env.VITE_BASE_URL
+    : systemUiBuild
+      ? "/system-assets/"
+      : "/";
   const baseConfig: UserConfig = {
     base: base,
     plugins: [

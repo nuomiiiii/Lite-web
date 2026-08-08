@@ -146,19 +146,16 @@ test("does not create an implicit second grid column on mobile", () => {
   assert.match(adminPanelSource, /sidebarOpen\s+\? `\$\{DESKTOP_SIDEBAR_WIDTH\}px`\s+: "0px"/);
 });
 
-test("mobile submenus use a lightweight grid while desktop keeps motion", () => {
+test("mobile and desktop submenus share the original motion collapse", () => {
+  assert.doesNotMatch(adminPanelSource, /km-admin-mobile-submenu/);
+  assert.doesNotMatch(globalCssSource, /\.km-admin-mobile-submenu/);
   assert.match(
     adminPanelSource,
-    /isMobile \? \([\s\S]*className="km-admin-mobile-submenu"[\s\S]*\) : \([\s\S]*<motion\.div/,
-  );
-  assert.match(globalCssSource, /\.km-admin-mobile-submenu \{[\s\S]*grid-template-rows: 0fr/);
-  assert.match(
-    globalCssSource,
-    /\.km-admin-mobile-submenu\[data-open="true"\] \{[\s\S]*grid-template-rows: 1fr/,
+    /<motion\.div\s+initial=\{\{ height: 0, opacity: 0 \}\}[\s\S]*height: "auto", opacity: 1/,
   );
   assert.match(
-    globalCssSource,
-    /data-reduce-motion="true"[\s\S]*\.km-admin-mobile-submenu/,
+    adminPanelSource,
+    /transition=\{reduceMotion \? \{ duration: 0 \} : \{ duration: 0\.14 \}\}/,
   );
 });
 
@@ -228,6 +225,10 @@ test("admin command buttons use motion instead of abrupt active flashes", () => 
   assert.match(globalCssSource, /\.rt-Button:active:not\(\[data-disabled\],[\s\S]*filter: none;[\s\S]*scale\(0\.985\)/);
   assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-Button/);
   assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-IconButton/);
+  assert.match(
+    globalCssSource,
+    /@media \(pointer: coarse\)[\s\S]*\.rt-Button:active[\s\S]*outline: none/,
+  );
 });
 
 test("prewarms admin routes and reuses shared monitoring data", () => {

@@ -886,28 +886,18 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                 }}
               />
             </Flex>
-            {isMobile ? (
-              <div
-                className="km-admin-mobile-submenu"
-                data-open={isOpen ? "true" : "false"}
-                aria-hidden={!isOpen}
-              >
-                <div className="km-admin-mobile-submenu-inner">{submenu}</div>
-              </div>
-            ) : (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={
-                  isOpen
-                    ? { height: "auto", opacity: 1 }
-                    : { height: 0, opacity: 0 }
-                }
-                transition={{ duration: 0.14 }}
-                style={{ overflow: "hidden" }}
-              >
-                {submenu}
-              </motion.div>
-            )}
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={
+                isOpen
+                  ? { height: "auto", opacity: 1 }
+                  : { height: 0, opacity: 0 }
+              }
+              transition={reduceMotion ? { duration: 0 } : { duration: 0.14 }}
+              style={{ overflow: "hidden" }}
+            >
+              {submenu}
+            </motion.div>
           </div>
         );
       }

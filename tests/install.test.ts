@@ -23,3 +23,12 @@ test("completed installation messaging is localized", () => {
     assert.notEqual(messages.install.completed.trim(), "");
   }
 });
+
+test("completed installation reuses the full installation layout", () => {
+  assert.match(source, /function InstallLayout/);
+  assert.match(source, /<Container size="2">/);
+  assert.match(source, /<InstallLayout step=\{INSTALL_STEPS\.length - 1\}>/);
+  assert.match(source, /<Card size="3">/);
+  assert.match(source, /className="py-10 text-center sm:py-14"/);
+  assert.doesNotMatch(source, /max-w-md text-center/);
+});

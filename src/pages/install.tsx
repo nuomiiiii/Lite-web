@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import {
   Button,
   Callout,
@@ -31,6 +31,48 @@ type APIResponse<T> = {
 };
 type InstallStatus = { state: string; required: boolean };
 const INSTALL_REDIRECT_DELAY_MS = 2500;
+const INSTALL_STEPS = ["welcome", "administrator", "site", "database", "confirm"];
+
+function InstallLayout({
+  step,
+  children,
+}: {
+  step: number;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <main className="min-h-screen px-4 py-8 sm:px-6">
+      <Container size="2">
+        <div className="mb-5">
+          <GuideHeader />
+        </div>
+        <Heading size="7" mb="5">
+          {t("install.title")}
+        </Heading>
+        <Progress
+          value={((step + 1) / INSTALL_STEPS.length) * 100}
+          size="2"
+          mb="4"
+        />
+        <Flex gap="3" mb="6" wrap="wrap">
+          {INSTALL_STEPS.map((title, index) => (
+            <Text
+              key={title}
+              size="2"
+              weight={index === step ? "bold" : "regular"}
+              color={index === step ? undefined : "gray"}
+            >
+              {index + 1}. {t(`install.steps.${title}`)}
+            </Text>
+          ))}
+        </Flex>
+        {children}
+      </Container>
+    </main>
+  );
+}
 
 function isSQLiteDSN(dsn: string): boolean {
   const normalized = dsn.trim().toLowerCase();
@@ -229,45 +271,31 @@ export default function Install() {
 
   if (ready === false)
     return (
-      <main className="flex min-h-screen items-center justify-center p-6">
-        <div className="w-full max-w-md text-center">
-          <div className="mb-8 flex justify-center">
-            <GuideHeader />
-          </div>
-          <Flex direction="column" align="center" gap="4" aria-live="polite">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--green-a3)] text-[var(--green-11)]">
-              <Check size={26} strokeWidth={2} />
+      <InstallLayout step={INSTALL_STEPS.length - 1}>
+        <Card size="3">
+          <Flex
+            direction="column"
+            align="center"
+            gap="5"
+            className="py-10 text-center sm:py-14"
+            aria-live="polite"
+          >
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--green-a3)] text-[var(--green-11)]">
+              <Check size={34} strokeWidth={2} />
             </div>
-            <Heading size="6">{t("install.completed_title")}</Heading>
-            <Text color="gray">{t("install.completed")}</Text>
+            <Flex direction="column" align="center" gap="2">
+              <Heading size="7">{t("install.completed_title")}</Heading>
+              <Text size="3" color="gray">
+                {t("install.completed")}
+              </Text>
+            </Flex>
           </Flex>
-        </div>
-      </main>
+        </Card>
+      </InstallLayout>
     );
 
-  const titles = ["welcome", "administrator", "site", "database", "confirm"];
   return (
-    <main className="min-h-screen px-4 py-8 sm:px-6">
-      <Container size="2">
-        <div className="mb-5">
-          <GuideHeader />
-        </div>
-        <Heading size="7" mb="5">
-          {t("install.title")}
-        </Heading>
-        <Progress value={((step + 1) / titles.length) * 100} size="2" mb="4" />
-        <Flex gap="3" mb="6" wrap="wrap">
-          {titles.map((title, index) => (
-            <Text
-              key={title}
-              size="2"
-              weight={index === step ? "bold" : "regular"}
-              color={index === step ? undefined : "gray"}
-            >
-              {index + 1}. {t(`install.steps.${title}`)}
-            </Text>
-          ))}
-        </Flex>
+    <InstallLayout step={step}>
         {error && (
           <Callout.Root color="red" variant="surface" mb="4">
             <Callout.Text>{error}</Callout.Text>
@@ -478,7 +506,6 @@ export default function Install() {
           onFileSelected={restoreBackup}
           closeLabel={t("common.cancel")}
         />
-      </Container>
-    </main>
+    </InstallLayout>
   );
 }

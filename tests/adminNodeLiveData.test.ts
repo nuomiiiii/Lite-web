@@ -97,6 +97,11 @@ test("all admin information lists share configurable pagination", () => {
   assert.match(pingTaskSource, /destinationPage = page \+ 1/);
 });
 
+test("theme deletion lets the backend choose an installed fallback", () => {
+  assert.match(marketSource, /request\("\/api\/admin\/theme\/delete"/);
+  assert.doesNotMatch(marketSource, /theme\/set\?theme=default/);
+});
+
 test("admin node toolbar aligns status left and search actions right", () => {
   assert.match(pageSource, /<AdminNodeStatusSummary/);
   assert.match(statusSummarySource, /aria-pressed=\{value === filter\}/);
