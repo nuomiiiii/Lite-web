@@ -928,25 +928,6 @@ body, * {
   padding-inline: 0.45rem;
 }
 
-@keyframes admin-tab-content-enter {
-  from {
-    opacity: 0.18;
-    transform: translate3d(0, 7px, 0) scale(0.998);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
-[data-admin-shell] .rt-TabsContent[data-state="active"],
-[data-admin-shell] [role="tabpanel"][data-state="active"] {
-  animation: admin-tab-content-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  backface-visibility: hidden;
-  transform-origin: 0 0;
-  will-change: opacity, transform;
-}
-
 [data-admin-shell] .rt-TabsList[data-admin-tab-motion-ready="true"] {
   position: relative;
 }
@@ -1043,6 +1024,40 @@ body, * {
   box-shadow: 0 1px 2px var(--accent-a5);
 }
 
+html[data-admin-shell-active="true"] .rt-SelectItem,
+html[data-admin-shell-active="true"] .rt-BaseMenuItem {
+  font-weight: var(--font-weight-regular);
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+html[data-admin-shell-active="true"] .rt-SelectItem[data-highlighted],
+html[data-admin-shell-active="true"]
+  .rt-BaseMenuContent.rt-variant-solid
+  .rt-BaseMenuItem[data-highlighted]:not([data-accent-color]) {
+  background-color: var(--accent-a3);
+  color: var(--accent-a11);
+}
+
+html[data-admin-shell-active="true"] .rt-SelectItem[data-state="checked"],
+html[data-admin-shell-active="true"]
+  .rt-BaseMenuContent.rt-variant-solid
+  .rt-BaseMenuItem[data-state="checked"]:not([data-accent-color]) {
+  background-color: var(--accent-a4);
+  color: var(--accent-12);
+}
+
+html[data-admin-shell-active="true"]
+  :is(.rt-SelectContent, .rt-DropdownMenuContent, .admin-select-or-input-content) {
+  background-color: var(--color-panel-solid);
+  border-radius: var(--radius-3);
+  box-shadow:
+    0 0 0 1px var(--gray-a5),
+    0 8px 24px -16px var(--black-a5),
+    0 2px 6px -4px var(--black-a4);
+}
+
 @keyframes admin-floating-content-enter {
   from {
     opacity: 0;
@@ -1065,34 +1080,32 @@ body, * {
   }
 }
 
-html[data-admin-shell-active="true"] :is(.rt-SelectContent, .rt-DropdownMenuContent, .rt-PopoverContent)[data-side="top"] {
+html[data-admin-shell-active="true"] :is(.rt-SelectContent, .rt-DropdownMenuContent, .rt-PopoverContent, .admin-select-or-input-content)[data-side="top"] {
   --admin-floating-x: 0;
   --admin-floating-y: 4px;
 }
 
-html[data-admin-shell-active="true"] :is(.rt-SelectContent, .rt-DropdownMenuContent, .rt-PopoverContent)[data-side="right"] {
+html[data-admin-shell-active="true"] :is(.rt-SelectContent, .rt-DropdownMenuContent, .rt-PopoverContent, .admin-select-or-input-content)[data-side="right"] {
   --admin-floating-x: -4px;
   --admin-floating-y: 0;
 }
 
-html[data-admin-shell-active="true"] :is(.rt-SelectContent, .rt-DropdownMenuContent, .rt-PopoverContent)[data-side="bottom"] {
+html[data-admin-shell-active="true"] :is(.rt-SelectContent, .rt-DropdownMenuContent, .rt-PopoverContent, .admin-select-or-input-content)[data-side="bottom"] {
   --admin-floating-x: 0;
   --admin-floating-y: -4px;
 }
 
-html[data-admin-shell-active="true"] :is(.rt-SelectContent, .rt-DropdownMenuContent, .rt-PopoverContent)[data-side="left"] {
+html[data-admin-shell-active="true"] :is(.rt-SelectContent, .rt-DropdownMenuContent, .rt-PopoverContent, .admin-select-or-input-content)[data-side="left"] {
   --admin-floating-x: 4px;
   --admin-floating-y: 0;
 }
 
-html[data-admin-shell-active="true"] :is(.rt-SelectContent, .rt-DropdownMenuContent, .rt-PopoverContent)[data-state="open"] {
-  animation: admin-floating-content-enter 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: opacity, transform;
+html[data-admin-shell-active="true"] :is(.rt-SelectContent, .rt-DropdownMenuContent, .rt-PopoverContent, .admin-select-or-input-content)[data-state="open"] {
+  animation: admin-floating-content-enter 180ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
-html[data-admin-shell-active="true"] :is(.rt-SelectContent, .rt-DropdownMenuContent, .rt-PopoverContent)[data-state="closed"] {
-  animation: admin-floating-content-exit 140ms cubic-bezier(0.4, 0, 0.2, 1) both;
-  will-change: opacity, transform;
+html[data-admin-shell-active="true"] :is(.rt-SelectContent, .rt-DropdownMenuContent, .rt-PopoverContent, .admin-select-or-input-content)[data-state="closed"] {
+  animation: admin-floating-content-exit 140ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 [data-admin-shell] .rt-SwitchRoot::before {
@@ -1205,23 +1218,21 @@ html[data-admin-shell-active="true"] .rt-BaseDialogContent {
 }
 
 html[data-admin-shell-active="true"] .rt-BaseDialogOverlay[data-state="open"]::before {
-  animation: admin-dialog-overlay-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: admin-dialog-overlay-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 html[data-admin-shell-active="true"] .rt-BaseDialogOverlay[data-state="closed"]::before {
-  animation: admin-dialog-overlay-exit 220ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: admin-dialog-overlay-exit 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 html[data-admin-shell-active="true"] .rt-BaseDialogContent[data-state="open"] {
-  animation: admin-dialog-content-enter 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: admin-dialog-content-enter 240ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
   transform-origin: 50% 50%;
-  will-change: opacity, transform;
 }
 
 html[data-admin-shell-active="true"] .rt-BaseDialogContent[data-state="closed"] {
-  animation: admin-dialog-content-exit 220ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: admin-dialog-content-exit 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
   transform-origin: 50% 50%;
-  will-change: opacity, transform;
 }
 
 html[data-reduce-motion="true"] [data-admin-shell] .rt-TabsContent,
@@ -1240,6 +1251,7 @@ html[data-reduce-motion="true"] .km-theme-config-tabs-list,
 html[data-reduce-motion="true"] .rt-SelectContent,
 html[data-reduce-motion="true"] .rt-DropdownMenuContent,
 html[data-reduce-motion="true"] .rt-PopoverContent,
+html[data-reduce-motion="true"] .admin-select-or-input-content,
 html[data-reduce-motion="true"] .rt-BaseDialogOverlay::before,
 html[data-reduce-motion="true"] .rt-BaseDialogContent {
   animation: none !important;

@@ -67,11 +67,6 @@ const MOBILE_SIDEBAR_CLOSE_TRANSITION = {
   duration: 0.18,
   ease: [0.4, 0, 1, 1],
 } as const;
-const ADMIN_PAGE_TRANSITION = {
-  duration: 0.2,
-  ease: [0.22, 1, 0.36, 1],
-} as const;
-
 interface AdminPanelBarProps {
   content: ReactNode;
 }
@@ -1261,20 +1256,9 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                 </Text>
               </Callout.Text>
             </Callout.Root>
-            <motion.div
-              key={location.pathname}
-              data-admin-page-content
-              initial={reduceMotion ? false : { opacity: 0.76, y: 4 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={reduceMotion ? { duration: 0 } : ADMIN_PAGE_TRANSITION}
-              style={{
-                minHeight: "100%",
-                transformOrigin: "50% 0%",
-                willChange: reduceMotion ? undefined : "opacity, transform",
-              }}
-            >
+            <div data-admin-page-content style={{ minHeight: "100%" }}>
               {content}
-            </motion.div>
+            </div>
           </div>
         </motion.div>
       </Grid>

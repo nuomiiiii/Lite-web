@@ -1,7 +1,8 @@
 import React from "react";
-import { Checkbox, TextField } from "@radix-ui/themes";
+import { TextField } from "@radix-ui/themes";
 import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Checkbox } from "./ui/checkbox";
 import {
   Table,
   TableBody,
@@ -124,7 +125,8 @@ function SelectorInner<T>(props: SelectorProps<T>) {
             <TableHead>
               <Checkbox
                 checked={checkAllState}
-                onCheckedChange={(checked) => handleCheckAll(!!checked)}
+                onClick={(event) => event.stopPropagation()}
+                onCheckedChange={(checked) => handleCheckAll(checked === true)}
                 aria-label={t("common.select_all")}
               />
             </TableHead>
@@ -143,7 +145,8 @@ function SelectorInner<T>(props: SelectorProps<T>) {
                   <TableCell>
                     <Checkbox
                       checked={value.includes(id)}
-                      onCheckedChange={(checked) => handleCheck(id, !!checked)}
+                      onClick={(event) => event.stopPropagation()}
+                      onCheckedChange={(checked) => handleCheck(id, checked === true)}
                       aria-label={`${t("common.select")} ${id}`}
                     />
                   </TableCell>
@@ -161,7 +164,8 @@ function SelectorInner<T>(props: SelectorProps<T>) {
                 <TableCell>
                   <Checkbox
                     checked={value.includes(id)}
-                    onCheckedChange={(checked) => handleCheck(id, !!checked)}
+                    onClick={(event) => event.stopPropagation()}
+                    onCheckedChange={(checked) => handleCheck(id, checked === true)}
                     aria-label={`${t("common.select")} ${id}`}
                   />
                 </TableCell>

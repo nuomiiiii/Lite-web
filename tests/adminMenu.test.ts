@@ -25,6 +25,9 @@ const returnRoutePageSource = readFileSync(new URL("../src/pages/admin/returnRou
 const globalCssSource = readFileSync(new URL("../src/global.css", import.meta.url), "utf8");
 const serverPageSource = readFileSync(new URL("../src/pages/admin/index.tsx", import.meta.url), "utf8");
 const dashboardPanelsSource = readFileSync(new URL("../src/components/admin/DashboardPanels.tsx", import.meta.url), "utf8");
+const selectorSource = readFileSync(new URL("../src/components/Selector.tsx", import.meta.url), "utf8");
+const checkboxSource = readFileSync(new URL("../src/components/ui/checkbox.tsx", import.meta.url), "utf8");
+const selectOrInputSource = readFileSync(new URL("../src/components/ui/select-or-input.tsx", import.meta.url), "utf8");
 const zhCN = JSON.parse(
   readFileSync(new URL("../src/i18n/locales/zh_CN.json", import.meta.url), "utf8"),
 );
@@ -168,18 +171,16 @@ test("system UI routes do not embed the legacy public dashboard", () => {
   assert.match(routesSource, /path:\s*["']\/manage\/\*["']/);
 });
 
-test("admin route changes animate only the main content", () => {
+test("admin route changes keep the main content out of a composited animation layer", () => {
   assert.doesNotMatch(adminPanelSource, /<AnimatePresence mode="wait"/);
   assert.match(
     adminPanelSource,
-    /<motion\.div\s+key=\{location\.pathname\}\s+data-admin-page-content/,
+    /<div data-admin-page-content style=\{\{ minHeight: "100%" \}\}>/,
   );
-  assert.match(
-    adminPanelSource,
-    /initial=\{reduceMotion \? false : \{ opacity: 0\.76, y: 4 \}\}/,
-  );
-  assert.doesNotMatch(adminPanelSource, /ADMIN_PAGE_EXIT_TRANSITION/);
-  assert.equal(adminPanelSource.match(/key=\{location\.pathname\}/g)?.length, 1);
+  assert.doesNotMatch(adminPanelSource, /<motion\.div[^>]*data-admin-page-content/);
+  assert.doesNotMatch(adminPanelSource, /ADMIN_PAGE_TRANSITION/);
+  assert.doesNotMatch(adminPanelSource, /key=\{location\.pathname\}/);
+  assert.doesNotMatch(adminPanelSource, /willChange:[^\n]*"opacity, transform"/);
   assert.doesNotMatch(adminPanelSource, /useReducedMotion/);
   assert.match(adminPanelSource, /Boolean\(settings\.reduce_motion\)/);
   assert.match(adminPanelSource, /preloadAdminRoute\(to\)/);
@@ -192,13 +193,21 @@ test("admin route changes animate only the main content", () => {
 test("admin tabs and dialogs share the saved motion preference", () => {
   assert.match(adminPanelSource, /dataset\.adminShellActive = "true"/);
   assert.match(adminPanelSource, /data-admin-tab-motion-ready/);
-  assert.match(globalCssSource, /admin-tab-content-enter 220ms/);
-  assert.match(globalCssSource, /admin-dialog-content-enter 240ms/);
+  assert.doesNotMatch(globalCssSource, /admin-tab-content-enter/);
+  assert.doesNotMatch(
+    globalCssSource,
+    /\.rt-TabsContent\[data-state="active"\][\s\S]*?(?:animation|backface-visibility|will-change)/,
+  );
+  assert.match(globalCssSource, /admin-dialog-content-enter 240ms[^;]*backwards/);
   assert.match(globalCssSource, /height: 2px;[\s\S]*background: var\(--accent-9\)/);
   assert.match(globalCssSource, /\.rt-TabsTriggerInner[\s\S]*background-color: transparent !important/);
   assert.match(globalCssSource, /\.rt-TabsTrigger\[data-state="active"\] \.rt-TabsTriggerInner[\s\S]*background-color: var\(--accent-a3\) !important/);
   assert.match(globalCssSource, /\.rt-TabsTrigger:focus-visible[\s\S]*outline-offset: 1px/);
-  assert.match(globalCssSource, /admin-dialog-content-exit 220ms/);
+  assert.match(globalCssSource, /admin-dialog-content-exit 220ms[^;]*forwards/);
+  assert.doesNotMatch(
+    globalCssSource,
+    /\.rt-BaseDialogContent\[data-state="(?:open|closed)"\][^}]*will-change/,
+  );
   assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-BaseDialogContent/);
 });
 
@@ -208,12 +217,30 @@ test("admin checkboxes share the active accent palette", () => {
   assert.match(globalCssSource, /\.rt-BaseCheckboxIndicator[\s\S]*color: var\(--accent-12\)/);
   assert.match(globalCssSource, /\[data-slot="checkbox"\][\s\S]*var\(--accent-a3\)/);
   assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-CheckboxRoot::before/);
+  assert.match(selectorSource, /import \{ Checkbox \} from "\.\/ui\/checkbox"/);
+  assert.doesNotMatch(selectorSource, /import \{ Checkbox, TextField \} from "@radix-ui\/themes"/);
+  assert.match(selectorSource, /checked=\{checkAllState\}/);
+  assert.match(checkboxSource, /MinusIcon[\s\S]*group-data-\[state=indeterminate\]:block/);
 });
 
 test("admin floating controls and switches animate consistently", () => {
   assert.match(globalCssSource, /@keyframes admin-floating-content-enter/);
-  assert.match(globalCssSource, /:is\(\.rt-SelectContent, \.rt-DropdownMenuContent, \.rt-PopoverContent\)\[data-state="open"\]/);
-  assert.match(globalCssSource, /admin-floating-content-exit 140ms/);
+  assert.match(globalCssSource, /:is\(\.rt-SelectContent, \.rt-DropdownMenuContent, \.rt-PopoverContent, \.admin-select-or-input-content\)\[data-state="open"\]/);
+  assert.match(globalCssSource, /admin-floating-content-enter 180ms[^;]*backwards/);
+  assert.match(globalCssSource, /admin-floating-content-exit 140ms[^;]*forwards/);
+  assert.doesNotMatch(
+    globalCssSource,
+    /:is\(\.rt-SelectContent,[^}]*\[data-state="(?:open|closed)"\][^}]*will-change/,
+  );
+  assert.match(globalCssSource, /\.rt-SelectItem\[data-highlighted\][\s\S]*background-color: var\(--accent-a3\)/);
+  assert.match(globalCssSource, /\.rt-SelectItem\[data-state="checked"\][\s\S]*background-color: var\(--accent-a4\)/);
+  assert.match(selectOrInputSource, /admin-select-or-input-content/);
+  assert.match(selectOrInputSource, /data-state=\{open \? "open" : "closed"\}/);
+  assert.match(selectOrInputSource, /FLOATING_CONTENT_EXIT_MS = 140/);
+  assert.match(selectOrInputSource, /bg-accent-a4 text-accent-12/);
+  assert.match(selectOrInputSource, /hover:bg-accent-a3 hover:text-foreground/);
+  assert.doesNotMatch(selectOrInputSource, /font-semibold|bg-accent-10/);
+  assert.match(globalCssSource, /\.rt-SelectContent, \.rt-DropdownMenuContent, \.admin-select-or-input-content[\s\S]*0 0 0 1px var\(--gray-a5\)/);
   assert.match(globalCssSource, /\.rt-SwitchThumb[\s\S]*transform 180ms/);
   assert.match(globalCssSource, /\.rt-SwitchThumb\[data-state="checked"\][\s\S]*scale\(0\.92\)/);
   assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-SelectContent/);

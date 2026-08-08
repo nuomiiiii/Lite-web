@@ -69,7 +69,11 @@ test("theme tabs switch only the content below the stable page heading", () => {
   assert.match(tabsSource, /new ResizeObserver\(updateScrollEdges\)/);
   assert.match(tabsSource, /km-theme-config-scroll-button/);
   assert.match(tabsSource, /reduceMotion \? false/);
-  assert.match(globalStyles, /admin-tab-content-enter/);
+  assert.doesNotMatch(globalStyles, /admin-tab-content-enter/);
+  assert.doesNotMatch(
+    globalStyles,
+    /\.rt-TabsContent\[data-state="active"\][^}]*?(?:animation|backface-visibility|will-change)/,
+  );
   assert.match(globalStyles, /data-reduce-motion="true"/);
   assert.match(globalStyles, /\.rt-SegmentedControlItem/);
   assert.match(globalStyles, /a\[href\^="\/admin"\]/);
