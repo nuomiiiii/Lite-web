@@ -393,7 +393,7 @@ export default function AdminDashboard() {
           : <Skeleton className="h-[286px] w-full" />;
       case "alerts":
         return data
-          ? <AlertOverviewPanel data={data} locale={locale} />
+          ? <AlertOverviewPanel data={data} locale={locale} accountKey={accountKey} />
           : <Skeleton className="h-[210px] w-full" />;
       case "storage_detail":
         return data

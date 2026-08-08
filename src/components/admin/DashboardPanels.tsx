@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -41,6 +41,8 @@ import {
   dashboardAlertCategoryPath,
   dashboardAlertDetailPath,
   formatBillingAlertStatus,
+  prefetchDashboardAlertItems,
+  serverAlertKinds,
 } from "@/utils/adminAlertFilters";
 import { formatBytes } from "@/utils/unitHelper";
 import { readDashboardSession, writeDashboardSession } from "@/utils/dashboardSession";
@@ -299,8 +301,43 @@ function relativeTime(value: string | null, locale: string, fallback: string): s
   return formatter.format(Math.round(hours / 24), "day");
 }
 
-export function AlertOverviewPanel({ data, locale }: { data: DashboardData; locale: string }) {
+export function AlertOverviewPanel({
+  data,
+  locale,
+  accountKey = "authenticated",
+}: {
+  data: DashboardData;
+  locale: string;
+  accountKey?: string;
+}) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const prepareCategory = React.useCallback((kind: DashboardAlertKind) => {
+    if (serverAlertKinds.has(kind)) {
+      void prefetchDashboardAlertItems(kind, accountKey).catch(() => undefined);
+    }
+  }, [accountKey]);
+  const openCategory = React.useCallback(async (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    kind: DashboardAlertKind,
+    to: string,
+  ) => {
+    if (
+      !serverAlertKinds.has(kind)
+      || event.button !== 0
+      || event.metaKey
+      || event.ctrlKey
+      || event.shiftKey
+      || event.altKey
+    ) return;
+    event.preventDefault();
+    try {
+      await prefetchDashboardAlertItems(kind, accountKey);
+    } catch {
+      // The destination page keeps its normal error handling if prefetch fails.
+    }
+    navigate(to);
+  }, [accountKey, navigate]);
   const items: Array<{
     kind: DashboardAlertKind;
     label: string;
@@ -360,6 +397,10 @@ export function AlertOverviewPanel({ data, locale }: { data: DashboardData; loca
             >
               <Link
                 to={categoryTo}
+                onPointerEnter={() => prepareCategory(item.kind)}
+                onFocus={() => prepareCategory(item.kind)}
+                onTouchStart={() => prepareCategory(item.kind)}
+                onClick={(event) => void openCategory(event, item.kind, categoryTo)}
                 className="flex min-w-0 items-start justify-between gap-2 rounded-sm text-xs outline-none hover:text-[var(--accent-11)] focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]"
               >
                 <span className="flex min-w-0 items-start gap-1.5 font-medium">
@@ -394,7 +435,14 @@ export function AlertOverviewPanel({ data, locale }: { data: DashboardData; loca
                   ) : null}
                 </Link>
               ) : (
-                <Link to={categoryTo} className="break-words text-[11px] leading-4 text-muted-foreground hover:text-foreground">
+                <Link
+                  to={categoryTo}
+                  onPointerEnter={() => prepareCategory(item.kind)}
+                  onFocus={() => prepareCategory(item.kind)}
+                  onTouchStart={() => prepareCategory(item.kind)}
+                  onClick={(event) => void openCategory(event, item.kind, categoryTo)}
+                  className="break-words text-[11px] leading-4 text-muted-foreground hover:text-foreground"
+                >
                   {t("admin_dashboard.affected_nodes", { count: item.summary.affected_nodes })}
                 </Link>
               )}

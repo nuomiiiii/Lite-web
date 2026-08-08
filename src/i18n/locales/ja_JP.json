@@ -893,7 +893,10 @@
       "page_description": "自動検出、GeoIP、その他の全体動作を設定します。",
       "admin_default_page_size": "リストの既定ページ件数",
       "admin_default_page_size_description": "ページ分けされたすべてのリストで、1ページに表示する既定件数を設定します。リストを開き直したときに反映されます。",
-      "admin_default_page_size_invalid": "{{min}} から {{max}} までの整数を入力してください"
+      "admin_default_page_size_invalid": "{{min}} から {{max}} までの整数を入力してください",
+      "interface_motion": "画面のモーション",
+      "reduce_motion": "モーションを減らす",
+      "reduce_motion_description": "ページ、タブ、サイドバーの切り替えアニメーションを無効にします。"
     },
     "geoip": {
       "enable_description": "ノードの地理位置情報を表示します",

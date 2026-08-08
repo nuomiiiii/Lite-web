@@ -11,7 +11,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useLocation /*useNavigate*/ } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ColorSwitch from "../ColorSwitch";
@@ -47,6 +47,8 @@ import {
   buildAdminMenuItems,
   toggleSingleSubMenu,
 } from "@/utils/adminMenu";
+import { useSettings } from "@/lib/api";
+import { preloadAdminRoute } from "@/routes";
 
 // 将JSON配置转换为类型安全的菜单项数组 (基础静态菜单)
 const parsedMenuConfig = menuConfig as {
@@ -58,12 +60,16 @@ const footerMenuItems = parsedMenuConfig.footer ?? [];
 const DESKTOP_SIDEBAR_WIDTH = 212;
 const MOBILE_SIDEBAR_WIDTH = "clamp(184px, 42vw, 244px)";
 const MOBILE_SIDEBAR_OPEN_TRANSITION = {
-  duration: 0.18,
-  ease: "easeOut",
+  duration: 0.22,
+  ease: [0.22, 1, 0.36, 1],
 } as const;
 const MOBILE_SIDEBAR_CLOSE_TRANSITION = {
-  duration: 0.16,
-  ease: "easeIn",
+  duration: 0.18,
+  ease: [0.4, 0, 1, 1],
+} as const;
+const ADMIN_PAGE_TRANSITION = {
+  duration: 0.2,
+  ease: [0.22, 1, 0.36, 1],
 } as const;
 
 interface AdminPanelBarProps {
@@ -301,6 +307,8 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   const ishttps = window.location.protocol === "https:";
   const [t, i18n] = useTranslation();
   const location = useLocation();
+  const { settings } = useSettings();
+  const reduceMotion = Boolean(settings.reduce_motion);
   const { publicInfo } = usePublicInfo();
   //const navigate = useNavigate();
   // 获取版本信息
@@ -333,6 +341,130 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     () => buildAdminMenuItems(baseMenuItems, extraMenuItems),
     [extraMenuItems],
   );
+
+  useEffect(() => {
+    document.documentElement.dataset.reduceMotion = reduceMotion ? "true" : "false";
+    document.documentElement.dataset.adminShellActive = "true";
+    return () => {
+      delete document.documentElement.dataset.reduceMotion;
+      delete document.documentElement.dataset.adminShellActive;
+    };
+  }, [reduceMotion]);
+
+  useEffect(() => {
+    const shell = document.querySelector<HTMLElement>("[data-admin-shell]");
+    if (!shell || reduceMotion) return;
+
+    const tabLists = new Set<HTMLElement>();
+    const scheduledFrames = new Map<HTMLElement, number>();
+
+    const updateIndicator = (list: HTMLElement) => {
+      scheduledFrames.delete(list);
+      const activeTab = list.querySelector<HTMLElement>(
+        '.rt-TabsTrigger[data-state="active"], [role="tab"][aria-selected="true"]',
+      );
+      if (!activeTab) return;
+
+      const listRect = list.getBoundingClientRect();
+      const tabRect = activeTab.getBoundingClientRect();
+      list.style.setProperty(
+        "--admin-tab-highlight-x",
+        `${tabRect.left - listRect.left + list.scrollLeft}px`,
+      );
+      list.style.setProperty("--admin-tab-highlight-width", `${tabRect.width}px`);
+      if (!list.hasAttribute("data-admin-tab-motion-ready")) {
+        window.requestAnimationFrame(() => {
+          if (list.isConnected) list.setAttribute("data-admin-tab-motion-ready", "true");
+        });
+      }
+    };
+
+    const scheduleIndicator = (list: HTMLElement) => {
+      const currentFrame = scheduledFrames.get(list);
+      if (currentFrame) window.cancelAnimationFrame(currentFrame);
+      scheduledFrames.set(
+        list,
+        window.requestAnimationFrame(() => updateIndicator(list)),
+      );
+    };
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      entries.forEach((entry) => scheduleIndicator(entry.target as HTMLElement));
+    });
+
+    const registerTabList = (list: HTMLElement) => {
+      if (tabLists.has(list)) return;
+      tabLists.add(list);
+      resizeObserver.observe(list);
+      list.addEventListener("scroll", handleTabListScroll, { passive: true });
+      updateIndicator(list);
+    };
+
+    function handleTabListScroll(event: Event) {
+      scheduleIndicator(event.currentTarget as HTMLElement);
+    }
+
+    const registerTabListsWithin = (root: ParentNode) => {
+      root.querySelectorAll<HTMLElement>(".rt-TabsList").forEach(registerTabList);
+    };
+
+    registerTabListsWithin(shell);
+    const mutationObserver = new MutationObserver((records) => {
+      records.forEach((record) => {
+        if (record.type === "attributes") {
+          const list = (record.target as HTMLElement).closest<HTMLElement>(".rt-TabsList");
+          if (list) scheduleIndicator(list);
+          return;
+        }
+        record.addedNodes.forEach((node) => {
+          if (!(node instanceof HTMLElement)) return;
+          if (node.matches(".rt-TabsList")) registerTabList(node);
+          registerTabListsWithin(node);
+        });
+      });
+    });
+    mutationObserver.observe(shell, {
+      attributes: true,
+      attributeFilter: ["data-state", "aria-selected"],
+      childList: true,
+      subtree: true,
+    });
+
+    const handleResize = () => tabLists.forEach(scheduleIndicator);
+    window.addEventListener("resize", handleResize, { passive: true });
+    return () => {
+      mutationObserver.disconnect();
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", handleResize);
+      scheduledFrames.forEach((frame) => window.cancelAnimationFrame(frame));
+      tabLists.forEach((list) => {
+        list.removeEventListener("scroll", handleTabListScroll);
+        list.removeAttribute("data-admin-tab-motion-ready");
+        list.style.removeProperty("--admin-tab-highlight-x");
+        list.style.removeProperty("--admin-tab-highlight-width");
+      });
+    };
+  }, [reduceMotion]);
+
+  const getAdminLinkTarget = (target: EventTarget | null) => {
+    if (!(target instanceof Element)) return null;
+    const anchor = target.closest<HTMLAnchorElement>("a[href]");
+    if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) {
+      return null;
+    }
+    if (anchor.dataset.adminReloadDocument === "true") return null;
+    const url = new URL(anchor.href, window.location.href);
+    if (url.origin !== window.location.origin) return null;
+    if (url.pathname !== "/admin" && !url.pathname.startsWith("/admin/")) {
+      return null;
+    }
+    return `${url.pathname}${url.search}${url.hash}`;
+  };
+
+  const preloadAdminLink = (target: EventTarget | null) => {
+    const href = getAdminLinkTarget(target);
+    if (href) void preloadAdminRoute(href);
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -508,7 +640,16 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   }, [location.pathname, menuItems]);
 
   // 侧边栏动画变体
-  const sidebarVariants = isMobile
+  const sidebarVariants = reduceMotion
+    ? {
+        open: { x: 0, opacity: 1, transition: { duration: 0 } },
+        closed: {
+          x: isMobile ? "-100%" : 0,
+          opacity: 1,
+          transition: { duration: 0 },
+        },
+      }
+    : isMobile
     ? {
         open: {
           x: 0,
@@ -546,14 +687,14 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
       opacity: 1,
       x: 0,
       transition: {
-        duration: 0.3,
+        duration: reduceMotion ? 0 : 0.3,
       },
     },
     closed: {
       opacity: 1,
       x: 0,
       transition: {
-        duration: 0.3,
+        duration: reduceMotion ? 0 : 0.3,
       },
     },
   };
@@ -777,6 +918,10 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
   return (
     <>
       <Grid
+        data-admin-shell
+        onPointerOverCapture={(event) => preloadAdminLink(event.target)}
+        onFocusCapture={(event) => preloadAdminLink(event.target)}
+        onTouchStartCapture={(event) => preloadAdminLink(event.target)}
         columns={{
           initial: "1fr",
           md: sidebarOpen
@@ -967,7 +1112,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: reduceMotion ? 0 : 0.2 }}
               onClick={() => setSidebarOpen(false)}
               className="absolute inset-0 z-[49] cursor-default border-0 bg-[var(--black-a6)] p-0"
             />
@@ -1112,9 +1257,20 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                 </Text>
               </Callout.Text>
             </Callout.Root>
-            <div data-admin-page-content>
+            <motion.div
+              key={location.pathname}
+              data-admin-page-content
+              initial={reduceMotion ? false : { opacity: 0.76, y: 4 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={reduceMotion ? { duration: 0 } : ADMIN_PAGE_TRANSITION}
+              style={{
+                minHeight: "100%",
+                transformOrigin: "50% 0%",
+                willChange: reduceMotion ? undefined : "opacity, transform",
+              }}
+            >
               {content}
-            </div>
+            </motion.div>
           </div>
         </motion.div>
       </Grid>
@@ -1148,11 +1304,15 @@ const SidebarItem = ({
     (location.pathname === to ||
       (to !== "/admin" && location.pathname.startsWith(to)));
   const openInNewTab = newTab === true || (isExternalLink && newTab !== false);
+  const preload = () => {
+    if (!isExternalLink && !reloadDocument) void preloadAdminRoute(to);
+  };
 
   if (openInNewTab || reloadDocument) {
     return (
       <a
         href={to}
+        data-admin-reload-document={reloadDocument ? "true" : undefined}
         onClick={onClick}
         target={openInNewTab ? "_blank" : undefined}
         rel={openInNewTab ? "noopener noreferrer" : undefined}
@@ -1189,6 +1349,9 @@ const SidebarItem = ({
   return (
     <Link
       to={to}
+      onPointerEnter={preload}
+      onFocus={preload}
+      onTouchStart={preload}
       onClick={onClick}
       className="group transition-colors duration-200 hover:bg-accent-3 rounded-md"
     >

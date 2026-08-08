@@ -17,6 +17,14 @@ const adminPanelSource = readFileSync(
   "utf8",
 );
 const routesSource = readFileSync(new URL("../src/routes.ts", import.meta.url), "utf8");
+const mainSource = readFileSync(new URL("../src/main.tsx", import.meta.url), "utf8");
+const adminLayoutSource = readFileSync(new URL("../src/pages/admin/_layout.tsx", import.meta.url), "utf8");
+const pingTaskContextSource = readFileSync(new URL("../src/contexts/PingTaskContext.tsx", import.meta.url), "utf8");
+const pingTaskPageSource = readFileSync(new URL("../src/pages/admin/pingTask.tsx", import.meta.url), "utf8");
+const returnRoutePageSource = readFileSync(new URL("../src/pages/admin/returnRoute.tsx", import.meta.url), "utf8");
+const globalCssSource = readFileSync(new URL("../src/global.css", import.meta.url), "utf8");
+const serverPageSource = readFileSync(new URL("../src/pages/admin/index.tsx", import.meta.url), "utf8");
+const dashboardPanelsSource = readFileSync(new URL("../src/components/admin/DashboardPanels.tsx", import.meta.url), "utf8");
 const zhCN = JSON.parse(
   readFileSync(new URL("../src/i18n/locales/zh_CN.json", import.meta.url), "utf8"),
 );
@@ -138,10 +146,86 @@ test("does not create an implicit second grid column on mobile", () => {
   assert.match(adminPanelSource, /sidebarOpen\s+\? `\$\{DESKTOP_SIDEBAR_WIDTH\}px`\s+: "0px"/);
 });
 
-test("admin route changes do not animate the main content or fixed navigation", () => {
-  assert.match(adminPanelSource, /<div data-admin-page-content>/);
-  assert.doesNotMatch(adminPanelSource, /opacity: 0\.62, y: 5/);
+test("admin route changes animate only the main content", () => {
+  assert.doesNotMatch(adminPanelSource, /<AnimatePresence mode="wait"/);
+  assert.match(
+    adminPanelSource,
+    /<motion\.div\s+key=\{location\.pathname\}\s+data-admin-page-content/,
+  );
+  assert.match(
+    adminPanelSource,
+    /initial=\{reduceMotion \? false : \{ opacity: 0\.76, y: 4 \}\}/,
+  );
+  assert.doesNotMatch(adminPanelSource, /ADMIN_PAGE_EXIT_TRANSITION/);
+  assert.equal(adminPanelSource.match(/key=\{location\.pathname\}/g)?.length, 1);
   assert.doesNotMatch(adminPanelSource, /useReducedMotion/);
+  assert.match(adminPanelSource, /Boolean\(settings\.reduce_motion\)/);
+  assert.match(adminPanelSource, /preloadAdminRoute\(to\)/);
+  assert.match(adminPanelSource, /onPointerOverCapture=\{\(event\) => preloadAdminLink/);
+  assert.doesNotMatch(adminPanelSource, /onClickCapture=/);
+  assert.match(adminPanelSource, /url\.pathname !== "\/admin"/);
+  assert.match(adminPanelSource, /anchor\.dataset\.adminReloadDocument/);
+});
+
+test("admin tabs and dialogs share the saved motion preference", () => {
+  assert.match(adminPanelSource, /dataset\.adminShellActive = "true"/);
+  assert.match(adminPanelSource, /data-admin-tab-motion-ready/);
+  assert.match(globalCssSource, /admin-tab-content-enter 220ms/);
+  assert.match(globalCssSource, /admin-dialog-content-enter 240ms/);
+  assert.match(globalCssSource, /height: 2px;[\s\S]*background: var\(--accent-9\)/);
+  assert.match(globalCssSource, /\.rt-TabsTriggerInner[\s\S]*background-color: transparent !important/);
+  assert.match(globalCssSource, /\.rt-TabsTrigger\[data-state="active"\] \.rt-TabsTriggerInner[\s\S]*background-color: var\(--accent-a3\) !important/);
+  assert.match(globalCssSource, /\.rt-TabsTrigger:focus-visible[\s\S]*outline-offset: 1px/);
+  assert.match(globalCssSource, /admin-dialog-content-exit 220ms/);
+  assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-BaseDialogContent/);
+});
+
+test("admin checkboxes share the active accent palette", () => {
+  assert.match(globalCssSource, /\.rt-CheckboxRoot::before[\s\S]*var\(--accent-6\)/);
+  assert.match(globalCssSource, /\.rt-CheckboxRoot\[data-state="checked"\]::before[\s\S]*var\(--accent-8\)/);
+  assert.match(globalCssSource, /\.rt-BaseCheckboxIndicator[\s\S]*color: var\(--accent-12\)/);
+  assert.match(globalCssSource, /\[data-slot="checkbox"\][\s\S]*var\(--accent-a3\)/);
+  assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-CheckboxRoot::before/);
+});
+
+test("admin floating controls and switches animate consistently", () => {
+  assert.match(globalCssSource, /@keyframes admin-floating-content-enter/);
+  assert.match(globalCssSource, /:is\(\.rt-SelectContent, \.rt-DropdownMenuContent, \.rt-PopoverContent\)\[data-state="open"\]/);
+  assert.match(globalCssSource, /admin-floating-content-exit 140ms/);
+  assert.match(globalCssSource, /\.rt-SwitchThumb[\s\S]*transform 180ms/);
+  assert.match(globalCssSource, /\.rt-SwitchThumb\[data-state="checked"\][\s\S]*scale\(0\.92\)/);
+  assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-SelectContent/);
+  assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-SwitchThumb/);
+});
+
+test("admin command buttons use motion instead of abrupt active flashes", () => {
+  assert.match(globalCssSource, /\.rt-Button,[\s\S]*\.rt-IconButton[\s\S]*background-color 160ms/);
+  assert.match(globalCssSource, /\.rt-Button:active:not\(\[data-disabled\],[\s\S]*filter: none;[\s\S]*scale\(0\.985\)/);
+  assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-Button/);
+  assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-IconButton/);
+});
+
+test("prewarms admin routes and reuses shared monitoring data", () => {
+  assert.match(routesSource, /export const preloadAdminRoutes/);
+  assert.match(mainSource, /requestIdleCallback\(\(\) => void preloadAdminRoutes\(\)/);
+  assert.match(
+    adminLayoutSource,
+    /<NodeDetailsProvider>\s*<PingTaskProvider>\s*<AdminAuthenticatedContent \/>/,
+  );
+  assert.match(pingTaskContextSource, /React\.useState<boolean>\(true\)/);
+  assert.match(pingTaskContextSource, /const inherited = React\.useContext\(PingTaskContext\)/);
+  assert.doesNotMatch(pingTaskContextSource, /refresh\(\);\s*setIsLoading\(false\)/);
+  assert.doesNotMatch(pingTaskPageSource, /<PingTaskProvider>/);
+  assert.doesNotMatch(pingTaskPageSource, /<NodeDetailsProvider>/);
+  assert.doesNotMatch(returnRoutePageSource, /<NodeDetailsProvider>/);
+});
+
+test("dashboard alert navigation prepares filtered server data before switching", () => {
+  assert.match(dashboardPanelsSource, /prefetchDashboardAlertItems\(kind, accountKey\)/);
+  assert.match(dashboardPanelsSource, /event\.preventDefault\(\)/);
+  assert.match(serverPageSource, /getDashboardAlertItemsSnapshot\(routeAlert, accountKey\)/);
+  assert.match(serverPageSource, /if \(isLoading\) return <Loading text="" \/>/);
+  assert.doesNotMatch(serverPageSource, /isLoading \|\| alertFilterLoading/);
 });
 
 test("registers the dashboard settings route", () => {

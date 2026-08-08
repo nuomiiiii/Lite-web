@@ -102,9 +102,11 @@ import {
 import { useAdminDefaultPageSize } from "@/hooks/useAdminDefaultPageSize";
 import { useAdminNodeLiveData } from "@/hooks/use-admin-node-live-data";
 import {
+  getDashboardAlertItemsSnapshot,
   requestDashboardAlertItems,
   serverAlertKinds,
 } from "@/utils/adminAlertFilters";
+import { useAccount } from "@/contexts/AccountContext";
 import type {
   DashboardAlertAffectedItem,
   DashboardAlertKind,
@@ -129,6 +131,8 @@ const NEXT_PAGE_DROP_ID = "admin-node-next-page";
 
 const Layout = () => {
   const { t } = useTranslation();
+  const { account } = useAccount();
+  const accountKey = account?.uuid || account?.username || "authenticated";
   const { nodeDetail, isLoading, error, refresh } = useNodeDetails();
   const { settings, loading: settingsLoading } = useSettings();
   const { liveData, available } = useAdminNodeLiveData();
@@ -138,8 +142,15 @@ const Layout = () => {
   const routeNode = searchParams.get("node")?.trim() || "";
   const alertParam = searchParams.get("alert")?.trim() as DashboardAlertKind | null;
   const routeAlert = alertParam && serverAlertKinds.has(alertParam) ? alertParam : null;
-  const [alertItems, setAlertItems] = useState<DashboardAlertAffectedItem[]>([]);
-  const [alertFilterLoading, setAlertFilterLoading] = useState(Boolean(routeAlert));
+  const initialAlertSnapshot = routeAlert
+    ? getDashboardAlertItemsSnapshot(routeAlert, accountKey)
+    : null;
+  const [alertItems, setAlertItems] = useState<DashboardAlertAffectedItem[]>(
+    initialAlertSnapshot?.items ?? [],
+  );
+  const [alertFilterLoading, setAlertFilterLoading] = useState(
+    Boolean(routeAlert && !initialAlertSnapshot),
+  );
   const [alertFilterError, setAlertFilterError] = useState("");
   const onlineSet = React.useMemo(
     () => new Set(liveData?.data.online ?? []),
@@ -153,10 +164,17 @@ const Layout = () => {
       setAlertFilterError("");
       return;
     }
+    const snapshot = getDashboardAlertItemsSnapshot(routeAlert, accountKey);
+    if (snapshot) {
+      setAlertItems(snapshot.items);
+      setAlertFilterLoading(false);
+      setAlertFilterError("");
+      return;
+    }
     const controller = new AbortController();
     setAlertFilterLoading(true);
     setAlertFilterError("");
-    void requestDashboardAlertItems(routeAlert, controller.signal)
+    void requestDashboardAlertItems(routeAlert, controller.signal, accountKey)
       .then((response) => setAlertItems(response.items))
       .catch((requestError) => {
         if (requestError instanceof DOMException && requestError.name === "AbortError") return;
@@ -167,7 +185,7 @@ const Layout = () => {
         if (!controller.signal.aborted) setAlertFilterLoading(false);
       });
     return () => controller.abort();
-  }, [routeAlert]);
+  }, [accountKey, routeAlert]);
 
   const alertItemOrder = React.useMemo(
     () => new Map(alertItems.map((item, index) => [item.node_uuid, index])),
@@ -223,7 +241,7 @@ const Layout = () => {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  if (isLoading || alertFilterLoading) return <Loading text="" />;
+  if (isLoading) return <Loading text="" />;
   if (error) return <div>{error}</div>;
 
   const isEmpty = Array.isArray(nodeDetail) && nodeDetail.length === 0;
@@ -250,7 +268,7 @@ const Layout = () => {
         <Callout.Root color="red" size="1"><Callout.Text>{alertFilterError}</Callout.Text></Callout.Root>
       ) : null}
 
-      {isEmpty ? (
+      {alertFilterLoading ? null : isEmpty ? (
         <EmptyNodesGuide />
       ) : filteredNodes.length === 0 ? (
         <Callout.Root color="gray"><Callout.Text>{t("common.no_data", "没有符合当前筛选的服务器")}</Callout.Text></Callout.Root>

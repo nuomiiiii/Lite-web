@@ -100,6 +100,8 @@ test("all admin information lists share configurable pagination", () => {
 test("admin node toolbar aligns status left and search actions right", () => {
   assert.match(pageSource, /<AdminNodeStatusSummary/);
   assert.match(statusSummarySource, /aria-pressed=\{value === filter\}/);
+  assert.match(statusSummarySource, /layoutId=\{reduceMotion \? undefined : "admin-node-status-highlight"\}/);
+  assert.match(statusSummarySource, /whileTap=\{reduceMotion \? undefined/);
   assert.match(statusSummarySource, /onClick=\{\(\) => onValueChange\(filter\)\}/);
   assert.match(pageSource, /flex flex-col gap-3 md:flex-row md:items-end md:justify-between/);
   assert.match(pageSource, /showStatusSummary[\s\S]*md:ml-auto md:w-auto/);

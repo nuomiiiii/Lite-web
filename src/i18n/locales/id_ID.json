@@ -893,7 +893,10 @@
       "page_description": "Konfigurasikan penemuan otomatis, GeoIP, dan perilaku global lainnya.",
       "admin_default_page_size": "Paginasi daftar bawaan",
       "admin_default_page_size_description": "Atur jumlah item bawaan per halaman untuk semua daftar berpaginasi. Nilai diterapkan saat halaman daftar dibuka kembali.",
-      "admin_default_page_size_invalid": "Masukkan bilangan bulat antara {{min}} dan {{max}}"
+      "admin_default_page_size_invalid": "Masukkan bilangan bulat antara {{min}} dan {{max}}",
+      "interface_motion": "Gerakan antarmuka",
+      "reduce_motion": "Kurangi gerakan",
+      "reduce_motion_description": "Nonaktifkan transisi halaman, tab, dan bilah samping untuk perpindahan langsung."
     },
     "geoip": {
       "enable_description": "Tampilkan lokasi geografis node",
