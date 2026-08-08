@@ -1076,13 +1076,13 @@
       "admin_default_page_size": "列表默认分页",
       "admin_default_page_size_description": "设置所有分页列表默认每页显示数量，重新进入列表页面后生效。",
       "admin_default_page_size_invalid": "请输入 {{min}} 到 {{max}} 之间的整数",
-      "interface_motion": "界面动效",
-      "reduce_motion": "减少动态效果",
-      "reduce_motion_description": "关闭页面、页签和侧栏的过渡动画，恢复为即时切换。",
       "auto_discovery": "自动发现",
       "auto_discovery_key": "自动发现密钥",
       "auto_discovery_key_description": "使用自动发现可以批量注册客户端，留空表示禁用自动发现。",
+      "interface_motion": "界面动效",
       "page_description": "配置自动发现、GeoIP 与其他全局行为。",
+      "reduce_motion": "减少动态效果",
+      "reduce_motion_description": "关闭页面、页签和侧栏的过渡动画，恢复为即时切换。",
       "title": "通用"
     },
     "geoip": {
