@@ -3,6 +3,16 @@
 
 @custom-variant dark (&:is(.dark *));
 
+:root {
+  --app-viewport-height: 100vh;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --app-viewport-height: 100dvh;
+  }
+}
+
 @theme inline {
   --color-accent-1: var(--accent-1);
   --color-accent-2: var(--accent-2);

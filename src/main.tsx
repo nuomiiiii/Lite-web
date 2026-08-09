@@ -129,7 +129,7 @@ const App = () => {
           className="theme-root"
           style={{
             backgroundColor: "transparent",
-            minHeight: "100vh",
+            minHeight: "var(--app-viewport-height, 100vh)",
           }}
         >
 		{isRestrictedGuideRoute ? (

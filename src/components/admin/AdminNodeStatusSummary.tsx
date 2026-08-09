@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
-import { useSettings } from "@/lib/api";
+import { useReduceMotionPreference } from "@/lib/api";
 
 export type AdminNodeStatusFilter = "all" | "online" | "offline";
 
@@ -20,8 +20,7 @@ export default function AdminNodeStatusSummary({
   onValueChange,
 }: AdminNodeStatusSummaryProps) {
   const { t } = useTranslation();
-  const { settings } = useSettings();
-  const reduceMotion = Boolean(settings.reduce_motion);
+  const reduceMotion = useReduceMotionPreference();
   const offline = Math.max(0, total - online);
   const items = [
     {

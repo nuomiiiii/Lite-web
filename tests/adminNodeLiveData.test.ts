@@ -105,6 +105,8 @@ test("theme deletion lets the backend choose an installed fallback", () => {
 test("admin node toolbar aligns status left and search actions right", () => {
   assert.match(pageSource, /<AdminNodeStatusSummary/);
   assert.match(statusSummarySource, /aria-pressed=\{value === filter\}/);
+  assert.match(statusSummarySource, /useReduceMotionPreference\(\)/);
+  assert.doesNotMatch(statusSummarySource, /useSettings\(\)/);
   assert.match(statusSummarySource, /layoutId=\{reduceMotion \? undefined : "admin-node-status-highlight"\}/);
   assert.match(statusSummarySource, /whileTap=\{reduceMotion \? undefined/);
   assert.match(statusSummarySource, /onClick=\{\(\) => onValueChange\(filter\)\}/);

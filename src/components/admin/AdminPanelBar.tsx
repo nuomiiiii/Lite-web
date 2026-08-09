@@ -927,11 +927,15 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             ? `${DESKTOP_SIDEBAR_WIDTH}px 1fr`
             : "0px 1fr",
         }} // 动态调整网格列
-        rows={{ initial: "auto 1fr", md: "auto 1fr" }}
+        rows={{
+          initial: "auto minmax(0, 1fr)",
+          md: "auto minmax(0, 1fr)",
+        }}
         style={{
-          height: "100vh",
-          width: "100vw",
-          overflow: "auto",
+          height: "var(--app-viewport-height, 100vh)",
+          width: "100%",
+          overflow: "hidden",
+          overscrollBehavior: "none",
           backgroundColor: "var(--accent-1)",
           position: "relative",
         }}
@@ -1113,7 +1117,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               exit={{ opacity: 0 }}
               transition={{ duration: reduceMotion ? 0 : 0.2 }}
               onClick={() => setSidebarOpen(false)}
-              className="absolute inset-0 z-[49] cursor-default border-0 bg-[var(--black-a6)] p-0"
+              className="absolute inset-0 z-[49] touch-none cursor-default border-0 bg-[var(--black-a6)] p-0"
             />
           )}
           <motion.div
@@ -1136,6 +1140,8 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               zIndex: isMobile ? 50 : 1,
               overflowY: "auto",
               overflowX: "hidden",
+              overscrollBehaviorY: "contain",
+              WebkitOverflowScrolling: "touch",
               willChange: isMobile ? "transform" : undefined,
               backfaceVisibility: isMobile ? "hidden" : undefined,
               pointerEvents: isMobile && !sidebarOpen ? "none" : "auto",
@@ -1221,6 +1227,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
             backgroundColor: "var(--accent-3)",
             display: "block",
             height: "100%", // Ensure the container takes full height
+            minHeight: 0,
             minWidth: 0,
             maxWidth: "100%",
             overflow: "hidden", // Prevent this container from scrolling
@@ -1233,7 +1240,9 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               height: "100%",
               borderRadius: "0",
               padding: isMobile ? "8px" : "16px",
-              overflowY: "auto",
+              overflowY: isMobile && sidebarOpen ? "hidden" : "auto",
+              overscrollBehaviorY: "contain",
+              WebkitOverflowScrolling: "touch",
               boxSizing: "border-box",
             }}
           >
