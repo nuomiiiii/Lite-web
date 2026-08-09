@@ -215,8 +215,10 @@ test("admin tabs and dialogs share the saved motion preference", () => {
 test("admin checkboxes share the active accent palette", () => {
   assert.match(globalCssSource, /\.rt-CheckboxRoot::before[\s\S]*background-color 150ms ease/);
   assert.doesNotMatch(globalCssSource, /\.rt-CheckboxRoot\[data-state="checked"\]::before[\s\S]*background-color: var\(--accent-8\)/);
-  assert.match(checkboxSource, /data-\[state=checked\]:bg-\[var\(--accent-indicator\)\]/);
-  assert.match(checkboxSource, /data-\[state=checked\]:text-\[var\(--accent-contrast\)\]/);
+  assert.match(checkboxSource, /data-\[state=checked\]:border-\[var\(--accent-9\)\]/);
+  assert.match(checkboxSource, /data-\[state=checked\]:bg-\[var\(--accent-8\)\]/);
+  assert.match(checkboxSource, /data-\[state=checked\]:text-\[var\(--accent-12\)\]/);
+  assert.match(checkboxSource, /border shadow-xs transition-shadow/);
   assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-CheckboxRoot::before/);
   assert.match(selectorSource, /import \{ Checkbox \} from "\.\/ui\/checkbox"/);
   assert.doesNotMatch(selectorSource, /import \{ Checkbox, TextField \} from "@radix-ui\/themes"/);
@@ -240,7 +242,8 @@ test("admin floating controls and switches animate consistently", () => {
   assert.match(selectOrInputSource, /FLOATING_CONTENT_EXIT_MS = 140/);
   assert.match(selectOrInputSource, /bg-accent-9 text-\[var\(--accent-contrast\)\]/);
   assert.match(selectOrInputSource, /hover:bg-accent hover:text-accent-foreground/);
-  assert.match(selectOrInputSource, /font-semibold/);
+  assert.match(selectOrInputSource, /text-sm font-normal outline-hidden/);
+  assert.doesNotMatch(selectOrInputSource, /text-sm font-semibold outline-hidden/);
   assert.match(selectOrInputSource, /rounded-md border bg-accent-1[\s\S]*shadow-md/);
   assert.match(globalCssSource, /\.rt-SwitchThumb[\s\S]*transform 180ms/);
   assert.match(globalCssSource, /\.rt-SwitchThumb\[data-state="checked"\][\s\S]*scale\(0\.92\)/);

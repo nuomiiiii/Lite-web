@@ -32,6 +32,9 @@ test("新建任务使用原选择框外观进行节点多选", () => {
   assert.match(source, /rt-SelectTrigger rt-r-size-2 rt-variant-surface w-full/);
   assert.match(source, /padding: 4,[\s\S]*rounded-md px-2 py-2/);
   assert.match(source, /<Checkbox checked=\{checked\}/);
+  assert.match(source, /role="listbox"[\s\S]*aria-multiselectable="true"/);
+  assert.match(source, /role="option"[\s\S]*aria-selected=\{checked\}/);
+  assert.match(source, /text-sm font-normal[\s\S]*data-\[state=checked\]:bg-\[var\(--accent-a4\)\]/);
   assert.match(source, /<MultiNodeSelect[\s\S]*value=\{selectedClients\}[\s\S]*onChange=\{setSelectedClients\}/);
   assert.doesNotMatch(source, /<NodeSelectorDialog/);
   assert.match(source, /for \(const client of clients\) \{[\s\S]*request\([\s\S]*"\/add"/);

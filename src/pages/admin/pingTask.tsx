@@ -6,13 +6,13 @@ import { usePingTask, type PingTask } from "@/contexts/PingTaskContext";
 import {
   Box,
   Button,
-  Checkbox,
   Dialog,
   Flex,
   Select,
   Tabs,
   TextField,
 } from "@radix-ui/themes";
+import { Checkbox } from "@/components/ui/checkbox";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";

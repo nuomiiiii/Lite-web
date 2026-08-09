@@ -361,7 +361,7 @@ export function SelectOrInput<T extends Primitive = string>(
                     aria-selected={isActive}
                     data-disabled={isDisabled || undefined}
                     className={cn(
-                      "flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm font-semibold outline-hidden transition-colors duration-150",
+                      "flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm font-normal outline-hidden transition-colors duration-150",
                       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
                       isActive
                         ? "bg-accent-9 text-[var(--accent-contrast)]"

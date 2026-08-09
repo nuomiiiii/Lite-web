@@ -28,7 +28,6 @@ import {
   Badge,
   Box,
   Button,
-  Checkbox,
   Dialog,
   Flex,
   IconButton,
@@ -37,6 +36,7 @@ import {
   Tabs,
   TextField,
 } from "@radix-ui/themes";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Pencil,
   Plus,

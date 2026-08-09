@@ -16,7 +16,6 @@ import {
   Flex,
   TextField,
   Button,
-  Checkbox,
   Text,
   Dialog,
   IconButton,
@@ -24,6 +23,7 @@ import {
   SegmentedControl,
   Callout,
 } from "@radix-ui/themes";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   CircleDollarSign,
   CheckCircle2,

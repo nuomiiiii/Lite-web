@@ -353,7 +353,11 @@ function MultiNodeSelect({
           maxWidth: "min(420px, calc(100vw - 24px))",
         }}
       >
-        <div className="max-h-[320px] overflow-y-auto py-1">
+        <div
+          className="max-h-[320px] overflow-y-auto py-1"
+          role="listbox"
+          aria-multiselectable="true"
+        >
           {nodes.length === 0 ? (
             <Text as="div" size="2" color="gray" className="px-3 py-2">
               暂无可选服务器
@@ -364,7 +368,10 @@ function MultiNodeSelect({
               <button
                 key={node.uuid}
                 type="button"
-                className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-[var(--gray-12)] hover:bg-[var(--accent-a3)] focus-visible:bg-[var(--accent-a3)] focus-visible:outline-none"
+                role="option"
+                aria-selected={checked}
+                data-state={checked ? "checked" : "unchecked"}
+                className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm font-normal text-[var(--gray-12)] transition-colors duration-150 hover:bg-[var(--accent-a3)] focus-visible:bg-[var(--accent-a3)] focus-visible:outline-none data-[state=checked]:bg-[var(--accent-a4)] data-[state=checked]:text-[var(--accent-12)] data-[state=checked]:hover:bg-[var(--accent-a5)]"
                 onClick={() => toggle(node.uuid)}
               >
                 <Checkbox checked={checked} tabIndex={-1} aria-hidden="true" />
