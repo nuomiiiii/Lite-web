@@ -37,6 +37,8 @@ export interface SelectorProps<T> {
   searchPlaceholder?: string;
   /** 表头标题（第二列） */
   headerLabel?: React.ReactNode;
+  /** 是否在标题行显示全选框 */
+  showHeaderSelectAll?: boolean;
 }
 
 function SelectorInner<T>(props: SelectorProps<T>) {
@@ -52,6 +54,7 @@ function SelectorInner<T>(props: SelectorProps<T>) {
     filterItem,
     searchPlaceholder,
     headerLabel,
+    showHeaderSelectAll = true,
   } = props;
   const { t } = useTranslation();
 
@@ -123,12 +126,14 @@ function SelectorInner<T>(props: SelectorProps<T>) {
         <Table>
           <TableHeader>
             <TableHead>
-              <Checkbox
-                checked={checkAllState}
-                onClick={(event) => event.stopPropagation()}
-                onCheckedChange={(checked) => handleCheckAll(checked === true)}
-                aria-label={t("common.select_all")}
-              />
+              {showHeaderSelectAll ? (
+                <Checkbox
+                  checked={checkAllState}
+                  onClick={(event) => event.stopPropagation()}
+                  onCheckedChange={(checked) => handleCheckAll(checked === true)}
+                  aria-label={t("common.select_all")}
+                />
+              ) : null}
             </TableHead>
             <TableHead>{resolvedHeaderLabel}</TableHead>
           </TableHeader>

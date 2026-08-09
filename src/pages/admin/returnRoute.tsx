@@ -25,6 +25,7 @@ import {
   Activity,
   AlertTriangle,
   BookOpen,
+  Check,
   CheckCircle2,
   ChevronDown,
   Download,
@@ -311,6 +312,7 @@ function MultiNodeSelect({
   value: string[];
   onChange: (clients: string[]) => void;
 }) {
+  const listboxRef = useRef<HTMLDivElement>(null);
   const selected = useMemo(() => new Set(value), [value]);
   const selectedNames = value.map(
     (uuid) => nodes.find((node) => node.uuid === uuid)?.name || uuid,
@@ -332,7 +334,7 @@ function MultiNodeSelect({
       <Popover.Trigger>
         <button
           type="button"
-          className="rt-SelectTrigger rt-r-size-2 rt-variant-surface w-full"
+          className="rt-reset rt-SelectTrigger rt-r-size-2 rt-variant-surface w-full"
           aria-label="选择探测节点"
         >
           <span
@@ -354,7 +356,9 @@ function MultiNodeSelect({
         }}
       >
         <div
-          className="max-h-[320px] overflow-y-auto py-1"
+          ref={listboxRef}
+          tabIndex={-1}
+          className="max-h-[320px] overflow-y-auto py-1 focus:outline-none"
           role="listbox"
           aria-multiselectable="true"
         >
@@ -371,10 +375,20 @@ function MultiNodeSelect({
                 role="option"
                 aria-selected={checked}
                 data-state={checked ? "checked" : "unchecked"}
-                className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm font-normal text-[var(--gray-12)] transition-colors duration-150 hover:bg-[var(--accent-a3)] focus-visible:bg-[var(--accent-a3)] focus-visible:outline-none data-[state=checked]:bg-[var(--accent-a4)] data-[state=checked]:text-[var(--accent-12)] data-[state=checked]:hover:bg-[var(--accent-a5)]"
-                onClick={() => toggle(node.uuid)}
+                className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm font-normal text-[var(--gray-12)] transition-colors duration-150 hover:bg-[var(--accent-9)] hover:text-[var(--accent-contrast)] focus-visible:bg-[var(--accent-9)] focus-visible:text-[var(--accent-contrast)] focus-visible:outline-none"
+                onClick={(event) => {
+                  toggle(node.uuid);
+                  if (event.detail > 0) {
+                    listboxRef.current?.focus({ preventScroll: true });
+                  }
+                }}
               >
-                <Checkbox checked={checked} tabIndex={-1} aria-hidden="true" />
+                <span
+                  className="flex size-4 shrink-0 items-center justify-center"
+                  aria-hidden="true"
+                >
+                  {checked ? <Check size={16} strokeWidth={2.5} /> : null}
+                </span>
                 <span className="min-w-0 truncate">{node.name || node.uuid}</span>
               </button>
             );

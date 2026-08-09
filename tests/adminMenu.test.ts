@@ -26,8 +26,10 @@ const globalCssSource = readFileSync(new URL("../src/global.css", import.meta.ur
 const serverPageSource = readFileSync(new URL("../src/pages/admin/index.tsx", import.meta.url), "utf8");
 const dashboardPanelsSource = readFileSync(new URL("../src/components/admin/DashboardPanels.tsx", import.meta.url), "utf8");
 const selectorSource = readFileSync(new URL("../src/components/Selector.tsx", import.meta.url), "utf8");
+const nodeSelectorSource = readFileSync(new URL("../src/components/NodeSelector.tsx", import.meta.url), "utf8");
 const checkboxSource = readFileSync(new URL("../src/components/ui/checkbox.tsx", import.meta.url), "utf8");
 const selectOrInputSource = readFileSync(new URL("../src/components/ui/select-or-input.tsx", import.meta.url), "utf8");
+const accountSource = readFileSync(new URL("../src/pages/admin/account.tsx", import.meta.url), "utf8");
 const zhCN = JSON.parse(
   readFileSync(new URL("../src/i18n/locales/zh_CN.json", import.meta.url), "utf8"),
 );
@@ -216,14 +218,22 @@ test("admin checkboxes share the active accent palette", () => {
   assert.match(globalCssSource, /\.rt-CheckboxRoot::before[\s\S]*background-color 150ms ease/);
   assert.doesNotMatch(globalCssSource, /\.rt-CheckboxRoot\[data-state="checked"\]::before[\s\S]*background-color: var\(--accent-8\)/);
   assert.match(checkboxSource, /data-\[state=checked\]:border-\[var\(--accent-9\)\]/);
-  assert.match(checkboxSource, /data-\[state=checked\]:bg-\[var\(--accent-8\)\]/);
-  assert.match(checkboxSource, /data-\[state=checked\]:text-\[var\(--accent-12\)\]/);
+  assert.match(checkboxSource, /data-\[state=checked\]:bg-\[var\(--accent-9\)\]/);
+  assert.match(checkboxSource, /data-\[state=checked\]:text-\[var\(--accent-contrast\)\]/);
+  assert.match(checkboxSource, /data-\[state=indeterminate\]:bg-\[var\(--accent-9\)\]/);
+  assert.match(checkboxSource, /data-\[state=indeterminate\]:text-\[var\(--accent-contrast\)\]/);
   assert.match(checkboxSource, /border shadow-xs transition-shadow/);
   assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-CheckboxRoot::before/);
   assert.match(selectorSource, /import \{ Checkbox \} from "\.\/ui\/checkbox"/);
   assert.doesNotMatch(selectorSource, /import \{ Checkbox, TextField \} from "@radix-ui\/themes"/);
   assert.match(selectorSource, /checked=\{checkAllState\}/);
   assert.match(checkboxSource, /MinusIcon[\s\S]*group-data-\[state=indeterminate\]:block/);
+});
+
+test("node selector dialogs keep a single select-all control", () => {
+  assert.match(selectorSource, /showHeaderSelectAll = true/);
+  assert.match(selectorSource, /showHeaderSelectAll \? \([\s\S]*aria-label=\{t\("common\.select_all"\)\}/);
+  assert.match(nodeSelectorSource, /showHeaderSelectAll=\{false\}/);
 });
 
 test("admin floating controls and switches animate consistently", () => {

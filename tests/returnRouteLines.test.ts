@@ -29,12 +29,15 @@ test("编辑表单只在打开弹窗时读取任务数据", () => {
 test("新建任务使用原选择框外观进行节点多选", () => {
   assert.match(source, /const \[selectedClients, setSelectedClients\] = useState<string\[]>/);
   assert.match(source, /function MultiNodeSelect/);
-  assert.match(source, /rt-SelectTrigger rt-r-size-2 rt-variant-surface w-full/);
+  assert.match(source, /rt-reset rt-SelectTrigger rt-r-size-2 rt-variant-surface w-full/);
   assert.match(source, /padding: 4,[\s\S]*rounded-md px-2 py-2/);
-  assert.match(source, /<Checkbox checked=\{checked\}/);
+  assert.match(source, /aria-hidden="true"[\s\S]*\{checked \? <Check size=\{16\} strokeWidth=\{2\.5\} \/> : null\}/);
   assert.match(source, /role="listbox"[\s\S]*aria-multiselectable="true"/);
   assert.match(source, /role="option"[\s\S]*aria-selected=\{checked\}/);
-  assert.match(source, /text-sm font-normal[\s\S]*data-\[state=checked\]:bg-\[var\(--accent-a4\)\]/);
+  assert.match(source, /hover:bg-\[var\(--accent-9\)\][\s\S]*focus-visible:bg-\[var\(--accent-9\)\]/);
+  assert.doesNotMatch(source, /data-\[state=checked\]:(?:bg|text)-/);
+  assert.match(source, /ref=\{listboxRef\}[\s\S]*tabIndex=\{-1\}[\s\S]*focus:outline-none/);
+  assert.match(source, /if \(event\.detail > 0\) \{\s*listboxRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(source, /<MultiNodeSelect[\s\S]*value=\{selectedClients\}[\s\S]*onChange=\{setSelectedClients\}/);
   assert.doesNotMatch(source, /<NodeSelectorDialog/);
   assert.match(source, /for \(const client of clients\) \{[\s\S]*request\([\s\S]*"\/add"/);
