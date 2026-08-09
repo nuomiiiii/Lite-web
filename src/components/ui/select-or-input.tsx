@@ -333,7 +333,7 @@ export function SelectOrInput<T extends Primitive = string>(
           data-side="bottom"
           data-state={open ? "open" : "closed"}
           className={cn(
-            "admin-select-or-input-content absolute left-0 right-0 z-50 mt-1 rounded-md text-popover-foreground data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0",
+            "admin-select-or-input-content absolute left-0 right-0 z-50 mt-1 rounded-md border bg-accent-1 text-popover-foreground shadow-md data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0",
             "max-h-60 overflow-auto",
             listClassName
           )}
@@ -361,11 +361,11 @@ export function SelectOrInput<T extends Primitive = string>(
                     aria-selected={isActive}
                     data-disabled={isDisabled || undefined}
                     className={cn(
-                      "flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm font-normal outline-hidden transition-colors duration-150",
+                      "flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm font-semibold outline-hidden transition-colors duration-150",
                       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
                       isActive
-                        ? "bg-accent-a4 text-accent-12"
-                        : "hover:bg-accent-a3 hover:text-foreground",
+                        ? "bg-accent-9 text-[var(--accent-contrast)]"
+                        : "hover:bg-accent hover:text-accent-foreground",
                       optionClassName
                     )}
                     onMouseEnter={() => setHighlightIndex(idx)}

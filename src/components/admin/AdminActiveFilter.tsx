@@ -12,7 +12,7 @@ export default function AdminActiveFilter({
 }) {
   const { t } = useTranslation();
   return (
-    <Callout.Root color="blue" size="1" className="admin-active-filter w-full">
+    <Callout.Root size="1" className="admin-active-filter w-full">
       <Callout.Icon><Filter size={15} /></Callout.Icon>
       <Callout.Text className="flex min-w-0 flex-1 items-center justify-between gap-3">
         <span className="min-w-0 break-words">

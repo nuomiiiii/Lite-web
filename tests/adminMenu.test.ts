@@ -201,7 +201,8 @@ test("admin tabs and dialogs share the saved motion preference", () => {
   assert.match(globalCssSource, /admin-dialog-content-enter 240ms[^;]*backwards/);
   assert.match(globalCssSource, /height: 2px;[\s\S]*background: var\(--accent-9\)/);
   assert.match(globalCssSource, /\.rt-TabsTriggerInner[\s\S]*background-color: transparent !important/);
-  assert.match(globalCssSource, /\.rt-TabsTrigger\[data-state="active"\] \.rt-TabsTriggerInner[\s\S]*background-color: var\(--accent-a3\) !important/);
+  assert.match(globalCssSource, /\.rt-TabsTrigger:hover \.rt-TabsTriggerInner[\s\S]*background-color: var\(--gray-a3\) !important/);
+  assert.doesNotMatch(globalCssSource, /\.rt-TabsTrigger\[data-state="active"\] \.rt-TabsTriggerInner[\s\S]*background-color: var\(--accent-a3\) !important/);
   assert.match(globalCssSource, /\.rt-TabsTrigger:focus-visible[\s\S]*outline-offset: 1px/);
   assert.match(globalCssSource, /admin-dialog-content-exit 220ms[^;]*forwards/);
   assert.doesNotMatch(
@@ -212,10 +213,10 @@ test("admin tabs and dialogs share the saved motion preference", () => {
 });
 
 test("admin checkboxes share the active accent palette", () => {
-  assert.match(globalCssSource, /\.rt-CheckboxRoot::before[\s\S]*var\(--accent-6\)/);
-  assert.match(globalCssSource, /\.rt-CheckboxRoot\[data-state="checked"\]::before[\s\S]*var\(--accent-8\)/);
-  assert.match(globalCssSource, /\.rt-BaseCheckboxIndicator[\s\S]*color: var\(--accent-12\)/);
-  assert.match(globalCssSource, /\[data-slot="checkbox"\][\s\S]*var\(--accent-a3\)/);
+  assert.match(globalCssSource, /\.rt-CheckboxRoot::before[\s\S]*background-color 150ms ease/);
+  assert.doesNotMatch(globalCssSource, /\.rt-CheckboxRoot\[data-state="checked"\]::before[\s\S]*background-color: var\(--accent-8\)/);
+  assert.match(checkboxSource, /data-\[state=checked\]:bg-\[var\(--accent-indicator\)\]/);
+  assert.match(checkboxSource, /data-\[state=checked\]:text-\[var\(--accent-contrast\)\]/);
   assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-CheckboxRoot::before/);
   assert.match(selectorSource, /import \{ Checkbox \} from "\.\/ui\/checkbox"/);
   assert.doesNotMatch(selectorSource, /import \{ Checkbox, TextField \} from "@radix-ui\/themes"/);
@@ -232,15 +233,15 @@ test("admin floating controls and switches animate consistently", () => {
     globalCssSource,
     /:is\(\.rt-SelectContent,[^}]*\[data-state="(?:open|closed)"\][^}]*will-change/,
   );
-  assert.match(globalCssSource, /\.rt-SelectItem\[data-highlighted\][\s\S]*background-color: var\(--accent-a3\)/);
-  assert.match(globalCssSource, /\.rt-SelectItem\[data-state="checked"\][\s\S]*background-color: var\(--accent-a4\)/);
+  assert.doesNotMatch(globalCssSource, /\.rt-SelectItem\[data-highlighted\][\s\S]*background-color: var\(--accent-a3\)/);
+  assert.doesNotMatch(globalCssSource, /\.rt-SelectItem\[data-state="checked"\][\s\S]*background-color: var\(--accent-a4\)/);
   assert.match(selectOrInputSource, /admin-select-or-input-content/);
   assert.match(selectOrInputSource, /data-state=\{open \? "open" : "closed"\}/);
   assert.match(selectOrInputSource, /FLOATING_CONTENT_EXIT_MS = 140/);
-  assert.match(selectOrInputSource, /bg-accent-a4 text-accent-12/);
-  assert.match(selectOrInputSource, /hover:bg-accent-a3 hover:text-foreground/);
-  assert.doesNotMatch(selectOrInputSource, /font-semibold|bg-accent-10/);
-  assert.match(globalCssSource, /\.rt-SelectContent, \.rt-DropdownMenuContent, \.admin-select-or-input-content[\s\S]*0 0 0 1px var\(--gray-a5\)/);
+  assert.match(selectOrInputSource, /bg-accent-9 text-\[var\(--accent-contrast\)\]/);
+  assert.match(selectOrInputSource, /hover:bg-accent hover:text-accent-foreground/);
+  assert.match(selectOrInputSource, /font-semibold/);
+  assert.match(selectOrInputSource, /rounded-md border bg-accent-1[\s\S]*shadow-md/);
   assert.match(globalCssSource, /\.rt-SwitchThumb[\s\S]*transform 180ms/);
   assert.match(globalCssSource, /\.rt-SwitchThumb\[data-state="checked"\][\s\S]*scale\(0\.92\)/);
   assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.rt-SelectContent/);
