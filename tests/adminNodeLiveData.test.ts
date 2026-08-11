@@ -218,6 +218,24 @@ test("admin tables align selection controls and use available text width", () =>
   assert.match(loadSource, /admin-card-actions admin-dual-actions flex items-center gap-3/);
 });
 
+test("load notifications support default-on in add and edit flows", () => {
+  assert.match(
+    loadSource,
+    /import \{ Checkbox \} from "@\/components\/ui\/checkbox"/,
+  );
+  assert.match(loadSource, /default_on: alert\.default_on \?\? false/);
+  assert.match(loadSource, /default_on: newForm\.default_on/);
+  assert.match(
+    loadSource,
+    /if \(!newForm\.default_on && newForm\.clients\.length === 0\)/,
+  );
+  assert.match(loadSource, /const \[defaultOn, setDefaultOn\] = React\.useState\(false\)/);
+  assert.match(loadSource, /default_on: defaultOn/);
+  assert.match(loadSource, /checked=\{form\.default_on\}/);
+  assert.match(loadSource, /checked=\{defaultOn\}/);
+  assert.match(loadSource, /ping\.default_on_description/);
+});
+
 test("batch selection uses one responsive toolbar instead of header checkboxes", () => {
   for (const source of [offlineSource, trafficReportSource, pingLossSource]) {
     assert.match(source, /AdminSelectionCount/);
