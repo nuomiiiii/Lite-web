@@ -44,10 +44,21 @@ const adminRoutePreloaders: Record<string, () => Promise<unknown>> = {
   "/admin/notification/ping-loss": () => import("./pages/admin/notification/ping_loss"),
 };
 
+const preloadAdminSettingsLayout = () => import("./pages/admin/settings/_layout");
+
 export const preloadAdminRoute = async (target: string): Promise<void> => {
   const pathname = target.split(/[?#]/, 1)[0].replace(/\/$/, "") || "/admin";
   const preload = adminRoutePreloaders[pathname];
   if (preload) await preload();
+};
+
+export const preloadAdminRoutes = async (): Promise<void> => {
+  await Promise.allSettled([
+    preloadAdminSettingsLayout(),
+    ...Array.from(new Set(Object.values(adminRoutePreloaders))).map((preload) =>
+      preload(),
+    ),
+  ]);
 };
 
 const AdminLayout = lazy(loadAdminLayout);

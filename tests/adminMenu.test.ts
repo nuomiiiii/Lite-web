@@ -271,9 +271,9 @@ test("admin command buttons use motion instead of abrupt active flashes", () => 
   );
 });
 
-test("preloads only intended admin routes and scopes monitoring data to consumers", () => {
-  assert.doesNotMatch(routesSource, /export const preloadAdminRoutes/);
-  assert.doesNotMatch(mainSource, /preloadAdminRoutes|requestIdleCallback/);
+test("prewarms admin route code without restoring global monitoring requests", () => {
+  assert.match(routesSource, /export const preloadAdminRoutes/);
+  assert.match(mainSource, /requestIdleCallback[\s\S]*preloadAdminRoutes\(\)/);
   assert.match(routesSource, /export const preloadAdminRoute/);
   assert.match(adminPanelSource, /preloadAdminRoute\(href\)/);
   assert.doesNotMatch(adminLayoutSource, /NodeDetailsProvider|PingTaskProvider/);
@@ -282,6 +282,15 @@ test("preloads only intended admin routes and scopes monitoring data to consumer
   assert.doesNotMatch(pingTaskContextSource, /refresh\(\);\s*setIsLoading\(false\)/);
   assert.match(pingTaskPageSource, /<NodeDetailsProvider>\s*<PingTaskProvider>/);
   assert.match(returnRoutePageSource, /<NodeDetailsProvider>/);
+});
+
+test("keeps lazy admin pages inside the mounted admin shell", () => {
+  assert.match(
+    adminLayoutSource,
+    /<AdminPanelBar[\s\S]*<Suspense fallback=\{<AdminRouteLoading \/>\}>[\s\S]*<Outlet \/>[\s\S]*<\/Suspense>/,
+  );
+  assert.match(adminLayoutSource, /const AdminRouteLoading/);
+  assert.doesNotMatch(adminLayoutSource, /AdminPanelBar content=\{<Outlet \/>\}/);
 });
 
 test("dashboard alert navigation prepares filtered server data before switching", () => {

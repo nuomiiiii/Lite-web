@@ -17,16 +17,54 @@ import "./i18n/config";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Suspense } from "react";
 import { useRoutes } from "react-router-dom";
-import { preloadAdminEntry, routes } from "./routes";
+import { preloadAdminEntry, preloadAdminRoutes, routes } from "./routes";
 import Loading from "./components/loading";
 import { PublicInfoProvider } from "./contexts/PublicInfoContext";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { Toaster } from "./components/ui/sonner";
 import { RPC2Provider } from "./contexts/RPC2Context";
 import { AccountProvider } from "./contexts/AccountContext";
+import { useAccount } from "./contexts/AccountContext";
 import FullPageLoading from "./components/FullPageLoading";
 import DocumentTitle from "./components/DocumentTitle";
 import AccountPreferenceSync from "./components/AccountPreferenceSync";
+
+const AdminRoutePreloader = () => {
+  const { account } = useAccount();
+
+  React.useEffect(() => {
+    if (!account?.logged_in) return;
+
+    let idleHandle: number | undefined;
+    let fallbackHandle: number | undefined;
+    const preloadWhenIdle = () => {
+      if ("requestIdleCallback" in window) {
+        idleHandle = window.requestIdleCallback(
+          () => void preloadAdminRoutes(),
+          { timeout: 2000 },
+        );
+        return;
+      }
+      fallbackHandle = Number(
+        globalThis.setTimeout(() => void preloadAdminRoutes(), 800),
+      );
+    };
+
+    if (document.readyState === "complete") {
+      preloadWhenIdle();
+    } else {
+      window.addEventListener("load", preloadWhenIdle, { once: true });
+    }
+
+    return () => {
+      window.removeEventListener("load", preloadWhenIdle);
+      if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle);
+      if (fallbackHandle !== undefined) globalThis.clearTimeout(fallbackHandle);
+    };
+  }, [account?.logged_in]);
+
+  return null;
+};
 
 const App = () => {
 	const currentPath = window.location.pathname.replace(/\/$/, "");
@@ -103,6 +141,7 @@ const App = () => {
 		) : (
 		  <AccountProvider>
 			<AccountPreferenceSync />
+			<AdminRoutePreloader />
 			<RPC2Provider>
 			  <PublicInfoProvider>
 				<DocumentTitle />
