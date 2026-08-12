@@ -29,7 +29,6 @@ const selectorSource = readFileSync(new URL("../src/components/Selector.tsx", im
 const nodeSelectorSource = readFileSync(new URL("../src/components/NodeSelector.tsx", import.meta.url), "utf8");
 const checkboxSource = readFileSync(new URL("../src/components/ui/checkbox.tsx", import.meta.url), "utf8");
 const selectOrInputSource = readFileSync(new URL("../src/components/ui/select-or-input.tsx", import.meta.url), "utf8");
-const accountSource = readFileSync(new URL("../src/pages/admin/account.tsx", import.meta.url), "utf8");
 const zhCN = JSON.parse(
   readFileSync(new URL("../src/i18n/locales/zh_CN.json", import.meta.url), "utf8"),
 );
@@ -272,19 +271,17 @@ test("admin command buttons use motion instead of abrupt active flashes", () => 
   );
 });
 
-test("prewarms admin routes and reuses shared monitoring data", () => {
-  assert.match(routesSource, /export const preloadAdminRoutes/);
-  assert.match(mainSource, /requestIdleCallback\(\(\) => void preloadAdminRoutes\(\)/);
-  assert.match(
-    adminLayoutSource,
-    /<NodeDetailsProvider>\s*<PingTaskProvider>\s*<AdminAuthenticatedContent \/>/,
-  );
+test("preloads only intended admin routes and scopes monitoring data to consumers", () => {
+  assert.doesNotMatch(routesSource, /export const preloadAdminRoutes/);
+  assert.doesNotMatch(mainSource, /preloadAdminRoutes|requestIdleCallback/);
+  assert.match(routesSource, /export const preloadAdminRoute/);
+  assert.match(adminPanelSource, /preloadAdminRoute\(href\)/);
+  assert.doesNotMatch(adminLayoutSource, /NodeDetailsProvider|PingTaskProvider/);
   assert.match(pingTaskContextSource, /React\.useState<boolean>\(true\)/);
   assert.match(pingTaskContextSource, /const inherited = React\.useContext\(PingTaskContext\)/);
   assert.doesNotMatch(pingTaskContextSource, /refresh\(\);\s*setIsLoading\(false\)/);
-  assert.doesNotMatch(pingTaskPageSource, /<PingTaskProvider>/);
-  assert.doesNotMatch(pingTaskPageSource, /<NodeDetailsProvider>/);
-  assert.doesNotMatch(returnRoutePageSource, /<NodeDetailsProvider>/);
+  assert.match(pingTaskPageSource, /<NodeDetailsProvider>\s*<PingTaskProvider>/);
+  assert.match(returnRoutePageSource, /<NodeDetailsProvider>/);
 });
 
 test("dashboard alert navigation prepares filtered server data before switching", () => {

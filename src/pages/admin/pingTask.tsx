@@ -1,8 +1,15 @@
 import Loading from "@/components/loading";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import NodeSelectorDialog from "@/components/NodeSelectorDialog";
-import { useNodeDetails } from "@/contexts/NodeDetailsContext";
-import { usePingTask, type PingTask } from "@/contexts/PingTaskContext";
+import {
+  NodeDetailsProvider,
+  useNodeDetails,
+} from "@/contexts/NodeDetailsContext";
+import {
+  PingTaskProvider,
+  usePingTask,
+  type PingTask,
+} from "@/contexts/PingTaskContext";
 import {
   Box,
   Button,
@@ -20,7 +27,13 @@ import { CheckCircle2, Radar, Search, Server } from "lucide-react";
 import { TaskView } from "./pingTask_Task";
 import { ServerView } from "./pingTask_Server";
 
-const PingTask = () => <InnerLayout />;
+const PingTask = () => (
+  <NodeDetailsProvider>
+    <PingTaskProvider>
+      <InnerLayout />
+    </PingTaskProvider>
+  </NodeDetailsProvider>
+);
 
 const InnerLayout = () => {
   const { pingTasks, isLoading, error } = usePingTask();

@@ -50,12 +50,6 @@ export const preloadAdminRoute = async (target: string): Promise<void> => {
   if (preload) await preload();
 };
 
-export const preloadAdminRoutes = async (): Promise<void> => {
-  await Promise.allSettled(
-    Array.from(new Set(Object.values(adminRoutePreloaders))).map((preload) => preload()),
-  );
-};
-
 const AdminLayout = lazy(loadAdminLayout);
 const AdminDashboard = lazy(loadAdminDashboard);
 const NotFound = lazy(() => import("./pages/404"));

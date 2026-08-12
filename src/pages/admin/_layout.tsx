@@ -16,8 +16,6 @@ import { Eula } from "@/utils/field";
 import { normalizeLanguage, readStoredLanguage } from "@/utils/language";
 import { resolveAdminAuthView } from "@/utils/adminAuth";
 import FullPageLoading from "@/components/FullPageLoading";
-import { NodeDetailsProvider } from "@/contexts/NodeDetailsContext";
-import { PingTaskProvider } from "@/contexts/PingTaskContext";
 
 const AuthStatusScreen = ({
   failed = false,
@@ -111,11 +109,7 @@ const AdminAuthenticatedContent = () => {
 
 const AdminAuthenticatedLayout = () => (
   <SettingsProvider>
-    <NodeDetailsProvider>
-      <PingTaskProvider>
-        <AdminAuthenticatedContent />
-      </PingTaskProvider>
-    </NodeDetailsProvider>
+    <AdminAuthenticatedContent />
   </SettingsProvider>
 );
 

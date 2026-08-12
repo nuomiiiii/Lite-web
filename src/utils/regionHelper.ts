@@ -558,43 +558,6 @@ export const emojiToRegionMap: Record<string, { en: string; zh: string; aliases:
 };
 
 /**
- * 检查地区emoji是否匹配搜索词
- * @param regionEmoji 地区emoji（如：🇭🇰）
- * @param searchTerm 搜索词
- * @returns 是否匹配
- */
-export const isRegionMatch = (regionEmoji: string, searchTerm: string): boolean => {
-  const lowerSearchTerm = searchTerm.toLowerCase().trim();
-  
-  // 直接匹配emoji
-  if (regionEmoji === searchTerm) {
-    return true;
-  }
-  
-  // 从映射表中查找
-  const regionInfo = emojiToRegionMap[regionEmoji];
-  if (!regionInfo) {
-    // 如果映射表中没有，则只进行简单的包含匹配
-    return regionEmoji.toLowerCase().includes(lowerSearchTerm);
-  }
-  
-  // 检查英文名称
-  if (regionInfo.en.toLowerCase().includes(lowerSearchTerm)) {
-    return true;
-  }
-  
-  // 检查中文名称
-  if (regionInfo.zh.includes(lowerSearchTerm)) {
-    return true;
-  }
-  
-  // 检查别名
-  return regionInfo.aliases.some(alias => 
-    alias.toLowerCase().includes(lowerSearchTerm)
-  );
-};
-
-/**
  * 获取地区的显示名称
  * @param regionEmoji 地区emoji
  * @param language 语言 ('en' | 'zh')
