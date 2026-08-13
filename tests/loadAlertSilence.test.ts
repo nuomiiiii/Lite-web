@@ -52,6 +52,21 @@ test("load notifications expose searchable configuration and current-alert tabs"
   assert.match(pageSource, /"off" \| "24h" \| "3d" \| "7d" \| "forever"/);
 });
 
+test("current load alerts show the preferred node IP instead of the UUID", () => {
+  assert.match(
+    pageSource,
+    /node\?\.ipv4\?\.trim\(\) \|\| node\?\.ipv6\?\.trim\(\) \|\| ""/,
+  );
+  assert.match(
+    pageSource,
+    /clientAddress \? \([\s\S]*text-xs text-muted-foreground[\s\S]*\{clientAddress\}/,
+  );
+  assert.doesNotMatch(
+    pageSource,
+    /text-xs text-muted-foreground">\{alert\.client\}/,
+  );
+});
+
 test("load notification tabs animate normally and stop only for reduced motion", () => {
   assert.match(pageSource, /className="admin-tab-panel pt-3"/);
   assert.match(globalStyles, /\.admin-tab-panel\[data-state="active"\][^{]*\{[^}]*animation: admin-tab-panel-enter 180ms/);

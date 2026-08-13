@@ -43,10 +43,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import Loading from "@/components/loading";
-import {
-  NodeDetailsProvider,
-  useNodeDetails,
-} from "@/contexts/NodeDetailsContext";
+import { useNodeDetails } from "@/contexts/NodeDetailsContext";
 import { useAccount } from "@/contexts/AccountContext";
 
 type Task = {
@@ -1226,9 +1223,5 @@ function RuleStat({ label, value, mono = false }: { label: string; value: string
 }
 
 export default function ReturnRoutePage() {
-  return (
-    <NodeDetailsProvider>
-      <ReturnRouteContent />
-    </NodeDetailsProvider>
-  );
+  return <ReturnRouteContent />;
 }

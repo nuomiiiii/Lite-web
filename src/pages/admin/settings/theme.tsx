@@ -13,7 +13,7 @@ import {
   Callout,
   Separator,
 } from "@radix-ui/themes";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Upload,
   Settings,
@@ -37,13 +37,15 @@ import {
   THEME_CONFIGURATION_MANAGED,
 } from "@/utils/themeConfiguration";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import { uploadArchive } from "@/utils/archiveUpload";
+import { resolveI18nText, type I18nText } from "@/utils/i18nText";
 
 interface Theme {
   id: string;
-  name: string;
+  name: I18nText;
   short: string;
-  description: string;
-  author: string;
+  description: I18nText;
+  author: I18nText;
   version: string;
   preview?: string;
   url?: string;
@@ -66,12 +68,15 @@ async function clearThemeNavigationCache() {
 }
 
 const ThemePage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLanguage = i18n.resolvedLanguage || i18n.language;
+  const displayText = (value?: I18nText) =>
+    resolveI18nText(value, currentLanguage) || "";
   const [themes, setThemes] = useState<Theme[]>([]);
   const [themesLoading, setThemesLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadXhr, setUploadXhr] = useState<XMLHttpRequest | null>(null);
+  const uploadController = useRef<AbortController | null>(null);
   const [settingTheme, setSettingTheme] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -177,89 +182,37 @@ const ThemePage = () => {
 
     setUploading(true);
     setUploadProgress(0);
-    const formData = new FormData();
-    formData.append("file", file);
-
-    return new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      setUploadXhr(xhr);
-
-      // 监听上传进度
-      xhr.upload.addEventListener("progress", (e) => {
-        if (e.lengthComputable) {
-          const percentComplete = (e.loaded / e.total) * 100;
-          setUploadProgress(Math.round(percentComplete));
-        }
+    const controller = new AbortController();
+    uploadController.current = controller;
+    try {
+      await uploadArchive({
+        basePath: "/api/admin/upload",
+        purpose: "theme",
+        file,
+        signal: controller.signal,
+        onProgress: setUploadProgress,
       });
-
-      // 监听请求完成
-      xhr.addEventListener("load", async () => {
-        if (xhr.status === 413) {
-          toast.error(t("theme.uploda_413_content_too_large"));
-          setUploading(false);
-          setUploadProgress(0);
-          setUploadXhr(null);
-          return;
-        }
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            // 检查响应是否成功
-            JSON.parse(xhr.responseText);
-            toast.success(t("theme.upload_success"));
-            setUploadDialogOpen(false);
-            setUploadProgress(0);
-            await fetchThemes();
-            resolve();
-          } catch (err) {
-            toast.error(t("theme.upload_failed") + ": Parse error");
-            reject(err);
-          }
-        } else {
-          try {
-            const errorData = JSON.parse(xhr.responseText);
-            throw new Error(errorData.message || "Upload failed");
-          } catch (err) {
-            toast.error(
-              t("theme.upload_failed") +
-                ": " +
-                (err instanceof Error ? err.message : "Unknown error"),
-            );
-            reject(err);
-          }
-        }
-        setUploading(false);
-        setUploadXhr(null);
-      });
-
-      // 监听错误
-      xhr.addEventListener("error", () => {
-        toast.error(t("theme.upload_failed") + ": Network error");
-        setUploading(false);
-        setUploadProgress(0);
-        setUploadXhr(null);
-        reject(new Error("Network error"));
-      });
-
-      // 监听中断
-      xhr.addEventListener("abort", () => {
-        toast.error(t("theme.upload_failed") + ": Upload cancelled");
-        setUploading(false);
-        setUploadProgress(0);
-        setUploadXhr(null);
-        reject(new Error("Upload cancelled"));
-      });
-
-      // 发送请求
-      xhr.open("PUT", "/api/admin/theme/upload");
-      xhr.send(formData);
-    });
+      toast.success(t("theme.upload_success"));
+      setUploadDialogOpen(false);
+      setUploadProgress(0);
+      await fetchThemes();
+    } catch (reason) {
+      if (!(reason instanceof DOMException && reason.name === "AbortError")) {
+        toast.error(
+          `${t("theme.upload_failed")}: ${reason instanceof Error ? reason.message : "Unknown error"}`,
+        );
+      }
+    } finally {
+      setUploading(false);
+      uploadController.current = null;
+    }
   };
 
   // 取消上传
   const cancelUpload = () => {
-    if (uploadXhr) {
-      uploadXhr.abort();
-    }
+    uploadController.current?.abort();
+    setUploading(false);
+    setUploadProgress(0);
   };
 
   // 设置主题
@@ -557,7 +510,7 @@ const ThemePage = () => {
                 {theme.preview ? (
                   <img
                     src={`/themes/${theme.short}/${theme.preview}`}
-                    alt={theme.name}
+                    alt={displayText(theme.name)}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
@@ -599,11 +552,11 @@ const ThemePage = () => {
                 className="p-4 space-y-2"
               >
                 <Text weight="bold" size="3">
-                  {theme.name}
+                  {displayText(theme.name)}
                 </Text>
                 <Flex justify="between" align="center">
                   <Text size="1" color="gray">
-                    by {theme.author}
+                    by {displayText(theme.author)}
                   </Text>
                   <Text size="1" color="gray">
                     v{theme.version}
@@ -655,14 +608,14 @@ const ThemePage = () => {
       {/* 预览对话框 */}
       <Dialog.Root open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
         <Dialog.Content maxWidth="800px">
-          <Dialog.Title>{selectedTheme?.name}</Dialog.Title>
+          <Dialog.Title>{displayText(selectedTheme?.name)}</Dialog.Title>
 
           <Box className="space-y-4 mt-4">
             <Box className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative">
               {selectedTheme?.preview ? (
                 <img
                   src={`/themes/${selectedTheme.short}/${selectedTheme.preview}`}
-                  alt={selectedTheme.name}
+                  alt={displayText(selectedTheme.name)}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -677,7 +630,7 @@ const ThemePage = () => {
                 <Text size="2" weight="bold" color="gray" wrap="nowrap">
                   {t("theme.author")}
                 </Text>
-                <Text size="3">{selectedTheme?.author}</Text>
+                <Text size="3">{displayText(selectedTheme?.author)}</Text>
               </Flex>
               <Flex gap="2" justify="start" align="center">
                 <Text size="2" weight="bold" color="gray" wrap="nowrap">
@@ -689,7 +642,7 @@ const ThemePage = () => {
                 <Text size="2" weight="bold" color="gray" wrap="nowrap">
                   {t("theme.description")}
                 </Text>
-                <Text size="3">{selectedTheme?.description}</Text>
+                <Text size="3">{displayText(selectedTheme?.description)}</Text>
               </Flex>
               {selectedTheme?.url && (
                 <Flex gap="2" justify="start" align="center">
@@ -760,7 +713,9 @@ const ThemePage = () => {
         <Dialog.Content maxWidth="400px">
           <Dialog.Title>{t("theme.confirm_delete")}</Dialog.Title>
           <Dialog.Description>
-            {t("theme.delete_warning", { themeName: themeToDelete?.name })}
+            {t("theme.delete_warning", {
+              themeName: displayText(themeToDelete?.name),
+            })}
           </Dialog.Description>
           <Flex gap="3" mt="4" justify="end">
             <Dialog.Close>
@@ -897,7 +852,7 @@ const ThemePage = () => {
                         {t("theme.name")}
                       </Text>
                       <Text size="3" weight="bold">
-                        {importPreview.theme.name}
+                        {displayText(importPreview.theme.name)}
                       </Text>
                     </Flex>
                     <Flex gap="2" align="center">
@@ -910,9 +865,11 @@ const ThemePage = () => {
                       <Text size="2" weight="bold" color="gray" wrap="nowrap">
                         {t("theme.author")}
                       </Text>
-                      <Text size="3">{importPreview.theme.author}</Text>
+                      <Text size="3">
+                        {displayText(importPreview.theme.author)}
+                      </Text>
                     </Flex>
-                    {importPreview.theme.description && (
+                    {displayText(importPreview.theme.description) && (
                       <Flex gap="2" align="center">
                         <Text
                           size="2"
@@ -923,7 +880,7 @@ const ThemePage = () => {
                           {t("theme.description")}
                         </Text>
                         <Text size="3">
-                          {importPreview.theme.description}
+                          {displayText(importPreview.theme.description)}
                         </Text>
                       </Flex>
                     )}

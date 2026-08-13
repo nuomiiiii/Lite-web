@@ -101,7 +101,8 @@ const InnerLayout = () => {
           const status = alert.silenced
             ? t("notification.load.silenced")
             : t("notification.load.not_silenced");
-          return `${alert.notification_name} ${alert.client_name} ${alert.client} ${alert.metric} ${status}`
+          const node = nodeDetail.find((item) => item.uuid === alert.client);
+          return `${alert.notification_name} ${alert.client_name} ${alert.client} ${node?.ipv4 || ""} ${node?.ipv6 || ""} ${alert.metric} ${status}`
             .toLocaleLowerCase()
             .includes(normalizedSearch);
         })
@@ -111,7 +112,7 @@ const InnerLayout = () => {
           const right = b.active_since ? new Date(b.active_since).getTime() : 0;
           return right - left;
         }),
-    [currentAlerts, normalizedSearch, t],
+    [currentAlerts, nodeDetail, normalizedSearch, t],
   );
   const configurationPagination =
     useAdminPagination(sortedAlerts);
@@ -327,7 +328,11 @@ const formatLoadValue = (metric: string, value: number) => {
 const CurrentLoadAlertRow = ({ alert }: { alert: CurrentLoadAlert }) => {
   const { t } = useTranslation();
   const { refreshCurrent } = useLoadAlert();
+  const { nodeDetail } = useNodeDetails();
   const [saving, setSaving] = React.useState(false);
+  const node = nodeDetail.find((item) => item.uuid === alert.client);
+  const clientName = alert.client_name || node?.name || alert.client;
+  const clientAddress = node?.ipv4?.trim() || node?.ipv6?.trim() || "";
   const setSilence = async (mode: "off" | "24h" | "3d" | "7d" | "forever") => {
     setSaving(true);
     try {
@@ -369,9 +374,9 @@ const CurrentLoadAlertRow = ({ alert }: { alert: CurrentLoadAlert }) => {
       </TableCell>
       <TableCell data-label={t("common.server")}>
         <div className="min-w-0">
-          <div className="truncate">{alert.client_name || alert.client}</div>
-          {alert.client_name ? (
-            <div className="truncate text-xs text-muted-foreground">{alert.client}</div>
+          <div className="truncate">{clientName}</div>
+          {clientAddress ? (
+            <div className="truncate text-xs text-muted-foreground">{clientAddress}</div>
           ) : null}
         </div>
       </TableCell>

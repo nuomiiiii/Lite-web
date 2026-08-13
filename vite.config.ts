@@ -14,8 +14,8 @@ import dotenv from "dotenv";
 const configDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
+  const buildTime = new Date().toISOString();
   const systemUiBuild = mode !== "development" && process.env.VITE_SYSTEM_UI_BUILD !== "0";
-  const analyzeBuild = process.env.ANALYZE === "1";
 
   // Production builds are embedded into Komari. An explicit opt-out is required
   // for a standalone root-path build.
@@ -84,13 +84,18 @@ export default defineConfig(({ mode }) => {
           ],
         },
       })]),
-      ...(analyzeBuild ? [visualizer({
-        open: false,
-        filename: "bundle-analysis.html",
-        gzipSize: true,
-        brotliSize: true,
-      })] : []),
+      ...(process.env.ANALYZE === "1"
+        ? [visualizer({
+            open: false,
+            filename: "bundle-analysis.html",
+            gzipSize: true,
+            brotliSize: true,
+          })]
+        : []),
     ],
+    define: {
+      __BUILD_TIME__: JSON.stringify(buildTime),
+    },
     resolve: {
       alias: [
         { find: "@", replacement: path.resolve(configDir, "./src") },

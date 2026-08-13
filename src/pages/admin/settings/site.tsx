@@ -11,9 +11,10 @@ import {
 } from "@/components/admin/SettingCard";
 import { toast } from "sonner";
 import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import UploadDialog from "@/components/UploadDialog";
+import { uploadArchive } from "@/utils/archiveUpload";
 
 export default function SiteSettings() {
   const { t } = useTranslation();
@@ -38,7 +39,7 @@ export default function SiteSettings() {
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [restoreProgress, setRestoreProgress] = useState(0);
-  const [restoreXhr, setRestoreXhr] = useState<XMLHttpRequest | null>(null);
+  const restoreController = useRef<AbortController | null>(null);
 
   const downloadBackup = async (scope: "full" | "config") => {
     const response = await fetch(`/api/admin/download/backup?scope=${scope}`);
@@ -75,79 +76,37 @@ export default function SiteSettings() {
 
     setRestoring(true);
     setRestoreProgress(0);
-    const formData = new FormData();
-    formData.append("backup", file);
-
-    return new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      setRestoreXhr(xhr);
-
-      xhr.upload.addEventListener("progress", (e) => {
-        if (e.lengthComputable) {
-          const percent = (e.loaded / e.total) * 100;
-          setRestoreProgress(Math.round(percent));
-        }
+    const controller = new AbortController();
+    restoreController.current = controller;
+    try {
+      await uploadArchive({
+        basePath: "/api/admin/upload",
+        purpose: "backup",
+        file,
+        signal: controller.signal,
+        onProgress: setRestoreProgress,
       });
-
-      xhr.addEventListener("load", () => {
-        try {
-          const ok = xhr.status >= 200 && xhr.status < 300;
-          const data = xhr.responseText ? JSON.parse(xhr.responseText) : {};
-          if (ok) {
-            if (data && data.status && data.status !== "success") {
-              // 服务器返回了非 success 状态
-              const msg =
-                data.message ||
-                t("settings.site.backup_restore_error", "恢复备份失败");
-              toast.error(msg);
-              reject(new Error(msg));
-            } else {
-              toast.success(t("account_settings.upload_success", "上传成功"));
-              setRestoreOpen(false);
-              setRestoreProgress(0);
-              resolve();
-            }
-          } else {
-            const msg =
-              (data && data.message) ||
-              t("settings.site.backup_restore_error", "恢复备份失败");
-            toast.error(msg);
-            reject(new Error(msg));
-          }
-        } catch (err) {
-          toast.error(t("settings.site.backup_restore_error", "恢复备份失败"));
-          reject(err as Error);
-        } finally {
-          setRestoring(false);
-          setRestoreXhr(null);
-        }
-      });
-
-      xhr.addEventListener("error", () => {
-        toast.error(t("settings.site.backup_restore_error", "恢复备份失败"));
-        setRestoring(false);
-        setRestoreProgress(0);
-        setRestoreXhr(null);
-        reject(new Error("Network error"));
-      });
-
-      xhr.addEventListener("abort", () => {
+      toast.success(t("account_settings.upload_success", "上传成功"));
+      setRestoreOpen(false);
+      setRestoreProgress(0);
+    } catch (reason) {
+      if (!(reason instanceof DOMException && reason.name === "AbortError")) {
         toast.error(
-          t("theme.upload_failed", "上传失败") + ": Upload cancelled",
+          reason instanceof Error
+            ? reason.message
+            : t("settings.site.backup_restore_error", "恢复备份失败"),
         );
-        setRestoring(false);
-        setRestoreProgress(0);
-        setRestoreXhr(null);
-        reject(new Error("Upload cancelled"));
-      });
-
-      xhr.open("POST", "/api/admin/upload/backup");
-      xhr.send(formData);
-    });
+      }
+    } finally {
+      setRestoring(false);
+      restoreController.current = null;
+    }
   };
 
   const cancelRestore = () => {
-    if (restoreXhr) restoreXhr.abort();
+    restoreController.current?.abort();
+    setRestoring(false);
+    setRestoreProgress(0);
   };
 
   if (loading) {
