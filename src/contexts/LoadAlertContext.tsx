@@ -13,6 +13,25 @@ export interface LoadAlert {
   [property: string]: any;
 }
 
+export interface CurrentLoadAlert {
+  notification_id: number;
+  notification_name: string;
+  client: string;
+  client_name: string;
+  metric: string;
+  threshold: number;
+  ratio: number;
+  interval: number;
+  active_since?: string | null;
+  last_evaluated_at: string;
+  latest_value: number;
+  matched_samples: number;
+  total_samples: number;
+  silenced: boolean;
+  silenced_until?: string | null;
+  silenced_forever: boolean;
+}
+
 interface Response {
   data: LoadAlert[];
   message: string;
@@ -22,9 +41,12 @@ interface Response {
 
 interface LoadAlertContextType {
   loadAlerts: LoadAlert[] | null;
+	currentAlerts: CurrentLoadAlert[] | null;
   isLoading: boolean;
+	currentLoading: boolean;
   error: string | null;
   refresh: () => void;
+	refreshCurrent: () => Promise<void>;
 }
 
 const LoadAlertContext = React.createContext<LoadAlertContextType | undefined>(
@@ -35,7 +57,9 @@ export const LoadAlertProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [loadAlerts, setLoadAlerts] = React.useState<LoadAlert[] | null>(null);
+	const [currentAlerts, setCurrentAlerts] = React.useState<CurrentLoadAlert[] | null>(null);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
+	const [currentLoading, setCurrentLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const refresh = () => {
@@ -62,6 +86,18 @@ export const LoadAlertProvider: React.FC<{ children: React.ReactNode }> = ({
       });
   };
 
+	const refreshCurrent = React.useCallback(async () => {
+		setCurrentLoading(true);
+		try {
+			const response = await fetch("/api/admin/notification/load/current", { cache: "no-store" });
+			if (!response.ok) throw new Error("Failed to fetch current load alerts");
+			const resp: Response & { data: CurrentLoadAlert[] } = await response.json();
+			setCurrentAlerts(resp && Array.isArray(resp.data) ? resp.data : []);
+		} finally {
+			setCurrentLoading(false);
+		}
+	}, []);
+
   React.useEffect(() => {
     setIsLoading(true);
 
@@ -70,7 +106,15 @@ export const LoadAlertProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   return (
-    <LoadAlertContext.Provider value={{ loadAlerts, isLoading, error, refresh }}>
+		<LoadAlertContext.Provider value={{
+			loadAlerts,
+			currentAlerts,
+			isLoading,
+			currentLoading,
+			error,
+			refresh,
+			refreshCurrent,
+		}}>
       {children}
     </LoadAlertContext.Provider>
   );

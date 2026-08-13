@@ -19,6 +19,7 @@ const adminPanelSource = readFileSync(
 const routesSource = readFileSync(new URL("../src/routes.ts", import.meta.url), "utf8");
 const mainSource = readFileSync(new URL("../src/main.tsx", import.meta.url), "utf8");
 const adminLayoutSource = readFileSync(new URL("../src/pages/admin/_layout.tsx", import.meta.url), "utf8");
+const settingsAPISource = readFileSync(new URL("../src/lib/api.ts", import.meta.url), "utf8");
 const pingTaskContextSource = readFileSync(new URL("../src/contexts/PingTaskContext.tsx", import.meta.url), "utf8");
 const pingTaskPageSource = readFileSync(new URL("../src/pages/admin/pingTask.tsx", import.meta.url), "utf8");
 const returnRoutePageSource = readFileSync(new URL("../src/pages/admin/returnRoute.tsx", import.meta.url), "utf8");
@@ -190,6 +191,20 @@ test("admin route changes keep the main content out of a composited animation la
   assert.doesNotMatch(adminPanelSource, /onClickCapture=/);
   assert.match(adminPanelSource, /url\.pathname !== "\/admin"/);
   assert.match(adminPanelSource, /anchor\.dataset\.adminReloadDocument/);
+});
+
+test("EULA acceptance closes only after settings persist successfully", () => {
+  assert.match(settingsAPISource, /return \{[\s\S]*setSettings,[\s\S]*updateSetting/);
+  assert.match(
+    adminLayoutSource,
+    /loading \|\| error \|\| settings\.eula_accepted !== false/,
+  );
+  assert.match(
+    adminLayoutSource,
+    /await updateSettingsWithToast\([\s\S]*setSettings\([\s\S]*setOpen\(false\)/,
+  );
+  assert.match(adminLayoutSource, /catch \{\s*setOpen\(true\)/);
+  assert.match(adminLayoutSource, /disabled=\{accepting\}/);
 });
 
 test("admin tabs and dialogs share the saved motion preference", () => {

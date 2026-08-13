@@ -639,8 +639,29 @@
   },
   "notification": {
     "load": {
+		"configuration": "Aturan peringatan",
+		"current_alerts": "Peringatan aktif",
+		"current_fetch_failed": "Gagal memuat peringatan aktif",
+		"current_value": "Nilai saat ini",
       "title": "Beban",
-      "description": "Konfigurasikan aturan peringatan CPU, memori, beban, dan sumber daya lain untuk node yang dipilih."
+		"description": "Konfigurasikan aturan peringatan CPU, memori, beban, dan sumber daya lain untuk node yang dipilih.",
+		"empty_configuration": "Tidak ada aturan peringatan beban",
+		"no_current_alerts": "Tidak ada peringatan beban yang sedang aktif",
+		"not_silenced": "Notifikasi aktif",
+		"silence_24h": "Senyapkan 24 jam",
+		"silence_3d": "Senyapkan 3 hari",
+		"silence_7d": "Senyapkan 7 hari",
+		"silence_action": "Atur senyap",
+		"silence_forever": "Senyapkan selamanya",
+		"silence_status": "Status senyap",
+		"silence_tips": "Jika peringatan server belum dapat ditangani, Anda dapat membisukan server tersebut:</br> <b>Senyap</b>: Hanya notifikasi untuk server tersebut dalam aturan peringatan yang dipilih yang dijeda. Evaluasi peringatan dan tampilan peringatan aktif tetap berjalan. Senyap berbatas waktu berakhir otomatis; senyap permanen harus dihentikan secara manual.",
+		"silenced": "Disenyapkan",
+		"silenced_forever": "Disenyapkan selamanya",
+		"silenced_success": "Peringatan disenyapkan",
+		"silenced_until": "Disenyapkan hingga {{time}}",
+		"triggered_at": "Dipicu pada",
+		"unsilence": "Aktifkan notifikasi",
+		"unsilenced_success": "Notifikasi diaktifkan"
     },
     "offline": {
       "batch_edit": "Edit Massal",

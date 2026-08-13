@@ -8,8 +8,8 @@ import {
   updateSettingsWithToast,
   useSettings,
 } from "@/lib/api";
-import { Button, Callout, Dialog, Flex } from "@radix-ui/themes";
-import { useEffect, useState } from "react";
+import { Button, Callout, Dialog, Flex, Spinner } from "@radix-ui/themes";
+import { Suspense, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CircleAlert, RefreshCw } from "lucide-react";
 import { Eula } from "@/utils/field";
@@ -54,22 +54,50 @@ const AuthStatusScreen = ({
   );
 };
 
+const AdminRouteLoading = () => (
+  <Flex
+    align="center"
+    justify="center"
+    role="status"
+    aria-label="页面加载中"
+    style={{ minHeight: "min(20rem, 55vh)" }}
+  >
+    <Spinner size="3" />
+  </Flex>
+);
+
 const AdminAuthenticatedContent = () => {
-  const { settings, loading } = useSettings();
+  const { settings, loading, error, setSettings } = useSettings();
   const lang = readStoredLanguage() || "en";
   const [open, setOpen] = useState(false);
+  const [accepting, setAccepting] = useState(false);
 
   useEffect(() => {
-    if (loading) {
+    if (loading || error || settings.eula_accepted !== false) {
       setOpen(false);
-    } else if (
-      settings &&
-      !settings.eula_accepted &&
-      normalizeLanguage(lang).startsWith("zh")
-    ) {
+      return;
+    }
+    if (normalizeLanguage(lang).startsWith("zh")) {
       setOpen(true);
     }
-  }, [loading, settings, lang]);
+  }, [loading, error, settings.eula_accepted, lang]);
+
+  const acceptEula = async () => {
+    if (accepting) return;
+    setAccepting(true);
+    try {
+      await updateSettingsWithToast(
+        { eula_accepted: true },
+        (key) => key,
+      );
+      setSettings((current) => ({ ...current, eula_accepted: true }));
+      setOpen(false);
+    } catch {
+      setOpen(true);
+    } finally {
+      setAccepting(false);
+    }
+  };
 
   return (
     <>
@@ -90,13 +118,8 @@ const AdminAuthenticatedContent = () => {
               </Button>
               <Button
                 variant="solid"
-                onClick={() => {
-                  setOpen(false);
-                  updateSettingsWithToast(
-                    { eula_accepted: true },
-                    (key) => key,
-                  );
-                }}
+                disabled={accepting}
+                onClick={() => void acceptEula()}
               >
                 我已详细阅读并接受
               </Button>
@@ -104,7 +127,13 @@ const AdminAuthenticatedContent = () => {
           </div>
         </Dialog.Content>
       </Dialog.Root>
-      <AdminPanelBar content={<Outlet />} />
+      <AdminPanelBar
+        content={
+          <Suspense fallback={<AdminRouteLoading />}>
+            <Outlet />
+          </Suspense>
+        }
+      />
     </>
   );
 };

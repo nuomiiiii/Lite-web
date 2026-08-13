@@ -226,6 +226,7 @@ function useSettingsController() {
     settings,
     loading,
     error,
+    setSettings,
     updateSetting,
     updateMultipleSettings,
     refetch,

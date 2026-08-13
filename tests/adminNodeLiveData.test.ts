@@ -275,7 +275,9 @@ test("ping task search filters task and server views by task, target, or server"
 test("list toolbars and pagination follow the compact layout", () => {
   assert.match(pageSource, /size="2"[\s\S]*md:w-56/);
   assert.match(pageSource, /showSummary=\{false\}/);
-  assert.match(loadSource, /sm:flex-row sm:items-end/);
+  assert.match(loadSource, /<Tabs\.Content value="configuration"[\s\S]*<LoadListToolbar[\s\S]*showAdd[\s\S]*<LoadConfigurationTable/);
+  assert.match(loadSource, /<Tabs\.Content value="current"[\s\S]*<LoadListToolbar[\s\S]*<CurrentLoadAlertsTable/);
+  assert.match(loadSource, /className="min-w-0 flex-1 sm:max-w-64"/);
   assert.match(loadSource, /showSummary=\{false\}/);
   assert.match(offlineSource, /common\.select_all[\s\S]*batch_edit[\s\S]*min-w-0 flex-1 md:w-64 md:flex-none/);
   assert.match(trafficReportSource, /common\.select_all[\s\S]*batch_edit[\s\S]*min-w-0 flex-1 md:w-64 md:flex-none/);
