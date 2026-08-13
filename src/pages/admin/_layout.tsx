@@ -67,21 +67,37 @@ const AdminRouteLoading = () => (
 );
 
 const AdminAuthenticatedContent = () => {
-  const { settings, loading } = useSettings();
+  const { settings, loading, error, setSettings } = useSettings();
   const lang = readStoredLanguage() || "en";
   const [open, setOpen] = useState(false);
+  const [accepting, setAccepting] = useState(false);
 
   useEffect(() => {
-    if (loading) {
+    if (loading || error || settings.eula_accepted !== false) {
       setOpen(false);
-    } else if (
-      settings &&
-      !settings.eula_accepted &&
-      normalizeLanguage(lang).startsWith("zh")
-    ) {
+      return;
+    }
+    if (normalizeLanguage(lang).startsWith("zh")) {
       setOpen(true);
     }
-  }, [loading, settings, lang]);
+  }, [loading, error, settings.eula_accepted, lang]);
+
+  const acceptEula = async () => {
+    if (accepting) return;
+    setAccepting(true);
+    try {
+      await updateSettingsWithToast(
+        { eula_accepted: true },
+        (key) => key,
+      );
+      setSettings((current) => ({ ...current, eula_accepted: true }));
+      setOpen(false);
+    } catch {
+      setOpen(true);
+    } finally {
+      setAccepting(false);
+    }
+  };
 
   return (
     <>
@@ -102,13 +118,8 @@ const AdminAuthenticatedContent = () => {
               </Button>
               <Button
                 variant="solid"
-                onClick={() => {
-                  setOpen(false);
-                  updateSettingsWithToast(
-                    { eula_accepted: true },
-                    (key) => key,
-                  );
-                }}
+                disabled={accepting}
+                onClick={() => void acceptEula()}
               >
                 我已详细阅读并接受
               </Button>
