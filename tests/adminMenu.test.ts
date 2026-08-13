@@ -29,7 +29,6 @@ const selectorSource = readFileSync(new URL("../src/components/Selector.tsx", im
 const nodeSelectorSource = readFileSync(new URL("../src/components/NodeSelector.tsx", import.meta.url), "utf8");
 const checkboxSource = readFileSync(new URL("../src/components/ui/checkbox.tsx", import.meta.url), "utf8");
 const selectOrInputSource = readFileSync(new URL("../src/components/ui/select-or-input.tsx", import.meta.url), "utf8");
-const accountSource = readFileSync(new URL("../src/pages/admin/account.tsx", import.meta.url), "utf8");
 const zhCN = JSON.parse(
   readFileSync(new URL("../src/i18n/locales/zh_CN.json", import.meta.url), "utf8"),
 );
@@ -272,19 +271,26 @@ test("admin command buttons use motion instead of abrupt active flashes", () => 
   );
 });
 
-test("prewarms admin routes and reuses shared monitoring data", () => {
+test("prewarms admin route code without restoring global monitoring requests", () => {
   assert.match(routesSource, /export const preloadAdminRoutes/);
-  assert.match(mainSource, /requestIdleCallback\(\(\) => void preloadAdminRoutes\(\)/);
-  assert.match(
-    adminLayoutSource,
-    /<NodeDetailsProvider>\s*<PingTaskProvider>\s*<AdminAuthenticatedContent \/>/,
-  );
+  assert.match(mainSource, /requestIdleCallback[\s\S]*preloadAdminRoutes\(\)/);
+  assert.match(routesSource, /export const preloadAdminRoute/);
+  assert.match(adminPanelSource, /preloadAdminRoute\(href\)/);
+  assert.doesNotMatch(adminLayoutSource, /NodeDetailsProvider|PingTaskProvider/);
   assert.match(pingTaskContextSource, /React\.useState<boolean>\(true\)/);
   assert.match(pingTaskContextSource, /const inherited = React\.useContext\(PingTaskContext\)/);
   assert.doesNotMatch(pingTaskContextSource, /refresh\(\);\s*setIsLoading\(false\)/);
-  assert.doesNotMatch(pingTaskPageSource, /<PingTaskProvider>/);
-  assert.doesNotMatch(pingTaskPageSource, /<NodeDetailsProvider>/);
-  assert.doesNotMatch(returnRoutePageSource, /<NodeDetailsProvider>/);
+  assert.match(pingTaskPageSource, /<NodeDetailsProvider>\s*<PingTaskProvider>/);
+  assert.match(returnRoutePageSource, /<NodeDetailsProvider>/);
+});
+
+test("keeps lazy admin pages inside the mounted admin shell", () => {
+  assert.match(
+    adminLayoutSource,
+    /<AdminPanelBar[\s\S]*<Suspense fallback=\{<AdminRouteLoading \/>\}>[\s\S]*<Outlet \/>[\s\S]*<\/Suspense>/,
+  );
+  assert.match(adminLayoutSource, /const AdminRouteLoading/);
+  assert.doesNotMatch(adminLayoutSource, /AdminPanelBar content=\{<Outlet \/>\}/);
 });
 
 test("dashboard alert navigation prepares filtered server data before switching", () => {

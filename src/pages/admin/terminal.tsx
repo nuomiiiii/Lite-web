@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import Loading from "@/components/loading";
 import RemoteNodePicker from "@/components/remote/RemoteNodePicker";
-import { useNodeList } from "@/contexts/NodeListContext";
+import { NodeListProvider, useNodeList } from "@/contexts/NodeListContext";
 import { useRPC2Call } from "@/contexts/RPC2Context";
 import type { LiveDataResponse } from "@/types/LiveData";
 import { mergeLatestStatus } from "@/utils/liveData";
@@ -15,7 +15,7 @@ import { openRemoteTerminal } from "@/utils/remoteLaunch";
 
 const statusRefreshInterval = 3_000;
 
-export default function AdminRemoteTerminal() {
+function AdminRemoteTerminalContent() {
   const { t } = useTranslation();
   const { nodeList, isLoading, error } = useNodeList();
   const { call } = useRPC2Call();
@@ -80,5 +80,13 @@ export default function AdminRemoteTerminal() {
         }}
       />
     </div>
+  );
+}
+
+export default function AdminRemoteTerminal() {
+  return (
+    <NodeListProvider>
+      <AdminRemoteTerminalContent />
+    </NodeListProvider>
   );
 }

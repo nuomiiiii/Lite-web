@@ -8,16 +8,14 @@ import {
   updateSettingsWithToast,
   useSettings,
 } from "@/lib/api";
-import { Button, Callout, Dialog, Flex } from "@radix-ui/themes";
-import { useEffect, useState } from "react";
+import { Button, Callout, Dialog, Flex, Spinner } from "@radix-ui/themes";
+import { Suspense, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CircleAlert, RefreshCw } from "lucide-react";
 import { Eula } from "@/utils/field";
 import { normalizeLanguage, readStoredLanguage } from "@/utils/language";
 import { resolveAdminAuthView } from "@/utils/adminAuth";
 import FullPageLoading from "@/components/FullPageLoading";
-import { NodeDetailsProvider } from "@/contexts/NodeDetailsContext";
-import { PingTaskProvider } from "@/contexts/PingTaskContext";
 
 const AuthStatusScreen = ({
   failed = false,
@@ -53,6 +51,18 @@ const AuthStatusScreen = ({
     </Flex>
   );
 };
+
+const AdminRouteLoading = () => (
+  <Flex
+    align="center"
+    justify="center"
+    role="status"
+    aria-label="页面加载中"
+    style={{ minHeight: "min(20rem, 55vh)" }}
+  >
+    <Spinner size="3" />
+  </Flex>
+);
 
 const AdminAuthenticatedContent = () => {
   const { settings, loading } = useSettings();
@@ -104,18 +114,20 @@ const AdminAuthenticatedContent = () => {
           </div>
         </Dialog.Content>
       </Dialog.Root>
-      <AdminPanelBar content={<Outlet />} />
+      <AdminPanelBar
+        content={
+          <Suspense fallback={<AdminRouteLoading />}>
+            <Outlet />
+          </Suspense>
+        }
+      />
     </>
   );
 };
 
 const AdminAuthenticatedLayout = () => (
   <SettingsProvider>
-    <NodeDetailsProvider>
-      <PingTaskProvider>
-        <AdminAuthenticatedContent />
-      </PingTaskProvider>
-    </NodeDetailsProvider>
+    <AdminAuthenticatedContent />
   </SettingsProvider>
 );
 

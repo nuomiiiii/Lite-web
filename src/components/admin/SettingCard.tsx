@@ -206,54 +206,6 @@ export function SettingCardButton({
   );
 }
 
-export function SettingCardIconButton({
-  label = "",
-  variant = "solid",
-  children,
-  onClick,
-  autoDisabled = true,
-  ...props
-}: SettingCardProps & {
-  label?: string;
-  variant?: "solid" | "soft" | "outline" | "ghost";
-  children?: React.ReactNode;
-  onClick?: (buttonElement: HTMLButtonElement) => void;
-  autoDisabled?: boolean;
-}) {
-  const [disabled, setDisabled] = React.useState(false);
-  const resolvedLabel = label;
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    if (autoDisabled) setDisabled(true);
-    const result: any = onClick ? onClick(event.currentTarget) : undefined;
-    if (autoDisabled) {
-      const promise: Promise<any> = result;
-      if (promise && typeof promise.then === "function") {
-        promise.finally(() => setDisabled(false)).catch(() => {});
-      } else {
-        setDisabled(false);
-      }
-    }
-  };
-  return (
-    <SettingCard {...props} direction="column">
-      <SettingCard.Action>
-        <Flex>
-          <Flex direction="row" gap="2" align="center">
-            <label>{resolvedLabel}</label>
-            <IconButton
-              onClick={handleClick}
-              variant={variant}
-              disabled={disabled}
-            >
-              {children}
-            </IconButton>
-          </Flex>
-        </Flex>
-      </SettingCard.Action>
-    </SettingCard>
-  );
-}
-
 interface SettingCardShortTextInputProps
   extends Omit<React.ComponentProps<typeof TextField.Root>, 'onChange' | 'onKeyDown'> {
   // SettingCard 相关属性
