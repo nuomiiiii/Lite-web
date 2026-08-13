@@ -639,8 +639,29 @@
   },
   "notification": {
     "load": {
+		"configuration": "告警設定",
+		"current_alerts": "目前告警",
+		"current_fetch_failed": "目前告警載入失敗",
+		"current_value": "目前值",
       "title": "負載通知",
-      "description": "設定 CPU、記憶體、負載等資源告警規則，並指定適用節點。"
+		"description": "設定 CPU、記憶體、負載等資源告警規則，並指定適用節點。",
+		"empty_configuration": "暫無負載告警設定",
+		"no_current_alerts": "目前沒有正在觸發的負載告警",
+		"not_silenced": "通知中",
+		"silence_24h": "靜默 24 小時",
+		"silence_3d": "靜默 3 天",
+		"silence_7d": "靜默 7 天",
+		"silence_action": "設定靜默",
+		"silence_forever": "永久靜默",
+		"silence_status": "靜默狀態",
+		"silence_tips": "如暫時無法處理某台伺服器的持續告警，可為該伺服器設定靜默：</br> <b>靜默</b>：僅暫停所選告警規則下該伺服器的通知；告警偵測和目前告警顯示不受影響。靜默到期後自動恢復通知，永久靜默需手動解除。",
+		"silenced": "已靜默",
+		"silenced_forever": "永久靜默",
+		"silenced_success": "已設定靜默",
+		"silenced_until": "靜默至 {{time}}",
+		"triggered_at": "觸發時間",
+		"unsilence": "解除靜默",
+		"unsilenced_success": "已解除靜默"
     },
     "offline": {
       "batch_edit": "批量修改",

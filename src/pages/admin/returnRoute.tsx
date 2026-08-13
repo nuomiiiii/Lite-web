@@ -43,10 +43,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import Loading from "@/components/loading";
-import {
-  NodeDetailsProvider,
-  useNodeDetails,
-} from "@/contexts/NodeDetailsContext";
+import { useNodeDetails } from "@/contexts/NodeDetailsContext";
 import { useAccount } from "@/contexts/AccountContext";
 
 type Task = {
@@ -265,7 +262,6 @@ const ruleGroupNames: Record<string, string> = {
 const ruleGroupOrder = ["cmin2", "cmi", "cmnet", "cn2_global", "cn2_backbone", "telecom_163", "unicom_10099", "unicom_9929", "unicom_4837"];
 
 const allLineOptions = Object.values(lineOptions).flat();
-const pendingLineOptions = new Set(["CN2 待确认", "CUG 待确认"]);
 
 const regionOptions = ["华北", "东北", "华东", "华中", "华南", "西南", "西北", "港澳台", "其他"];
 
@@ -1070,7 +1066,7 @@ function ReturnRouteContent() {
                             <td data-label="任务 / 节点" className="p-3"><div className="return-route-cell-pair"><div className="font-medium">{task.name}</div><div className="mt-1 text-xs text-gray-500">{task.client_info?.name || task.client}</div></div></td>
                             <td data-label="运营商 / 地区" className="p-3"><div className="return-route-cell-pair"><div>{carrierNames[task.carrier]}</div><div className="mt-1 text-xs text-gray-500">{task.region || "未标记"} · IPv{task.ip_version}</div></div></td>
                             <td data-label="线路" className="p-3"><div className="return-route-cell-pair"><div><span className="text-gray-500">当前 </span><strong>{status?.current_line || "-"}</strong></div><div className="mt-1 text-xs text-gray-500">预期 {task.expected_line}</div></div></td>
-                            <td data-label="状态" className="p-3"><div className="return-route-cell-content">{!task.enabled ? <Badge color="gray">已暂停</Badge> : probing ? <Badge color="blue"><RefreshCw size={12} className="mr-1 animate-spin" />探测中</Badge> : stateBadge(status)}{status?.candidate_line && <div className="mt-1 text-xs text-amber-600">{status.candidate_line}{pendingLineOptions.has(status.candidate_line) ? null : <> {status.candidate_count}/{needed}</>}</div>}{(status?.confidence ?? 0) > 0 && <div className="mt-1 text-xs text-gray-500">置信度 {((status?.confidence ?? 0) * 100).toFixed(0)}%</div>}</div></td>
+                            <td data-label="状态" className="p-3"><div className="return-route-cell-content">{!task.enabled ? <Badge color="gray">已暂停</Badge> : probing ? <Badge color="blue"><RefreshCw size={12} className="mr-1 animate-spin" />探测中</Badge> : stateBadge(status)}{status?.candidate_line && <div className="mt-1 text-xs text-amber-600">{status.candidate_line}{status.candidate_line === "CN2 待确认" ? null : <> {status.candidate_count}/{needed}</>}</div>}{(status?.confidence ?? 0) > 0 && <div className="mt-1 text-xs text-gray-500">置信度 {((status?.confidence ?? 0) * 100).toFixed(0)}%</div>}</div></td>
                             <td data-label="关键 ASN" className="max-w-[320px] p-3"><div className="return-route-cell-content"><div className="flex flex-wrap gap-1">{status?.asn_path?.length ? status.asn_path.map((asn) => <Badge key={asn} color="gray" variant="soft">{asn}</Badge>) : <span className="text-gray-400">-</span>}</div>{status?.route_path?.length ? <details className="mt-2 text-xs text-gray-500"><summary className="cursor-pointer">查看完整路径</summary><div className="mt-2 max-h-48 overflow-auto whitespace-pre font-mono leading-5">{status.route_path.join("\n")}</div></details> : null}{status?.last_error && <div className="mt-2 max-w-xs text-xs text-red-600">{status.last_error}</div>}</div></td>
                             <td data-label="最后探测" className="p-3 text-gray-600"><div className="return-route-cell-pair"><span>{formatTime(status?.last_checked_at)}</span><div className="mt-1 text-xs text-gray-400">每 {Math.round(task.interval / 60)} 分钟</div></div></td>
                             <td data-label="操作" className="p-3"><Flex justify="start" gap="1" className="admin-card-actions"><IconButton variant="ghost" title={probing ? "探测中" : "立即探测"} disabled={probing || !task.enabled} onClick={() => runNow(task.id)}>{probing ? <RefreshCw size={16} className="animate-spin" /> : <Play size={16} />}</IconButton><RouteTaskDialog task={task} nodes={nodes} onSaved={refreshTasksAfterChange}><IconButton variant="ghost" title="编辑"><Pencil size={16} /></IconButton></RouteTaskDialog><IconButton variant="ghost" color="red" title="删除" onClick={() => remove(task)}><Trash2 size={16} /></IconButton></Flex></td>
@@ -1226,9 +1222,5 @@ function RuleStat({ label, value, mono = false }: { label: string; value: string
 }
 
 export default function ReturnRoutePage() {
-  return (
-    <NodeDetailsProvider>
-      <ReturnRouteContent />
-    </NodeDetailsProvider>
-  );
+  return <ReturnRouteContent />;
 }

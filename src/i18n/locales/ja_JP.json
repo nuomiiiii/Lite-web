@@ -639,8 +639,29 @@
   },
   "notification": {
     "load": {
+		"configuration": "アラート設定",
+		"current_alerts": "現在のアラート",
+		"current_fetch_failed": "現在のアラートを読み込めませんでした",
+		"current_value": "現在値",
       "title": "負荷通知",
-      "description": "CPU、メモリ、負荷などのリソース警告ルールと対象ノードを設定します。"
+		"description": "CPU、メモリ、負荷などのリソース警告ルールと対象ノードを設定します。",
+		"empty_configuration": "負荷アラート設定はありません",
+		"no_current_alerts": "現在発生中の負荷アラートはありません",
+		"not_silenced": "通知中",
+		"silence_24h": "24 時間ミュート",
+		"silence_3d": "3 日間ミュート",
+		"silence_7d": "7 日間ミュート",
+		"silence_action": "ミュートを設定",
+		"silence_forever": "無期限にミュート",
+		"silence_status": "ミュート状態",
+		"silence_tips": "サーバーの継続的なアラートにすぐ対応できない場合、そのサーバーをミュートできます：</br> <b>ミュート</b>：選択したアラートルール内の該当サーバーへの通知だけを一時停止します。アラート判定と現在のアラート表示は継続します。期限付きミュートは自動解除され、永久ミュートは手動解除が必要です。",
+		"silenced": "ミュート中",
+		"silenced_forever": "無期限にミュート",
+		"silenced_success": "ミュートを設定しました",
+		"silenced_until": "{{time}} までミュート",
+		"triggered_at": "発生時刻",
+		"unsilence": "ミュートを解除",
+		"unsilenced_success": "ミュートを解除しました"
     },
     "offline": {
       "batch_edit": "バッチ編集",

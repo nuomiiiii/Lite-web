@@ -679,8 +679,29 @@
   },
   "notification": {
     "load": {
+		"configuration": "Alert rules",
+		"current_alerts": "Current alerts",
+		"current_fetch_failed": "Failed to load current alerts",
+		"current_value": "Current value",
       "title": "Load",
-      "description": "Configure CPU, memory, load, and other resource alert rules for selected nodes."
+		"description": "Configure CPU, memory, load, and other resource alert rules for selected nodes.",
+		"empty_configuration": "No load alert rules",
+		"no_current_alerts": "No load alerts are currently active",
+		"not_silenced": "Notifications on",
+		"silence_24h": "Silence for 24 hours",
+		"silence_3d": "Silence for 3 days",
+		"silence_7d": "Silence for 7 days",
+		"silence_action": "Set silence",
+		"silence_forever": "Silence indefinitely",
+		"silence_status": "Silence status",
+		"silence_tips": "If a server alert cannot be handled immediately, you can silence that server:</br> <b>Silence</b>: Only notifications for that server under the selected alert rule are paused. Alert evaluation and the current-alert display continue. Timed silence ends automatically; permanent silence must be removed manually.",
+		"silenced": "Silenced",
+		"silenced_forever": "Silenced indefinitely",
+		"silenced_success": "Alert silenced",
+		"silenced_until": "Silenced until {{time}}",
+		"triggered_at": "Triggered at",
+		"unsilence": "Resume notifications",
+		"unsilenced_success": "Notifications resumed"
     },
     "offline": {
       "batch_edit": "Batch Edit",

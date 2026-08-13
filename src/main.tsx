@@ -20,9 +20,12 @@ import { useRoutes } from "react-router-dom";
 import { preloadAdminEntry, preloadAdminRoutes, routes } from "./routes";
 import Loading from "./components/loading";
 import { PublicInfoProvider } from "./contexts/PublicInfoContext";
+import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
+import { PWAUpdatePrompt } from "./components/PWAUpdatePrompt";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { Toaster } from "./components/ui/sonner";
 import { RPC2Provider } from "./contexts/RPC2Context";
+import { NodeListProvider } from "./contexts/NodeListContext";
 import { AccountProvider } from "./contexts/AccountContext";
 import { useAccount } from "./contexts/AccountContext";
 import FullPageLoading from "./components/FullPageLoading";
@@ -39,15 +42,12 @@ const AdminRoutePreloader = () => {
     let fallbackHandle: number | undefined;
     const preloadWhenIdle = () => {
       if ("requestIdleCallback" in window) {
-        idleHandle = window.requestIdleCallback(
-          () => void preloadAdminRoutes(),
-          { timeout: 2000 },
-        );
+        idleHandle = window.requestIdleCallback(() => void preloadAdminRoutes(), {
+          timeout: 2000,
+        });
         return;
       }
-      fallbackHandle = Number(
-        globalThis.setTimeout(() => void preloadAdminRoutes(), 800),
-      );
+      fallbackHandle = Number(globalThis.setTimeout(() => void preloadAdminRoutes(), 800));
     };
 
     if (document.readyState === "complete") {
@@ -145,13 +145,17 @@ const App = () => {
 			<RPC2Provider>
 			  <PublicInfoProvider>
 				<DocumentTitle />
-				<Toaster />
-				<OfflineIndicator />
-				<Suspense
-				  fallback={isAdminRoute ? <FullPageLoading /> : <Loading />}
-				>
-				  {routing}
-				</Suspense>
+				<NodeListProvider>
+				  <Toaster />
+				  <OfflineIndicator />
+				  <Suspense
+					fallback={isAdminRoute ? <FullPageLoading /> : <Loading />}
+				  >
+					{routing}
+				  </Suspense>
+				  <PWAInstallPrompt />
+				  <PWAUpdatePrompt />
+				</NodeListProvider>
 			  </PublicInfoProvider>
 			</RPC2Provider>
 		  </AccountProvider>
