@@ -27,6 +27,7 @@ import {
 import {
   Badge,
   Button,
+  Callout,
   Dialog,
   DropdownMenu,
   Flex,
@@ -39,6 +40,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   BellOff,
   BellRing,
+  CircleAlert,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -66,6 +68,7 @@ const InnerLayout = () => {
     isLoading,
     currentLoading,
     error,
+    currentError,
     refreshCurrent,
   } = useLoadAlert();
   const { isLoading: nodeDetailLoading, error: nodeDetailError } =
@@ -129,10 +132,10 @@ const InnerLayout = () => {
     return () => window.clearInterval(timer);
   }, [refreshCurrent, t, view]);
 
-  if (isLoading || nodeDetailLoading) {
+  if ((isLoading && loadAlerts === null) || nodeDetailLoading) {
     return <Loading />;
   }
-  if (error || nodeDetailError) {
+  if ((error && loadAlerts === null) || nodeDetailError) {
     return <div>{error || nodeDetailError}</div>;
   }
   return (
@@ -145,6 +148,15 @@ const InnerLayout = () => {
       >
         {t("notification.load.title")}
       </AdminPageTitle>
+
+      {error ? (
+        <Callout.Root color="red" role="alert">
+          <Callout.Icon>
+            <CircleAlert size={16} />
+          </Callout.Icon>
+          <Callout.Text>{error}</Callout.Text>
+        </Callout.Root>
+      ) : null}
 
       <Tabs.Root value={view} onValueChange={(value) => setView(value as typeof view)}>
         <div className="w-full overflow-x-auto pb-1">
@@ -167,6 +179,14 @@ const InnerLayout = () => {
         </Tabs.Content>
         <Tabs.Content value="current" className="admin-tab-panel pt-3">
           <LoadListToolbar search={search} onSearchChange={setSearch} />
+          {currentError ? (
+            <Callout.Root color="red" className="mb-3" role="alert">
+              <Callout.Icon>
+                <CircleAlert size={16} />
+              </Callout.Icon>
+              <Callout.Text>{currentError}</Callout.Text>
+            </Callout.Root>
+          ) : null}
           <CurrentLoadAlertsTable
             alerts={currentPagination.pageItems}
             total={sortedCurrentAlerts.length}

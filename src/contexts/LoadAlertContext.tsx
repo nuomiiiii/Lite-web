@@ -1,17 +1,13 @@
 import React from "react";
+import { useAccount } from "@/contexts/AccountContext";
+import {
+  fetchLoadAlertConfigurations,
+  loadAlertBootstrapResource,
+  type LoadAlertBootstrapSnapshot,
+  type LoadAlertConfiguration,
+} from "@/utils/loadAlertBootstrap";
 
-export interface LoadAlert {
-  id?: number;
-  name?: string;
-  clients?: string[];
-  default_on?: boolean;
-  metric?: "cpu" | "ram" | "disk" | "net_in" | "net_out";
-  threshold?: number;
-  ratio?: number;
-  interval?: number;
-  last_notified?: string;
-  [property: string]: any;
-}
+export type LoadAlert = LoadAlertConfiguration;
 
 export interface CurrentLoadAlert {
   notification_id: number;
@@ -41,12 +37,13 @@ interface Response {
 
 interface LoadAlertContextType {
   loadAlerts: LoadAlert[] | null;
-	currentAlerts: CurrentLoadAlert[] | null;
+  currentAlerts: CurrentLoadAlert[] | null;
   isLoading: boolean;
-	currentLoading: boolean;
+  currentLoading: boolean;
   error: string | null;
-  refresh: () => void;
-	refreshCurrent: () => Promise<void>;
+  currentError: string | null;
+  refresh: () => Promise<void>;
+  refreshCurrent: () => Promise<void>;
 }
 
 const LoadAlertContext = React.createContext<LoadAlertContextType | undefined>(
@@ -56,65 +53,83 @@ const LoadAlertContext = React.createContext<LoadAlertContextType | undefined>(
 export const LoadAlertProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [loadAlerts, setLoadAlerts] = React.useState<LoadAlert[] | null>(null);
-	const [currentAlerts, setCurrentAlerts] = React.useState<CurrentLoadAlert[] | null>(null);
+  const { account } = useAccount();
+  const accountKey = account?.uuid || "__authenticated__";
+  const initialSnapshot = loadAlertBootstrapResource.read(accountKey);
+  const initialSnapshotRef = React.useRef<LoadAlertBootstrapSnapshot>(initialSnapshot);
+  const [loadAlerts, setLoadAlerts] = React.useState<LoadAlert[] | null>(
+    initialSnapshot.data,
+  );
+  const loadAlertsRef = React.useRef<LoadAlert[] | null>(initialSnapshot.data);
+  const [currentAlerts, setCurrentAlerts] = React.useState<CurrentLoadAlert[] | null>(null);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
-	const [currentLoading, setCurrentLoading] = React.useState<boolean>(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [currentLoading, setCurrentLoading] = React.useState<boolean>(false);
+  const [error, setError] = React.useState<string | null>(initialSnapshot.error);
+  const [currentError, setCurrentError] = React.useState<string | null>(null);
 
-  const refresh = () => {
-    setError(null);
-    fetch("/api/admin/notification/load")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch notification tasks");
-        }
-        return response.json();
-      })
-      .then((resp: Response) => {
-        if (resp && Array.isArray(resp.data)) {
-          setLoadAlerts(resp.data);
-        } else {
-          setLoadAlerts([]);
-        }
-      })
-      .catch((err) => {
-        setError(err.message || "An error occurred while fetching load alerts");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  };
-
-	const refreshCurrent = React.useCallback(async () => {
-		setCurrentLoading(true);
-		try {
-			const response = await fetch("/api/admin/notification/load/current", { cache: "no-store" });
-			if (!response.ok) throw new Error("Failed to fetch current load alerts");
-			const resp: Response & { data: CurrentLoadAlert[] } = await response.json();
-			setCurrentAlerts(resp && Array.isArray(resp.data) ? resp.data : []);
-		} finally {
-			setCurrentLoading(false);
-		}
-	}, []);
-
-  React.useEffect(() => {
+  const refresh = React.useCallback(async () => {
     setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchLoadAlertConfigurations();
+      initialSnapshotRef.current = loadAlertBootstrapResource.update(accountKey, data);
+      loadAlertsRef.current = data;
+      setLoadAlerts(data);
+    } catch (reason) {
+      const message =
+        reason instanceof Error
+          ? reason.message
+          : "An error occurred while fetching load alerts";
+      initialSnapshotRef.current = loadAlertBootstrapResource.update(
+        accountKey,
+        loadAlertsRef.current,
+        message,
+      );
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [accountKey]);
 
-    refresh();
-    setIsLoading(false);
+  const refreshCurrent = React.useCallback(async () => {
+    setCurrentLoading(true);
+    setCurrentError(null);
+    try {
+      const response = await fetch("/api/admin/notification/load/current", {
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("Failed to fetch current load alerts");
+      const resp: Response & { data: CurrentLoadAlert[] } = await response.json();
+      setCurrentAlerts(resp && Array.isArray(resp.data) ? resp.data : []);
+    } catch (reason) {
+      const message =
+        reason instanceof Error
+          ? reason.message
+          : "An error occurred while fetching current load alerts";
+      setCurrentError(message);
+      throw reason instanceof Error ? reason : new Error(message);
+    } finally {
+      setCurrentLoading(false);
+    }
   }, []);
 
+  React.useEffect(() => {
+    if (loadAlertBootstrapResource.isStale(initialSnapshotRef.current)) {
+      void refresh();
+    }
+  }, [refresh]);
+
   return (
-		<LoadAlertContext.Provider value={{
-			loadAlerts,
-			currentAlerts,
-			isLoading,
-			currentLoading,
-			error,
-			refresh,
-			refreshCurrent,
-		}}>
+    <LoadAlertContext.Provider value={{
+      loadAlerts,
+      currentAlerts,
+      isLoading,
+      currentLoading,
+      error,
+      currentError,
+      refresh,
+      refreshCurrent,
+    }}>
       {children}
     </LoadAlertContext.Provider>
   );

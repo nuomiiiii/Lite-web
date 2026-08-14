@@ -29,12 +29,19 @@ import { useAccount } from "./contexts/AccountContext";
 import FullPageLoading from "./components/FullPageLoading";
 import DocumentTitle from "./components/DocumentTitle";
 import AccountPreferenceSync from "./components/AccountPreferenceSync";
+import { shouldPreloadAdminRoutes } from "./utils/adminPreload";
 
 const AdminRoutePreloader = () => {
   const { account } = useAccount();
 
   React.useEffect(() => {
     if (!account?.logged_in) return;
+    const connection = (
+      navigator as Navigator & {
+        connection?: { saveData?: boolean; effectiveType?: string };
+      }
+    ).connection;
+    if (!shouldPreloadAdminRoutes(connection)) return;
 
     let idleHandle: number | undefined;
     let fallbackHandle: number | undefined;
@@ -75,7 +82,7 @@ const App = () => {
 		currentPath === "/install" ||
 		currentPath === "/database-recovery";
 	if (isAdminRoute) {
-		preloadAdminEntry();
+		preloadAdminEntry(currentPath);
 	}
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);

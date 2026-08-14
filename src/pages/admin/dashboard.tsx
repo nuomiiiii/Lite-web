@@ -405,6 +405,10 @@ export default function AdminDashboard() {
   };
 
   const generatedAt = data?.generated_at || charts?.generated_at;
+  const initialDataPending =
+    settingsLoading ||
+    (summarySections.length > 0 && loading && !data) ||
+    (chartSections.length > 0 && !charts && !chartsError);
   const formalLayout = (
     <>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -434,7 +438,12 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div ref={dashboardRootRef} onClickCapture={rememberClickedModule} className="flex flex-col gap-3 p-0 md:p-4">
+    <div
+      ref={dashboardRootRef}
+      data-admin-route-pending={initialDataPending ? "true" : undefined}
+      onClickCapture={rememberClickedModule}
+      className="flex flex-col gap-3 p-0 md:p-4"
+    >
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
         <AdminPageTitle description={t("admin_dashboard.subtitle")}>
           {t("admin_dashboard.title")}

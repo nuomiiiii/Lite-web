@@ -39,6 +39,7 @@ import {
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import { uploadArchive } from "@/utils/archiveUpload";
 import { resolveI18nText, type I18nText } from "@/utils/i18nText";
+import { clearThemeNavigationCache } from "@/utils/themeCache";
 
 interface Theme {
   id: string;
@@ -55,17 +56,6 @@ interface Theme {
 }
 
 const THEME_CHANGE_STORAGE_KEY = "komari-active-theme-changed";
-
-async function clearThemeNavigationCache() {
-  if ("serviceWorker" in navigator) {
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(registrations.map((registration) => registration.unregister()));
-  }
-  if ("caches" in window) {
-    const cacheNames = await caches.keys();
-    await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
-  }
-}
 
 const ThemePage = () => {
   const { t, i18n } = useTranslation();

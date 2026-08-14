@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { useOutlet } from "react-router-dom";
 
 import AdminPanelBar from "../../components/admin/AdminPanelBar";
 import LoginDialog from "../../components/Login";
@@ -9,7 +9,7 @@ import {
   useSettings,
 } from "@/lib/api";
 import { Button, Callout, Dialog, Flex, Spinner } from "@radix-ui/themes";
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CircleAlert, RefreshCw } from "lucide-react";
 import { Eula } from "@/utils/field";
@@ -18,6 +18,7 @@ import { resolveAdminAuthView } from "@/utils/adminAuth";
 import FullPageLoading from "@/components/FullPageLoading";
 import { NodeDetailsProvider } from "@/contexts/NodeDetailsContext";
 import { PingTaskProvider } from "@/contexts/PingTaskContext";
+import AdminRouteViewport from "@/components/admin/AdminRouteViewport";
 
 const AuthStatusScreen = ({
   failed = false,
@@ -56,6 +57,7 @@ const AuthStatusScreen = ({
 
 const AdminRouteLoading = () => (
   <Flex
+    data-admin-route-pending="true"
     align="center"
     justify="center"
     role="status"
@@ -67,6 +69,7 @@ const AdminRouteLoading = () => (
 );
 
 const AdminAuthenticatedContent = () => {
+  const outlet = useOutlet();
   const { settings, loading, error, setSettings } = useSettings();
   const lang = readStoredLanguage() || "en";
   const [open, setOpen] = useState(false);
@@ -129,9 +132,10 @@ const AdminAuthenticatedContent = () => {
       </Dialog.Root>
       <AdminPanelBar
         content={
-          <Suspense fallback={<AdminRouteLoading />}>
-            <Outlet />
-          </Suspense>
+          <AdminRouteViewport
+            fallback={<AdminRouteLoading />}
+            outlet={outlet}
+          />
         }
       />
     </>

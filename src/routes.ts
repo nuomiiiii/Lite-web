@@ -11,9 +11,9 @@ const loadAdminLayout = () => (adminLayoutModule ??= importAdminLayout());
 const loadAdminDashboard = () =>
   (adminDashboardModule ??= importAdminDashboard());
 
-export const preloadAdminEntry = () => {
+export const preloadAdminEntry = (pathname: string) => {
   void loadAdminLayout();
-  void loadAdminDashboard();
+  if (pathname === "/admin") void loadAdminDashboard();
 };
 
 const adminRoutePreloaders: Record<string, () => Promise<unknown>> = {
@@ -50,9 +50,16 @@ export const preloadAdminRoute = async (target: string): Promise<void> => {
   if (preload) await preload();
 };
 
+const likelyAdminRoutes = [
+  "/admin/servers",
+  "/admin/ping",
+  "/admin/notification/load",
+  "/admin/settings/site",
+];
+
 export const preloadAdminRoutes = async (): Promise<void> => {
   await Promise.allSettled(
-    Array.from(new Set(Object.values(adminRoutePreloaders))).map((preload) => preload()),
+    likelyAdminRoutes.map((target) => preloadAdminRoute(target)),
   );
 };
 

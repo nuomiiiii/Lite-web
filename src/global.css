@@ -1246,3 +1246,54 @@ html[data-reduce-motion="true"] .rt-BaseDialogContent {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
+@keyframes admin-route-progress {
+  from {
+    transform: translateX(-115%);
+  }
+  to {
+    transform: translateX(315%);
+  }
+}
+
+.admin-route-viewport {
+  position: relative;
+  min-height: 100%;
+}
+
+.admin-route-view {
+  min-height: 100%;
+}
+
+.admin-route-view[data-admin-route-active="false"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.admin-route-progress-track {
+  position: absolute;
+  z-index: 20;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  overflow: hidden;
+  background: var(--accent-a3);
+}
+
+.admin-route-progress-indicator {
+  display: block;
+  width: 28%;
+  height: 100%;
+  background: var(--accent-9);
+  animation: admin-route-progress 1s ease-in-out infinite;
+}
+
+[data-reduce-motion="true"] .admin-route-progress-indicator {
+  width: 100%;
+  animation: none;
+  opacity: 0.72;
+}
