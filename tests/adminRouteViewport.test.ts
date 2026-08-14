@@ -3,7 +3,9 @@ import test from "node:test";
 import { createMemoryRouter } from "react-router-dom";
 
 import {
+  ADMIN_ROUTE_PROGRESS_MIN_VISIBLE_MS,
   getAdminRouteViewKey,
+  getAdminRouteProgressHideDelay,
   isAdminRouteViewReady,
   promoteAdminRouteView,
   stageAdminRouteView,
@@ -124,4 +126,21 @@ test("real Router keys do not remount the active route when a pending navigation
   assert.equal(cancelled.pendingKey, null);
   assert.equal(cancelled.views.length, 1);
   assert.equal(cancelled.views[0].outlet, activeOutlet);
+});
+
+test("visible route progress stays long enough to avoid a flash", () => {
+  assert.equal(
+    getAdminRouteProgressHideDelay({
+      becameVisibleAt: 1000,
+      now: 1000 + ADMIN_ROUTE_PROGRESS_MIN_VISIBLE_MS - 40,
+    }),
+    40,
+  );
+  assert.equal(
+    getAdminRouteProgressHideDelay({
+      becameVisibleAt: 1000,
+      now: 1000 + ADMIN_ROUTE_PROGRESS_MIN_VISIBLE_MS + 10,
+    }),
+    0,
+  );
 });

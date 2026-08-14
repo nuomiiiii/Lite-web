@@ -15,6 +15,14 @@ import { useRef, useState } from "react";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import UploadDialog from "@/components/UploadDialog";
 import { uploadArchive } from "@/utils/archiveUpload";
+import {
+  UPLOAD_COMPLETED_VISIBLE_MS,
+  createCompletedUploadState,
+  createProcessingUploadState,
+  delay,
+  type UploadProgressState,
+  withUploadProgressCopy,
+} from "@/utils/uploadProgress";
 
 export default function SiteSettings() {
   const { t } = useTranslation();
@@ -37,9 +45,35 @@ export default function SiteSettings() {
 
   // 恢复备份对话框与上传状态
   const [restoreOpen, setRestoreOpen] = useState(false);
-  const [restoring, setRestoring] = useState(false);
-  const [restoreProgress, setRestoreProgress] = useState(0);
+  const [restoreState, setRestoreState] = useState<UploadProgressState | null>(
+    null,
+  );
   const restoreController = useRef<AbortController | null>(null);
+  const restoreStateRef = useRef<UploadProgressState | null>(null);
+  const restoreCopy = {
+    preparing: t("settings.site.phase_preparing", "Preparing backup"),
+    uploading: t("settings.site.phase_uploading", "Uploading backup"),
+    merging: t(
+      "settings.site.phase_processing",
+      "Restoring data on the server",
+    ),
+    processing: t(
+      "settings.site.phase_processing",
+      "Restoring data on the server",
+    ),
+    restarting: t("settings.site.phase_restarting", "Restarting service"),
+    completed: t("settings.site.phase_completed", "Backup restored"),
+    failed: t("settings.site.backup_restore_error", "Restore backup failed"),
+    nonCancelable: t(
+      "settings.site.phase_non_cancelable",
+      "Server processing has started and can no longer be canceled",
+    ),
+  };
+
+  const setTrackedRestoreState = (state: UploadProgressState | null) => {
+    restoreStateRef.current = state;
+    setRestoreState(state);
+  };
 
   const downloadBackup = async (scope: "full" | "config") => {
     const response = await fetch(`/api/admin/download/backup?scope=${scope}`);
@@ -74,8 +108,7 @@ export default function SiteSettings() {
       return;
     }
 
-    setRestoring(true);
-    setRestoreProgress(0);
+    setTrackedRestoreState(null);
     const controller = new AbortController();
     restoreController.current = controller;
     try {
@@ -84,13 +117,28 @@ export default function SiteSettings() {
         purpose: "backup",
         file,
         signal: controller.signal,
-        onProgress: setRestoreProgress,
+        onStateChange: (state) => {
+          const nextState =
+            state.stage === "merging"
+              ? createProcessingUploadState(state)
+              : state;
+          setTrackedRestoreState(withUploadProgressCopy(nextState, restoreCopy));
+        },
       });
+      setTrackedRestoreState(
+        withUploadProgressCopy(
+          createCompletedUploadState(restoreStateRef.current),
+          restoreCopy,
+        ),
+      );
       toast.success(t("account_settings.upload_success", "上传成功"));
+      await delay(UPLOAD_COMPLETED_VISIBLE_MS);
       setRestoreOpen(false);
-      setRestoreProgress(0);
+      setTrackedRestoreState(null);
     } catch (reason) {
-      if (!(reason instanceof DOMException && reason.name === "AbortError")) {
+      if (reason instanceof DOMException && reason.name === "AbortError") {
+        setTrackedRestoreState(null);
+      } else {
         toast.error(
           reason instanceof Error
             ? reason.message
@@ -98,15 +146,13 @@ export default function SiteSettings() {
         );
       }
     } finally {
-      setRestoring(false);
       restoreController.current = null;
     }
   };
 
   const cancelRestore = () => {
     restoreController.current?.abort();
-    setRestoring(false);
-    setRestoreProgress(0);
+    setTrackedRestoreState(null);
   };
 
   if (loading) {
@@ -466,15 +512,19 @@ export default function SiteSettings() {
       {/* 上传备份对话框 */}
       <UploadDialog
         open={restoreOpen}
-        onOpenChange={setRestoreOpen}
+        onOpenChange={(open) => {
+          setRestoreOpen(open);
+          if (!open && restoreState?.stage !== "completed") {
+            setTrackedRestoreState(null);
+          }
+        }}
         title={t("settings.site.backup_restore")}
         description={t("settings.site.backup_restore_description")}
         accept=".zip"
         dragDropText={t("theme.drag_drop")}
         clickToBrowseText={t("theme.or_click_to_browse")}
         hintText={t("theme.zip_files_only")}
-        uploading={restoring}
-        progress={restoreProgress}
+        uploadState={restoreState}
         cancelUploadLabel={t("common.cancel")}
         onCancelUpload={cancelRestore}
         onFileSelected={(file) => uploadBackup(file)}

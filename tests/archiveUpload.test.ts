@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { uploadArchive } from "../src/utils/archiveUpload.ts";
+import {
+  createCompletedUploadState,
+  withUploadProgressCopy,
+} from "../src/utils/uploadProgress.ts";
 
 type FetchCall = { url: string; init?: RequestInit };
 
@@ -15,6 +19,7 @@ test("uploads backup archives in server-sized chunks and merges last", async () 
   const originalFetch = globalThis.fetch;
   const calls: FetchCall[] = [];
   const progress: number[] = [];
+  const stages: string[] = [];
   globalThis.fetch = async (input, init) => {
     calls.push({ url: String(input), init });
     if (String(input).endsWith("/init")) {
@@ -36,6 +41,7 @@ test("uploads backup archives in server-sized chunks and merges last", async () 
       purpose: "backup",
       file,
       onProgress: (value) => progress.push(value),
+      onStateChange: (state) => stages.push(state.stage),
     });
 
     assert.deepEqual(
@@ -58,7 +64,8 @@ test("uploads backup archives in server-sized chunks and merges last", async () 
       filename: "backup.zip",
       size: 10,
     }));
-    assert.deepEqual(progress, [0, 38, 76, 95, 100]);
+    assert.deepEqual(progress, [0, 40, 80, 100]);
+    assert.deepEqual(stages, ["preparing", "uploading", "uploading", "uploading", "uploading", "merging"]);
     assert.equal(calls.at(-1)?.init?.body, JSON.stringify({ upload_id: "upload-1" }));
   } finally {
     globalThis.fetch = originalFetch;
@@ -107,6 +114,7 @@ test("retries only a failed chunk and cancels the session on terminal failure", 
 test("does not report 100 percent when merge validation fails", async () => {
   const originalFetch = globalThis.fetch;
   const progress: number[] = [];
+  const stages: string[] = [];
   globalThis.fetch = async (input) => {
     const url = String(input);
     if (url.endsWith("/init")) {
@@ -128,13 +136,41 @@ test("does not report 100 percent when merge validation fails", async () => {
         purpose: "backup",
         file: new File(["data"], "backup.zip"),
         onProgress: (value) => progress.push(value),
+        onStateChange: (state) => stages.push(state.stage),
       }),
       /invalid backup/,
     );
-    assert.deepEqual(progress, [0, 95]);
+    assert.deepEqual(progress, [0, 100]);
+    assert.deepEqual(stages, ["preparing", "uploading", "uploading", "merging", "failed"]);
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("upload progress copy keeps completion explicit before a dialog may close", () => {
+  const completed = withUploadProgressCopy(
+    createCompletedUploadState({
+      percent: 100,
+      uploadedBytes: 10,
+      totalBytes: 10,
+      uploadedChunks: 2,
+      totalChunks: 2,
+    }),
+    {
+      preparing: "Preparing",
+      uploading: "Uploading",
+      merging: "Merging",
+      processing: "Processing",
+      restarting: "Restarting",
+      completed: "Completed",
+      nonCancelable: "Cannot cancel",
+    },
+  );
+
+  assert.equal(completed.stage, "completed");
+  assert.equal(completed.percent, 100);
+  assert.equal(completed.label, "Completed");
+  assert.equal(completed.canCancel, false);
 });
 
 test("uses only same-origin relative upload endpoints", () => {

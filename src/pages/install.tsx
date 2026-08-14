@@ -24,6 +24,14 @@ import { useTranslation } from "react-i18next";
 import GuideHeader from "@/components/GuideHeader";
 import UploadDialog from "@/components/UploadDialog";
 import { uploadArchive } from "@/utils/archiveUpload";
+import {
+  UPLOAD_RESTARTING_VISIBLE_MS,
+  createCompletedUploadState,
+  createRestartingUploadState,
+  delay,
+  type UploadProgressState,
+  withUploadProgressCopy,
+} from "@/utils/uploadProgress";
 
 type APIResponse<T> = {
   status: "success" | "error";
@@ -117,11 +125,32 @@ export default function Install() {
   const [metricDSN, setMetricDSN] = useState("./data/metrics.db");
   const [busy, setBusy] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
-  const [restoring, setRestoring] = useState(false);
-  const [restoreProgress, setRestoreProgress] = useState(0);
+  const [restoreState, setRestoreState] = useState<UploadProgressState | null>(
+    null,
+  );
   const restoreController = useRef<AbortController | null>(null);
+  const restoreStateRef = useRef<UploadProgressState | null>(null);
   const [error, setError] = useState("");
   const [ready, setReady] = useState<boolean | null>(null);
+  const [restartCountdown, setRestartCountdown] = useState<number | null>(null);
+  const restoreCopy = {
+    preparing: t("install.phase_preparing", "Preparing backup"),
+    uploading: t("install.phase_uploading", "Uploading backup"),
+    merging: t("install.phase_processing", "Restoring installation data"),
+    processing: t("install.phase_processing", "Restoring installation data"),
+    restarting: t("install.phase_restarting", "Restarting service"),
+    completed: t("install.phase_completed", "Restore completed"),
+    failed: t("install.restore_failed"),
+    nonCancelable: t(
+      "install.phase_non_cancelable",
+      "Server processing has started and can no longer be canceled",
+    ),
+  };
+
+  const setTrackedRestoreState = (state: UploadProgressState | null) => {
+    restoreStateRef.current = state;
+    setRestoreState(state);
+  };
 
   useEffect(() => {
     void request<InstallStatus>("/status")
@@ -191,8 +220,8 @@ export default function Install() {
     }
 
     setError("");
-    setRestoring(true);
-    setRestoreProgress(0);
+    setRestartCountdown(null);
+    setTrackedRestoreState(null);
     const controller = new AbortController();
     restoreController.current = controller;
     try {
@@ -201,10 +230,44 @@ export default function Install() {
         purpose: "backup",
         file,
         signal: controller.signal,
-        onProgress: setRestoreProgress,
+        onStateChange: (state) => {
+          const nextState =
+            state.stage === "merging"
+              ? withUploadProgressCopy(
+                  {
+                    ...state,
+                    stage: "processing",
+                    indeterminate: true,
+                    canCancel: false,
+                    percent: null,
+                  },
+                  restoreCopy,
+                )
+              : state;
+          setTrackedRestoreState(
+            "stage" in nextState
+              ? withUploadProgressCopy(nextState, restoreCopy)
+              : nextState,
+          );
+        },
       });
-      // The server restarts after a successful upload, so retain the progress state.
+      setTrackedRestoreState(
+        withUploadProgressCopy(
+          createRestartingUploadState(restoreStateRef.current),
+          restoreCopy,
+        ),
+      );
+      await delay(UPLOAD_RESTARTING_VISIBLE_MS);
+      setTrackedRestoreState(
+        withUploadProgressCopy(
+          createCompletedUploadState(restoreStateRef.current, {
+            detail: t("install.phase_redirecting", "Opening the dashboard shortly"),
+          }),
+          restoreCopy,
+        ),
+      );
       restoreController.current = null;
+      setRestartCountdown(5);
       window.setTimeout(() => window.location.assign("/"), 5000);
     } catch (reason) {
       if (!(reason instanceof DOMException && reason.name === "AbortError")) {
@@ -214,17 +277,27 @@ export default function Install() {
             : t("install.restore_failed"),
         );
       }
-      setRestoring(false);
-      setRestoreProgress(0);
+      setTrackedRestoreState(null);
+      setRestartCountdown(null);
       restoreController.current = null;
     }
   };
 
   const cancelRestore = () => {
     restoreController.current?.abort();
-    setRestoring(false);
-    setRestoreProgress(0);
+    setTrackedRestoreState(null);
+    setRestartCountdown(null);
   };
+
+  useEffect(() => {
+    if (restartCountdown === null || restartCountdown <= 0) return;
+    const timer = window.setTimeout(() => {
+      setRestartCountdown((current) =>
+        current === null ? current : Math.max(0, current - 1),
+      );
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [restartCountdown]);
 
   if (ready === null)
     return (
@@ -414,7 +487,7 @@ export default function Install() {
               type="button"
               variant="soft"
               color="gray"
-              disabled={step === 0 || busy || restoring}
+              disabled={step === 0 || busy || Boolean(restoreState)}
               onClick={() => {
                 setError("");
                 setStep((current) => current - 1);
@@ -429,22 +502,22 @@ export default function Install() {
                   <Button
                     type="button"
                     variant="soft"
-                    disabled={busy || restoring || ready === null}
+                    disabled={busy || Boolean(restoreState) || ready === null}
                     onClick={() => setRestoreOpen(true)}
                   >
-                    {restoring ? (
+                    {restoreState ? (
                       <LoaderCircle size={16} className="animate-spin" />
                     ) : (
                       <Upload size={16} />
                     )}
                     {t(
-                      restoring
+                      restoreState
                         ? "install.restore_restarting"
                         : "install.restore",
                     )}
                   </Button>
                 )}
-                <Button type="button" disabled={restoring} onClick={next}>
+                <Button type="button" disabled={Boolean(restoreState)} onClick={next}>
                   {t(step === 0 ? "install.start" : "install.next")}
                   <ArrowRight size={16} />
                 </Button>
@@ -463,16 +536,30 @@ export default function Install() {
         </form>
         <UploadDialog
           open={restoreOpen}
-          onOpenChange={setRestoreOpen}
+          onOpenChange={(open) => {
+            setRestoreOpen(open);
+            if (!open && restoreState?.stage !== "completed") {
+              setTrackedRestoreState(null);
+              setRestartCountdown(null);
+            }
+          }}
           title={t("install.restore")}
           description={error || t("install.restore_description")}
           accept=".zip"
           dragDropText={t("theme.drag_drop")}
           clickToBrowseText={t("theme.or_click_to_browse")}
           hintText={t("theme.zip_files_only")}
-          uploading={restoring}
-          progress={restoreProgress}
-          uploadingText={t("install.restore_restarting")}
+          uploadState={
+            restartCountdown !== null && restoreState?.stage === "completed"
+              ? {
+                  ...restoreState,
+                  detail: t("install.phase_redirect_countdown", {
+                    defaultValue: "Opening the dashboard in {{count}}s",
+                    count: restartCountdown,
+                  }),
+                }
+              : restoreState
+          }
           cancelUploadLabel={t("common.cancel")}
           onCancelUpload={cancelRestore}
           onFileSelected={restoreBackup}

@@ -1,7 +1,10 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
 import {
+  ADMIN_ROUTE_PROGRESS_EXIT_MS,
+  ADMIN_ROUTE_PROGRESS_SHOW_DELAY_MS,
   getAdminRouteViewKey,
+  getAdminRouteProgressHideDelay,
   isAdminRouteViewReady,
   promoteAdminRouteView,
   stageAdminRouteView,
@@ -26,7 +29,8 @@ const AdminRouteViewport = ({
   const location = useLocation();
   const incomingKey = getAdminRouteViewKey(location);
   const viewElements = React.useRef(new Map<string, HTMLDivElement>());
-  const [showProgress, setShowProgress] = React.useState(false);
+  const [progressState, setProgressState] = React.useState<"hidden" | "visible" | "leaving">("hidden");
+  const progressVisibleAt = React.useRef<number | null>(null);
   const [state, setState] = React.useState<RouteViewportState<React.ReactNode>>(() => ({
     activeKey: incomingKey,
     pendingKey: null,
@@ -39,12 +43,36 @@ const AdminRouteViewport = ({
 
   React.useEffect(() => {
     if (!state.pendingKey) {
-      setShowProgress(false);
+      const delay = getAdminRouteProgressHideDelay({
+        becameVisibleAt: progressVisibleAt.current,
+        now: window.performance.now(),
+      });
+      const timer = window.setTimeout(() => {
+        progressVisibleAt.current = null;
+        setProgressState((current) => (current === "hidden" ? current : "leaving"));
+      }, delay);
+      return () => window.clearTimeout(timer);
+    }
+    if (progressState === "visible") return;
+    if (progressState === "leaving") {
+      progressVisibleAt.current = window.performance.now();
+      setProgressState("visible");
       return;
     }
-    const timer = window.setTimeout(() => setShowProgress(true), 180);
+    const timer = window.setTimeout(() => {
+      progressVisibleAt.current = window.performance.now();
+      setProgressState("visible");
+    }, ADMIN_ROUTE_PROGRESS_SHOW_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [state.pendingKey]);
+  }, [progressState, state.pendingKey]);
+
+  React.useEffect(() => {
+    if (progressState !== "leaving") return;
+    const timer = window.setTimeout(() => {
+      setProgressState("hidden");
+    }, ADMIN_ROUTE_PROGRESS_EXIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [progressState]);
 
   React.useLayoutEffect(() => {
     const pendingKey = state.pendingKey;
@@ -94,10 +122,11 @@ const AdminRouteViewport = ({
 
   return (
     <div className="admin-route-viewport">
-      {showProgress && state.pendingKey ? (
+      {progressState !== "hidden" ? (
         <div
           aria-label="页面载入中"
           className="admin-route-progress-track"
+          data-progress-state={progressState}
           role="status"
         >
           <span className="admin-route-progress-indicator" />

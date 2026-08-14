@@ -96,3 +96,11 @@ test("account backup hint points to the actual site settings page", () => {
     "正在尋找備份？現已移至「系統設定 > 站點」。",
   ]);
 });
+
+test("backup restore dialog uses staged progress instead of a fake 95 percent finish", () => {
+  assert.match(source, /phase_uploading/);
+  assert.match(source, /phase_processing/);
+  assert.match(source, /phase_completed/);
+  assert.match(source, /uploadState={restoreState}/);
+  assert.doesNotMatch(source, /setRestoreProgress/);
+});

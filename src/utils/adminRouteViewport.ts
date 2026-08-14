@@ -9,6 +9,21 @@ export type RouteViewportState<Outlet = unknown> = {
   views: RouteView<Outlet>[];
 };
 
+export const ADMIN_ROUTE_PROGRESS_SHOW_DELAY_MS = 180;
+export const ADMIN_ROUTE_PROGRESS_MIN_VISIBLE_MS = 240;
+export const ADMIN_ROUTE_PROGRESS_EXIT_MS = 180;
+
+export function getAdminRouteProgressHideDelay({
+  becameVisibleAt,
+  now,
+}: {
+  becameVisibleAt: number | null;
+  now: number;
+}) {
+  if (becameVisibleAt === null) return 0;
+  return Math.max(0, ADMIN_ROUTE_PROGRESS_MIN_VISIBLE_MS - (now - becameVisibleAt));
+}
+
 export const getAdminRouteViewKey = ({
   pathname,
   search,

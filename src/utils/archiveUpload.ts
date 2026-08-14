@@ -1,3 +1,11 @@
+import {
+  createFailedUploadState,
+  createMergingUploadState,
+  createPreparingUploadState,
+  createUploadingUploadState,
+  type UploadProgressState,
+} from "./uploadProgress.ts";
+
 export type ArchiveUploadPurpose = "backup" | "theme";
 
 type APIResponse<T> = {
@@ -18,6 +26,7 @@ export type ArchiveUploadOptions = {
   file: File;
   signal?: AbortSignal;
   onProgress?: (progress: number) => void;
+  onStateChange?: (state: UploadProgressState) => void;
   maxChunkAttempts?: number;
 };
 
@@ -75,6 +84,25 @@ function isRetryable(reason: unknown): boolean {
     );
   }
   return true;
+}
+
+function emitUploadState(
+  state: UploadProgressState,
+  onStateChange?: (state: UploadProgressState) => void,
+  onProgress?: (progress: number) => void,
+) {
+  onStateChange?.(state);
+  if (typeof state.percent === "number") {
+    onProgress?.(state.percent);
+  }
+}
+
+function isAbortReason(reason: unknown) {
+  return reason instanceof DOMException && reason.name === "AbortError";
+}
+
+function describeUploadFailure(reason: unknown) {
+  return reason instanceof Error ? reason.message : "Upload failed";
 }
 
 function waitForRetry(delay: number, signal?: AbortSignal): Promise<void> {
@@ -143,6 +171,7 @@ export async function uploadArchive({
   file,
   signal,
   onProgress,
+  onStateChange,
   maxChunkAttempts = 3,
 }: ArchiveUploadOptions): Promise<APIResponse<unknown>> {
   if (!file.name.toLowerCase().endsWith(".zip")) {
@@ -153,6 +182,8 @@ export async function uploadArchive({
   }
 
   let uploadID = "";
+  let currentState = createPreparingUploadState(file.size);
+  emitUploadState(currentState, onStateChange, onProgress);
   try {
     const init = await requestJSON<UploadInit>(
       `${basePath}/init`,
@@ -166,7 +197,13 @@ export async function uploadArchive({
       throw new ArchiveUploadError("The server returned invalid upload metadata");
     }
 
-    onProgress?.(0);
+    currentState = createUploadingUploadState({
+      totalBytes: file.size,
+      uploadedBytes: 0,
+      totalChunks: chunkCount,
+      uploadedChunks: 0,
+    });
+    emitUploadState(currentState, onStateChange, onProgress);
     for (let index = 0; index < chunkCount; index += 1) {
       const start = index * chunkSize;
       const end = Math.min(file.size, start + chunkSize);
@@ -178,17 +215,31 @@ export async function uploadArchive({
         signal,
         Math.max(1, maxChunkAttempts),
       );
-      onProgress?.(Math.min(95, Math.round((end / file.size) * 95)));
+      currentState = createUploadingUploadState({
+        totalBytes: file.size,
+        uploadedBytes: end,
+        totalChunks: chunkCount,
+        uploadedChunks: index + 1,
+      });
+      emitUploadState(currentState, onStateChange, onProgress);
     }
 
-    const result = await requestJSON<unknown>(
+    currentState = createMergingUploadState(currentState);
+    emitUploadState(currentState, onStateChange, onProgress);
+
+    return await requestJSON<unknown>(
       `${basePath}/merge`,
       { upload_id: uploadID },
       signal,
     );
-    onProgress?.(100);
-    return result;
   } catch (reason) {
+    if (!isAbortReason(reason)) {
+      emitUploadState(
+        createFailedUploadState(describeUploadFailure(reason), currentState),
+        onStateChange,
+        onProgress,
+      );
+    }
     if (uploadID) await cancelUpload(basePath, uploadID);
     throw reason;
   }

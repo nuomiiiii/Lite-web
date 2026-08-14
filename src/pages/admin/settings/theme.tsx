@@ -31,6 +31,8 @@ import { useNavigate } from "react-router-dom";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";
 import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import { useSettings } from "@/lib/api";
+import AppDialogContent from "@/components/AppDialogContent";
+import ThemePreviewImage from "@/components/ThemePreviewImage";
 import UploadDialog from "@/components/UploadDialog";
 import {
   getThemeConfigurationType,
@@ -40,6 +42,13 @@ import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import { uploadArchive } from "@/utils/archiveUpload";
 import { resolveI18nText, type I18nText } from "@/utils/i18nText";
 import { clearThemeNavigationCache } from "@/utils/themeCache";
+import {
+  UPLOAD_COMPLETED_VISIBLE_MS,
+  createCompletedUploadState,
+  delay,
+  type UploadProgressState,
+  withUploadProgressCopy,
+} from "@/utils/uploadProgress";
 
 interface Theme {
   id: string;
@@ -64,9 +73,11 @@ const ThemePage = () => {
     resolveI18nText(value, currentLanguage) || "";
   const [themes, setThemes] = useState<Theme[]>([]);
   const [themesLoading, setThemesLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadState, setUploadState] = useState<UploadProgressState | null>(
+    null,
+  );
   const uploadController = useRef<AbortController | null>(null);
+  const uploadStateRef = useRef<UploadProgressState | null>(null);
   const [settingTheme, setSettingTheme] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -95,6 +106,24 @@ const ThemePage = () => {
   const navigate = useNavigate();
   const { publicInfo } = usePublicInfo();
   const [activeThemeHasConfig, setActiveThemeHasConfig] = useState(false);
+  const uploadCopy = {
+    preparing: t("theme.phase_preparing", "Preparing theme package"),
+    uploading: t("theme.phase_uploading", "Uploading theme package"),
+    merging: t("theme.phase_processing", "Validating and installing theme"),
+    processing: t("theme.phase_processing", "Validating and installing theme"),
+    restarting: t("theme.phase_processing", "Validating and installing theme"),
+    completed: t("theme.phase_completed", "Theme installed"),
+    failed: t("theme.upload_failed"),
+    nonCancelable: t(
+      "theme.phase_non_cancelable",
+      "Server processing has started and can no longer be canceled",
+    ),
+  };
+
+  const setTrackedUploadState = (state: UploadProgressState | null) => {
+    uploadStateRef.current = state;
+    setUploadState(state);
+  };
 
   // 当 currentTheme 或 publicInfo.theme 变化时重新检测当前主题是否有配置文件
   useEffect(() => {
@@ -170,8 +199,7 @@ const ThemePage = () => {
       return;
     }
 
-    setUploading(true);
-    setUploadProgress(0);
+    setTrackedUploadState(null);
     const controller = new AbortController();
     uploadController.current = controller;
     try {
@@ -180,20 +208,30 @@ const ThemePage = () => {
         purpose: "theme",
         file,
         signal: controller.signal,
-        onProgress: setUploadProgress,
+        onStateChange: (state) => {
+          setTrackedUploadState(withUploadProgressCopy(state, uploadCopy));
+        },
       });
+      setTrackedUploadState(
+        withUploadProgressCopy(
+          createCompletedUploadState(uploadStateRef.current),
+          uploadCopy,
+        ),
+      );
       toast.success(t("theme.upload_success"));
+      await delay(UPLOAD_COMPLETED_VISIBLE_MS);
       setUploadDialogOpen(false);
-      setUploadProgress(0);
+      setTrackedUploadState(null);
       await fetchThemes();
     } catch (reason) {
-      if (!(reason instanceof DOMException && reason.name === "AbortError")) {
+      if (reason instanceof DOMException && reason.name === "AbortError") {
+        setTrackedUploadState(null);
+      } else {
         toast.error(
           `${t("theme.upload_failed")}: ${reason instanceof Error ? reason.message : "Unknown error"}`,
         );
       }
     } finally {
-      setUploading(false);
       uploadController.current = null;
     }
   };
@@ -201,8 +239,7 @@ const ThemePage = () => {
   // 取消上传
   const cancelUpload = () => {
     uploadController.current?.abort();
-    setUploading(false);
-    setUploadProgress(0);
+    setTrackedUploadState(null);
   };
 
   // 设置主题
@@ -485,7 +522,7 @@ const ThemePage = () => {
         </Box>
       ) : (
         <Grid columns={{ initial: "1", sm: "2", md: "3", lg: "4" }} gap="4">
-          {themes.map((theme) => (
+          {themes.map((theme, index) => (
             <Card
               key={theme.id}
               className="relative group hover:shadow-lg transition-all duration-200"
@@ -497,26 +534,20 @@ const ThemePage = () => {
                 }}
                 className="aspect-video bg-gradient-to-br rounded-t-lg overflow-hidden relative "
               >
-                {theme.preview ? (
-                  <img
-                    src={`/themes/${theme.short}/${theme.preview}`}
-                    alt={displayText(theme.name)}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                      e.currentTarget.nextElementSibling?.classList.remove(
-                        "hidden",
-                      );
-                    }}
-                  />
-                ) : null}
-                <Flex
-                  align="center"
-                  justify="center"
-                  className={`w-full h-full ${theme.preview ? "hidden" : ""}`}
-                >
-                  <ImageIcon size={48} className="text-gray-400" />
-                </Flex>
+                <ThemePreviewImage
+                  src={
+                    theme.preview
+                      ? `/themes/${theme.short}/${theme.preview}`
+                      : undefined
+                  }
+                  alt={displayText(theme.name)}
+                  loading={index < 4 ? "eager" : "lazy"}
+                  containerClassName="w-full h-full"
+                  imageClassName="w-full h-full"
+                  fit="cover"
+                  fallbackLabel={t("theme.preview_unavailable", "Preview unavailable")}
+                  iconSize={48}
+                />
                 {/* 覆盖层 */}
                 <Box className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
                   <Flex gap="2">{/* 预留操作位 */}</Flex>
@@ -579,16 +610,19 @@ const ThemePage = () => {
       {/* 上传对话框 */}
       <UploadDialog
         open={uploadDialogOpen}
-        onOpenChange={setUploadDialogOpen}
+        onOpenChange={(open) => {
+          setUploadDialogOpen(open);
+          if (!open && uploadState?.stage !== "completed") {
+            setTrackedUploadState(null);
+          }
+        }}
         title={t("theme.upload_theme")}
         description={t("theme.upload_description")}
         accept=".zip"
         dragDropText={t("theme.drag_drop")}
         clickToBrowseText={t("theme.or_click_to_browse")}
         hintText={t("theme.zip_files_only")}
-        uploading={uploading}
-        progress={uploadProgress}
-        uploadingText={t("theme.uploading")}
+        uploadState={uploadState}
         cancelUploadLabel={t("common.cancel")}
         onCancelUpload={cancelUpload}
         onFileSelected={(file) => uploadTheme(file)}
@@ -597,22 +631,30 @@ const ThemePage = () => {
 
       {/* 预览对话框 */}
       <Dialog.Root open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-        <Dialog.Content maxWidth="800px">
-          <Dialog.Title>{displayText(selectedTheme?.name)}</Dialog.Title>
-
+        <AppDialogContent
+          maxWidth="800px"
+          title={displayText(selectedTheme?.name)}
+          visuallyHiddenDescription={
+            displayText(selectedTheme?.description) ||
+            t("theme.preview_dialog_description", "Theme preview")
+          }
+        >
           <Box className="space-y-4 mt-4">
             <Box className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative">
-              {selectedTheme?.preview ? (
-                <img
-                  src={`/themes/${selectedTheme.short}/${selectedTheme.preview}`}
-                  alt={displayText(selectedTheme.name)}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Flex align="center" justify="center" className="w-full h-full">
-                  <ImageIcon size={64} className="text-gray-400" />
-                </Flex>
-              )}
+              <ThemePreviewImage
+                src={
+                  selectedTheme?.preview
+                    ? `/themes/${selectedTheme.short}/${selectedTheme.preview}`
+                    : undefined
+                }
+                alt={displayText(selectedTheme?.name)}
+                loading="eager"
+                containerClassName="w-full h-full"
+                imageClassName="w-full h-full"
+                fit="contain"
+                fallbackLabel={t("theme.preview_unavailable", "Preview unavailable")}
+                iconSize={64}
+              />
             </Box>
 
             <Flex direction="column">
@@ -695,18 +737,18 @@ const ThemePage = () => {
               </Button>
             )}
           </Flex>
-        </Dialog.Content>
+        </AppDialogContent>
       </Dialog.Root>
 
       {/* 删除确认对话框 */}
       <Dialog.Root open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <Dialog.Content maxWidth="400px">
-          <Dialog.Title>{t("theme.confirm_delete")}</Dialog.Title>
-          <Dialog.Description>
-            {t("theme.delete_warning", {
-              themeName: displayText(themeToDelete?.name),
-            })}
-          </Dialog.Description>
+        <AppDialogContent
+          maxWidth="400px"
+          title={t("theme.confirm_delete")}
+          description={t("theme.delete_warning", {
+            themeName: displayText(themeToDelete?.name),
+          })}
+        >
           <Flex gap="3" mt="4" justify="end">
             <Dialog.Close>
               <Button variant="soft" color="gray">
@@ -726,17 +768,16 @@ const ThemePage = () => {
               {t("common.delete")}
             </Button>
           </Flex>
-        </Dialog.Content>
+        </AppDialogContent>
       </Dialog.Root>
 
       {/* 更新主题对话框 */}
       <Dialog.Root open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
-        <Dialog.Content maxWidth="500px">
-          <Dialog.Title>{t("theme.update_theme")}</Dialog.Title>
-          <Dialog.Description>
-            {t("theme.update_description")}
-          </Dialog.Description>
-
+        <AppDialogContent
+          maxWidth="500px"
+          title={t("theme.update_theme")}
+          description={t("theme.update_description")}
+        >
           <Box className="space-y-4 mt-4">
             {/* Auto Mode Explanation */}
             <Flex direction="column" gap="2">
@@ -771,7 +812,7 @@ const ThemePage = () => {
               {t("theme.update")}
             </Button>
           </Flex>
-        </Dialog.Content>
+        </AppDialogContent>
       </Dialog.Root>
 
       {/* 导入主题对话框 */}
@@ -786,12 +827,11 @@ const ThemePage = () => {
           }
         }}
       >
-        <Dialog.Content maxWidth="520px">
-          <Dialog.Title>{t("theme.import_title")}</Dialog.Title>
-          <Dialog.Description>
-            {t("theme.import_description")}
-          </Dialog.Description>
-
+        <AppDialogContent
+          maxWidth="520px"
+          title={t("theme.import_title")}
+          description={t("theme.import_description")}
+        >
           <Box className="space-y-4 mt-4">
             <Flex gap="2">
               <Box className="flex-1">
@@ -910,7 +950,7 @@ const ThemePage = () => {
               </Button>
             )}
           </Flex>
-        </Dialog.Content>
+        </AppDialogContent>
       </Dialog.Root>
 
     </Box>
