@@ -20,6 +20,10 @@ export type AppDialogContentProps = Omit<
 const joinClassName = (...values: Array<string | undefined>) =>
   values.filter(Boolean).join(" ");
 
+const disabledDescriptionProps = {
+  "aria-describedby": undefined,
+} as const;
+
 export default function AppDialogContent({
   title,
   description,
@@ -42,7 +46,7 @@ export default function AppDialogContent({
     : descriptionProps?.className;
   const dialogAccessibilityProps =
     disableDescription || !descriptionContent
-      ? { "aria-describedby": undefined }
+      ? disabledDescriptionProps
       : ariaDescribedBy !== undefined
         ? { "aria-describedby": ariaDescribedBy }
         : {};

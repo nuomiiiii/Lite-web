@@ -32,7 +32,10 @@ test("theme and upload dialogs use shared dialog content and staged upload UI", 
   assert.match(themeSettingsSource, /AppDialogContent/);
   assert.match(marketSource, /AppDialogContent/);
   assert.match(dialogSource, /ariaDescribedBy !== undefined/);
-  assert.match(dialogSource, /"aria-describedby": undefined as const/);
+  assert.match(
+    dialogSource,
+    /"aria-describedby": undefined,\s*}\s*as const/,
+  );
   assert.match(uploadDialogSource, /normalizedState\.indeterminate/);
   assert.match(uploadDialogSource, /km-upload-indeterminate-bar/);
   assert.match(uploadDialogSource, /disabled=\{!canCancel\}/);
