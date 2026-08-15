@@ -102,5 +102,9 @@ test("backup restore dialog uses staged progress instead of a fake 95 percent fi
   assert.match(source, /phase_processing/);
   assert.match(source, /phase_completed/);
   assert.match(source, /uploadState={restoreState}/);
+  assert.match(
+    source,
+    /setRestoreOpen\(false\);\s*await delay\(UPLOAD_DIALOG_EXIT_MS\);\s*setTrackedRestoreState\(null\)/,
+  );
   assert.doesNotMatch(source, /setRestoreProgress/);
 });

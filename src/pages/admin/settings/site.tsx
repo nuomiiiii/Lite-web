@@ -1,3 +1,4 @@
+import AppDialogContent from "@/components/AppDialogContent";
 import { useTranslation } from "react-i18next";
 import { Button, Dialog, Flex, Text } from "@radix-ui/themes";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
@@ -17,6 +18,7 @@ import UploadDialog from "@/components/UploadDialog";
 import { uploadArchive } from "@/utils/archiveUpload";
 import {
   UPLOAD_COMPLETED_VISIBLE_MS,
+  UPLOAD_DIALOG_EXIT_MS,
   createCompletedUploadState,
   createProcessingUploadState,
   delay,
@@ -134,6 +136,7 @@ export default function SiteSettings() {
       toast.success(t("account_settings.upload_success", "上传成功"));
       await delay(UPLOAD_COMPLETED_VISIBLE_MS);
       setRestoreOpen(false);
+      await delay(UPLOAD_DIALOG_EXIT_MS);
       setTrackedRestoreState(null);
     } catch (reason) {
       if (reason instanceof DOMException && reason.name === "AbortError") {
@@ -398,7 +401,7 @@ export default function SiteSettings() {
                   {t("settings.custom.favicon_default", "恢复默认")}
                 </Button>
               </Dialog.Trigger>
-              <Dialog.Content>
+              <AppDialogContent>
                 <Dialog.Title>
                   {t("settings.custom.favicon_default", "恢复默认")}
                 </Dialog.Title>
@@ -441,7 +444,7 @@ export default function SiteSettings() {
                     </Button>
                   </Dialog.Trigger>
                 </Flex>
-              </Dialog.Content>
+              </AppDialogContent>
             </Dialog.Root>
             <Button
               onClick={async () => {

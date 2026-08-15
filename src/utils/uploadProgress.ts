@@ -24,6 +24,8 @@ export type UploadProgressState = {
 
 export const UPLOAD_COMPLETED_VISIBLE_MS = 900;
 export const UPLOAD_RESTARTING_VISIBLE_MS = 1100;
+export const UPLOAD_FINAL_PROGRESS_VISIBLE_MS = 240;
+export const UPLOAD_DIALOG_EXIT_MS = 240;
 
 type UploadProgressSnapshot = Pick<
   UploadProgressState,
@@ -158,7 +160,7 @@ export function createFailedUploadState(
 }
 
 export function isUploadStageActive(stage: UploadProgressStage) {
-  return stage !== "completed" && stage !== "failed";
+  return stage !== "failed";
 }
 
 export function formatUploadBytes(bytes: number) {
@@ -196,7 +198,12 @@ export function withUploadProgressCopy(
   copy: UploadProgressCopy,
   overrides: Partial<UploadProgressState> = {},
 ): UploadProgressState {
-  const actionLabel = state.canCancel ? undefined : copy.nonCancelable;
+  const actionLabel =
+    state.stage === "merging" ||
+    state.stage === "processing" ||
+    state.stage === "restarting"
+      ? copy.nonCancelable
+      : undefined;
   const label =
     state.stage === "preparing"
       ? copy.preparing

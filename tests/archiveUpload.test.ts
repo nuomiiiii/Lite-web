@@ -72,6 +72,95 @@ test("uploads backup archives in server-sized chunks and merges last", async () 
   }
 });
 
+test("reports in-flight browser upload bytes before merge processing begins", async () => {
+  const originalFetch = globalThis.fetch;
+  const hadXMLHttpRequest = "XMLHttpRequest" in globalThis;
+  const originalXMLHttpRequest = globalThis.XMLHttpRequest;
+  const progress: number[] = [];
+  const stages: string[] = [];
+  const chunkPaths: string[] = [];
+
+  class FakeXMLHttpRequest {
+    upload = {
+      onprogress: null as ((event: { loaded: number }) => void) | null,
+    };
+    status = 200;
+    statusText = "OK";
+    responseText = JSON.stringify({ status: "success", data: {} });
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    onabort: (() => void) | null = null;
+    private path = "";
+
+    open(_method: string, path: string) {
+      this.path = path;
+    }
+
+    send(body: FormData) {
+      chunkPaths.push(this.path);
+      const chunk = body.get("chunk_data") as File;
+      this.upload.onprogress?.({ loaded: Math.floor(chunk.size / 2) });
+      this.upload.onprogress?.({ loaded: chunk.size });
+      this.onload?.();
+    }
+
+    abort() {
+      this.onabort?.();
+    }
+  }
+
+  Object.defineProperty(globalThis, "XMLHttpRequest", {
+    configurable: true,
+    writable: true,
+    value: FakeXMLHttpRequest,
+  });
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/init")) {
+      return jsonResponse({
+        status: "success",
+        data: { upload_id: "upload-browser", chunk_size: 4, chunks: 2 },
+      });
+    }
+    if (url.endsWith("/merge")) {
+      assert.equal(stages.at(-1), "merging");
+      assert.equal(progress.at(-1), 100);
+      return jsonResponse({ status: "success", data: {} });
+    }
+    throw new Error(`Unexpected fetch request: ${url}`);
+  };
+
+  try {
+    await uploadArchive({
+      basePath: "/api/admin/upload",
+      purpose: "backup",
+      file: new File(["abcdefgh"], "backup.zip"),
+      onProgress: (value) => progress.push(value),
+      onStateChange: (state) => stages.push(state.stage),
+    });
+
+    assert.deepEqual(chunkPaths, [
+      "/api/admin/upload/chunk",
+      "/api/admin/upload/chunk",
+    ]);
+    assert.ok(progress.includes(25));
+    assert.ok(progress.includes(75));
+    assert.equal(progress.at(-1), 100);
+    assert.equal(stages.at(-1), "merging");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (hadXMLHttpRequest) {
+      Object.defineProperty(globalThis, "XMLHttpRequest", {
+        configurable: true,
+        writable: true,
+        value: originalXMLHttpRequest,
+      });
+    } else {
+      delete (globalThis as { XMLHttpRequest?: unknown }).XMLHttpRequest;
+    }
+  }
+});
+
 test("retries only a failed chunk and cancels the session on terminal failure", async () => {
   const originalFetch = globalThis.fetch;
   const calls: FetchCall[] = [];

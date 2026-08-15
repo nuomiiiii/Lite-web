@@ -1370,6 +1370,30 @@ html[data-reduce-motion="true"] .rt-BaseDialogContent {
   will-change: transform;
 }
 
+.km-upload-status-card {
+  min-height: 9.5rem;
+}
+
+.km-upload-status-heading,
+.km-upload-status-detail {
+  min-height: 1.5rem;
+}
+
+.km-upload-status-detail > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.km-upload-dialog-actions {
+  min-height: 2.5rem;
+}
+
+.km-upload-dialog-actions button {
+  max-width: 100%;
+  min-height: 2.5rem;
+  white-space: normal;
+}
+
 .km-theme-preview[data-image-status="loaded"] .km-theme-preview-skeleton,
 .km-theme-preview[data-image-status="error"] .km-theme-preview-skeleton {
   opacity: 0;

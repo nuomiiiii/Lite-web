@@ -1,3 +1,4 @@
+import AppDialogContent from "@/components/AppDialogContent";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import AdminActiveFilter from "@/components/admin/AdminActiveFilter";
@@ -485,7 +486,7 @@ function RouteTaskDialog({
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Trigger>{children}</Dialog.Trigger>
-      <Dialog.Content maxWidth="760px">
+      <AppDialogContent maxWidth="760px">
         <Dialog.Title>{task?.id ? "编辑回程监测" : "新建回程监测"}</Dialog.Title>
         <Dialog.Description size="2" color="gray">
           从所选服务器探测到国内目标的逐跳路径，并在线路变化稳定后通知。
@@ -568,7 +569,7 @@ function RouteTaskDialog({
             <Button type="submit" loading={saving}>保存</Button>
           </Flex>
         </form>
-      </Dialog.Content>
+      </AppDialogContent>
     </Dialog.Root>
   );
 }
@@ -621,7 +622,7 @@ function RouteTaskBatchDialog({
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Trigger>{children}</Dialog.Trigger>
-      <Dialog.Content maxWidth="760px">
+      <AppDialogContent maxWidth="760px">
         <Dialog.Title>批量修改回程监测</Dialog.Title>
         <Dialog.Description size="2" color="gray">
           已选择 {tasks.length} 个任务。下列配置会同步更新，任务名称和各自的探测节点保持不变。
@@ -694,7 +695,7 @@ function RouteTaskBatchDialog({
             <Button type="submit" loading={saving}>保存到 {tasks.length} 个任务</Button>
           </Flex>
         </form>
-      </Dialog.Content>
+      </AppDialogContent>
     </Dialog.Root>
   );
 }

@@ -1,3 +1,4 @@
+import AppDialogContent from "@/components/AppDialogContent";
 import { Cross1Icon, ExitIcon } from "@radix-ui/react-icons";
 import {
   Button,
@@ -996,7 +997,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                       />
                     </button>
                   </Dialog.Trigger>
-                  <Dialog.Content
+                  <AppDialogContent
                     className="max-h-[calc(100dvh-1.5rem)] overflow-hidden p-0"
                     style={{
                       width: isMobile
@@ -1085,7 +1086,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                         </a>
                       )}
                     </footer>
-                  </Dialog.Content>
+                  </AppDialogContent>
                 </Dialog.Root>
               )}
             </Flex>

@@ -1,3 +1,4 @@
+import AppDialogContent from "@/components/AppDialogContent";
 import { useOutlet } from "react-router-dom";
 
 import AdminPanelBar from "../../components/admin/AdminPanelBar";
@@ -105,7 +106,7 @@ const AdminAuthenticatedContent = () => {
   return (
     <>
       <Dialog.Root open={open}>
-        <Dialog.Content>
+        <AppDialogContent>
           <Dialog.Title>法律声明与合规指引</Dialog.Title>
           <div className="flex flex-col gap-2">
             <div className="max-h-[70vh] overflow-y-auto space-y-4">
@@ -128,7 +129,7 @@ const AdminAuthenticatedContent = () => {
               </Button>
             </div>
           </div>
-        </Dialog.Content>
+        </AppDialogContent>
       </Dialog.Root>
       <AdminPanelBar
         content={

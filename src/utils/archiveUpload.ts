@@ -1,8 +1,10 @@
 import {
+  UPLOAD_FINAL_PROGRESS_VISIBLE_MS,
   createFailedUploadState,
   createMergingUploadState,
   createPreparingUploadState,
   createUploadingUploadState,
+  delay,
   type UploadProgressState,
 } from "./uploadProgress.ts";
 
@@ -132,21 +134,23 @@ async function uploadChunk(
   chunk: Blob,
   signal: AbortSignal | undefined,
   maxAttempts: number,
+  onProgress?: (loadedBytes: number) => void,
 ): Promise<void> {
   let lastError: unknown;
+  let maxReportedLoaded = 0;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      const body = new FormData();
-      body.append("upload_id", uploadID);
-      body.append("chunk_index", String(chunkIndex));
-      body.append("chunk_data", chunk, "chunk.part");
-      const response = await fetch(path, {
-        method: "POST",
-        body,
-        cache: "no-store",
+      await uploadChunkAttempt(
+        path,
+        uploadID,
+        chunkIndex,
+        chunk,
         signal,
-      });
-      await parseResponse(response);
+        (loadedBytes) => {
+          maxReportedLoaded = Math.max(maxReportedLoaded, loadedBytes);
+          onProgress?.(maxReportedLoaded);
+        },
+      );
       return;
     } catch (reason) {
       lastError = reason;
@@ -155,6 +159,84 @@ async function uploadChunk(
     }
   }
   throw lastError;
+}
+
+function createChunkBody(uploadID: string, chunkIndex: number, chunk: Blob) {
+  const body = new FormData();
+  body.append("upload_id", uploadID);
+  body.append("chunk_index", String(chunkIndex));
+  body.append("chunk_data", chunk, "chunk.part");
+  return body;
+}
+
+async function uploadChunkAttempt(
+  path: string,
+  uploadID: string,
+  chunkIndex: number,
+  chunk: Blob,
+  signal: AbortSignal | undefined,
+  onProgress: (loadedBytes: number) => void,
+) {
+  const body = createChunkBody(uploadID, chunkIndex, chunk);
+  if (typeof XMLHttpRequest === "undefined") {
+    const response = await fetch(path, {
+      method: "POST",
+      body,
+      cache: "no-store",
+      signal,
+    });
+    await parseResponse(response);
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    let settled = false;
+    const cleanup = () => signal?.removeEventListener("abort", abort);
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback();
+    };
+    const abort = () => {
+      xhr.abort();
+      finish(() => reject(new DOMException("Upload cancelled", "AbortError")));
+    };
+
+    xhr.open("POST", path);
+    xhr.upload.onprogress = (event) => {
+      onProgress(Math.min(chunk.size, Math.max(0, event.loaded)));
+    };
+    xhr.onload = () => {
+      const ok = xhr.status >= 200 && xhr.status < 300;
+      let payload: APIResponse<unknown> = { status: ok ? "success" : "error" };
+      if (xhr.responseText) {
+        try {
+          payload = JSON.parse(xhr.responseText) as APIResponse<unknown>;
+        } catch {
+          // Non-JSON success responses retain the status-derived fallback.
+        }
+      }
+      if (!ok || payload.status !== "success") {
+        finish(() => reject(new ArchiveUploadError(
+          payload.message || xhr.statusText || `HTTP ${xhr.status}`,
+          xhr.status,
+        )));
+        return;
+      }
+      finish(resolve);
+    };
+    xhr.onerror = () => finish(() => reject(new ArchiveUploadError("Network error")));
+    xhr.onabort = () => finish(() => reject(new DOMException("Upload cancelled", "AbortError")));
+
+    if (signal?.aborted) {
+      abort();
+      return;
+    }
+    signal?.addEventListener("abort", abort, { once: true });
+    xhr.send(body);
+  });
 }
 
 async function cancelUpload(basePath: string, uploadID: string): Promise<void> {
@@ -214,6 +296,15 @@ export async function uploadArchive({
         file.slice(start, end),
         signal,
         Math.max(1, maxChunkAttempts),
+        (loadedBytes) => {
+          currentState = createUploadingUploadState({
+            totalBytes: file.size,
+            uploadedBytes: Math.min(end, start + loadedBytes),
+            totalChunks: chunkCount,
+            uploadedChunks: index,
+          });
+          emitUploadState(currentState, onStateChange, onProgress);
+        },
       );
       currentState = createUploadingUploadState({
         totalBytes: file.size,
@@ -222,6 +313,10 @@ export async function uploadArchive({
         uploadedChunks: index + 1,
       });
       emitUploadState(currentState, onStateChange, onProgress);
+    }
+
+    if (onStateChange || onProgress) {
+      await delay(UPLOAD_FINAL_PROGRESS_VISIBLE_MS);
     }
 
     currentState = createMergingUploadState(currentState);

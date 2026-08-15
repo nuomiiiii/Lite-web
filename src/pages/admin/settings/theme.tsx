@@ -44,6 +44,7 @@ import { resolveI18nText, type I18nText } from "@/utils/i18nText";
 import { clearThemeNavigationCache } from "@/utils/themeCache";
 import {
   UPLOAD_COMPLETED_VISIBLE_MS,
+  UPLOAD_DIALOG_EXIT_MS,
   createCompletedUploadState,
   delay,
   type UploadProgressState,
@@ -221,6 +222,7 @@ const ThemePage = () => {
       toast.success(t("theme.upload_success"));
       await delay(UPLOAD_COMPLETED_VISIBLE_MS);
       setUploadDialogOpen(false);
+      await delay(UPLOAD_DIALOG_EXIT_MS);
       setTrackedUploadState(null);
       await fetchThemes();
     } catch (reason) {

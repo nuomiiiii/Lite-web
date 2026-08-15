@@ -1,3 +1,4 @@
+import AppDialogContent from "@/components/AppDialogContent";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
@@ -23,13 +24,14 @@ import {
   AdminPagination,
   useAdminPagination,
 } from "@/components/admin/AdminPagination";
-import { Clock3, Pencil, Save, Search, Send } from "lucide-react";
+import { Clock3, Pencil, Save, Search, Send, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Badge,
   Button,
   Dialog,
   Flex,
+  Spinner,
   Switch,
   TextField,
 } from "@radix-ui/themes";
@@ -126,11 +128,13 @@ const TrafficReportEditForm = ({
   onSubmit,
   loading,
   onCancel,
+  statusLabel,
 }: {
   initialValues: TrafficReportFormValues;
   onSubmit: (values: TrafficReportFormValues) => void;
   loading?: boolean;
   onCancel?: () => void;
+  statusLabel?: string;
 }) => {
   const { t } = useTranslation();
   const formId = React.useId();
@@ -158,64 +162,72 @@ const TrafficReportEditForm = ({
           include_billing: includeBilling,
         });
       }}
-      className="flex flex-col gap-3"
+      className="mt-4 flex flex-col gap-5"
     >
-      <label htmlFor={`${formId}-status`}>{t("common.status")}</label>
-      <Switch
-        id={`${formId}-status`}
-        name="status"
-        checked={enabled}
-        onCheckedChange={setEnabled}
-      />
+      <div className="flex items-center justify-between gap-4">
+        <label htmlFor={`${formId}-status`} className="font-medium">
+          {statusLabel ?? t("common.status")}
+        </label>
+        <Switch
+          id={`${formId}-status`}
+          name="status"
+          checked={enabled}
+          onCheckedChange={setEnabled}
+        />
+      </div>
 
-      <label className="font-medium mt-2">
-        {t("notification.traffic_report.report_type")}
-      </label>
-      <Flex direction="column" gap="2">
-        <ReportOption
-          id={`${formId}-daily`}
-          checked={daily}
-          onCheckedChange={setDaily}
-        >
-          {t("notification.traffic_report.daily")}
-        </ReportOption>
-        <ReportOption
-          id={`${formId}-weekly`}
-          checked={weekly}
-          onCheckedChange={setWeekly}
-        >
-          {t("notification.traffic_report.weekly")}
-        </ReportOption>
-        <ReportOption
-          id={`${formId}-monthly`}
-          checked={monthly}
-          onCheckedChange={setMonthly}
-        >
-          {t("notification.traffic_report.monthly")}
-        </ReportOption>
-      </Flex>
+      <fieldset className="grid min-w-0 gap-3 border-0 p-0">
+        <legend className="font-medium">
+          {t("notification.traffic_report.report_type")}
+        </legend>
+        <div className="grid gap-3 pl-1">
+          <ReportOption
+            id={`${formId}-daily`}
+            checked={daily}
+            onCheckedChange={setDaily}
+          >
+            {t("notification.traffic_report.daily")}
+          </ReportOption>
+          <ReportOption
+            id={`${formId}-weekly`}
+            checked={weekly}
+            onCheckedChange={setWeekly}
+          >
+            {t("notification.traffic_report.weekly")}
+          </ReportOption>
+          <ReportOption
+            id={`${formId}-monthly`}
+            checked={monthly}
+            onCheckedChange={setMonthly}
+          >
+            {t("notification.traffic_report.monthly")}
+          </ReportOption>
+        </div>
+      </fieldset>
 
-      <label className="font-medium mt-2">
-        {t("notification.traffic_report.report_content")}
-      </label>
-      <Flex direction="column" gap="2">
-        <ReportOption
-          id={`${formId}-include-traffic`}
-          checked={includeTraffic}
-          onCheckedChange={setIncludeTraffic}
-        >
-          {t("notification.traffic_report.traffic_content")}
-        </ReportOption>
-        <ReportOption
-          id={`${formId}-include-billing`}
-          checked={includeBilling}
-          onCheckedChange={setIncludeBilling}
-        >
-          {t("notification.traffic_report.billing_content")}
-        </ReportOption>
-      </Flex>
+      <fieldset className="grid min-w-0 gap-3 border-0 p-0">
+        <legend className="font-medium">
+          {t("notification.traffic_report.report_content")}
+        </legend>
+        <div className="grid gap-3 pl-1">
+          <ReportOption
+            id={`${formId}-include-traffic`}
+            checked={includeTraffic}
+            onCheckedChange={setIncludeTraffic}
+          >
+            {t("notification.traffic_report.traffic_content")}
+          </ReportOption>
+          <ReportOption
+            id={`${formId}-include-billing`}
+            checked={includeBilling}
+            onCheckedChange={setIncludeBilling}
+          >
+            {t("notification.traffic_report.billing_content")}
+          </ReportOption>
+        </div>
+      </fieldset>
 
-      <Flex gap="2" justify="end" className="mt-4">
+      <Flex gap="2" justify="end" className="mt-2">
         {onCancel && (
           <Dialog.Close>
             <Button variant="soft" color="gray" type="button" onClick={onCancel}>
@@ -286,6 +298,17 @@ const InnerLayout = () => {
   } = useSettings();
   const [batchLoading, setBatchLoading] = React.useState(false);
   const [batchDialogOpen, setBatchDialogOpen] = React.useState(false);
+  const [defaultDialogOpen, setDefaultDialogOpen] = React.useState(false);
+  const [defaultLoading, setDefaultLoading] = React.useState(false);
+  const [defaultSaving, setDefaultSaving] = React.useState(false);
+  const [defaultConfig, setDefaultConfig] = React.useState({
+    enabled: false,
+    daily: true,
+    weekly: false,
+    monthly: false,
+    include_traffic: true,
+    include_billing: false,
+  });
   const [reportTime, setReportTime] = React.useState("00:00");
   const [reportTimeSaving, setReportTimeSaving] = React.useState(false);
   const [dailySending, setDailySending] = React.useState(false);
@@ -318,6 +341,74 @@ const InnerLayout = () => {
       return;
     }
     setSelected((current) => Array.from(new Set([...current, ...filteredNodeIds])));
+  };
+
+  const handleDefaultDialogOpenChange = (open: boolean) => {
+    setDefaultDialogOpen(open);
+    if (!open) return;
+    setDefaultLoading(true);
+    fetch("/api/admin/notification/traffic-report/default", {
+      cache: "no-store",
+    })
+      .then((response) =>
+        parseJsonOrThrow(
+          response,
+          t("notification.traffic_report.errors.fetch_default_failed"),
+        )
+      )
+      .then((payload) => {
+        const value = payload?.data;
+        setDefaultConfig({
+          enabled: value?.enabled === true,
+          daily: value?.daily !== false,
+          weekly: value?.weekly === true,
+          monthly: value?.monthly === true,
+          include_traffic: value?.include_traffic !== false,
+          include_billing: value?.include_billing === true,
+        });
+      })
+      .catch((error) => toast.error(getErrorMessage(error, t)))
+      .finally(() => setDefaultLoading(false));
+  };
+
+  const saveDefaultConfig = async (values: TrafficReportFormValues) => {
+    try {
+      validateReportSelection(values, t);
+    } catch (error) {
+      toast.error(getErrorMessage(error, t));
+      return;
+    }
+
+    const next = {
+      enabled: values.enable,
+      daily: values.daily,
+      weekly: values.weekly,
+      monthly: values.monthly,
+      include_traffic: values.include_traffic,
+      include_billing: values.include_billing,
+    };
+    setDefaultSaving(true);
+    try {
+      const response = await fetch(
+        "/api/admin/notification/traffic-report/default",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(next),
+        },
+      );
+      await parseJsonOrThrow(
+        response,
+        t("notification.traffic_report.errors.save_default_failed"),
+      );
+      setDefaultConfig(next);
+      toast.success(t("common.updated_successfully"));
+      setDefaultDialogOpen(false);
+    } catch (error) {
+      toast.error(getErrorMessage(error, t));
+    } finally {
+      setDefaultSaving(false);
+    }
   };
 
   const savedReportTime = settings.traffic_report_time || "00:00";
@@ -543,7 +634,7 @@ const InnerLayout = () => {
                   {t("notification.traffic_report.batch_edit")}
                 </Button>
               </Dialog.Trigger>
-              <Dialog.Content>
+              <AppDialogContent maxWidth="560px">
                 <Dialog.Title>
                   {t("notification.traffic_report.batch_edit")}
                 </Dialog.Title>
@@ -553,7 +644,7 @@ const InnerLayout = () => {
                   onSubmit={handleBatchEdit}
                   onCancel={() => setBatchDialogOpen(false)}
                 />
-              </Dialog.Content>
+              </AppDialogContent>
             </Dialog.Root>
             <TextField.Root
               type="text"
@@ -568,6 +659,47 @@ const InnerLayout = () => {
                 <Search size={16} />
               </TextField.Slot>
             </TextField.Root>
+            <Dialog.Root
+              open={defaultDialogOpen}
+              onOpenChange={handleDefaultDialogOpenChange}
+            >
+              <Dialog.Trigger>
+                <Button type="button" variant="soft">
+                  <Settings2 size={16} />
+                  {t("notification.traffic_report.default_config")}
+                </Button>
+              </Dialog.Trigger>
+              <AppDialogContent
+                title={t("notification.traffic_report.default_config")}
+                description={t(
+                  "notification.traffic_report.default_config_description",
+                )}
+                maxWidth="560px"
+              >
+                {defaultLoading ? (
+                  <Flex align="center" justify="center" py="6">
+                    <Spinner size="3" />
+                  </Flex>
+                ) : (
+                  <TrafficReportEditForm
+                    initialValues={{
+                      enable: defaultConfig.enabled,
+                      daily: defaultConfig.daily,
+                      weekly: defaultConfig.weekly,
+                      monthly: defaultConfig.monthly,
+                      include_traffic: defaultConfig.include_traffic,
+                      include_billing: defaultConfig.include_billing,
+                    }}
+                    loading={defaultSaving}
+                    statusLabel={t(
+                      "notification.traffic_report.default_config_enabled",
+                    )}
+                    onSubmit={saveDefaultConfig}
+                    onCancel={() => setDefaultDialogOpen(false)}
+                  />
+                )}
+              </AppDialogContent>
+            </Dialog.Root>
           </div>
         </div>
       </div>
@@ -697,7 +829,7 @@ const ActionButtons = ({
             </span>
           </Button>
         </Dialog.Trigger>
-        <Dialog.Content>
+        <AppDialogContent maxWidth="560px">
           <Dialog.Title>{t("common.edit")}</Dialog.Title>
           <TrafficReportEditForm
             initialValues={{
@@ -751,7 +883,7 @@ const ActionButtons = ({
             }}
             onCancel={() => setEditOpen(false)}
           />
-        </Dialog.Content>
+        </AppDialogContent>
       </Dialog.Root>
     </Flex>
   );

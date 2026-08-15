@@ -1,3 +1,4 @@
+import AppDialogContent from "@/components/AppDialogContent";
 import { Checkbox } from "@/components/ui/checkbox";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import { AdminSelectionCount } from "@/components/admin/AdminSelectionCount";
@@ -23,13 +24,14 @@ import {
   type OfflineNotification,
 } from "@/contexts/NotificationContext";
 import React from "react";
-import { Pencil, Search } from "lucide-react";
+import { Pencil, Search, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Badge,
   Button,
   Dialog,
   Flex,
+  Spinner,
   Switch,
   TextField,
 } from "@radix-ui/themes";
@@ -51,6 +53,7 @@ const NotificationEditForm = ({
   onSubmit,
   loading,
   onCancel,
+  statusLabel,
 }: {
   initialValues: { enable: boolean; cooldown: number; grace_period: number };
   onSubmit: (values: {
@@ -60,8 +63,10 @@ const NotificationEditForm = ({
   }) => void;
   loading?: boolean;
   onCancel?: () => void;
+  statusLabel?: string;
 }) => {
   const { t } = useTranslation();
+  const formId = React.useId();
   const [enabled, setEnabled] = React.useState(initialValues.enable);
   // const [cooldown, setCooldown] = React.useState(initialValues.cooldown);
   const [grace, setGrace] = React.useState(initialValues.grace_period);
@@ -71,36 +76,46 @@ const NotificationEditForm = ({
         e.preventDefault();
         onSubmit({ enable: enabled, cooldown: 3000, grace_period: grace });
       }}
-      className="flex flex-col gap-2"
+      className="mt-4 flex flex-col gap-5"
     >
-      <label htmlFor="status">{t("common.status")}</label>
-      <Switch
-        id="status"
-        name="status"
-        checked={enabled}
-        onCheckedChange={setEnabled}
-      />
+      <div className="flex items-center justify-between gap-4">
+        <label htmlFor={`${formId}-status`} className="font-medium">
+          {statusLabel ?? t("common.status")}
+        </label>
+        <Switch
+          id={`${formId}-status`}
+          name="status"
+          checked={enabled}
+          onCheckedChange={setEnabled}
+        />
+      </div>
       {/* <label htmlFor="cooldown">{t("notification.offline.cooldown")}</label>
       <TextField.Root
         type="number"
-        min={0}
+        min={1}
         value={cooldown}
         onChange={e => setCooldown(Number(e.target.value))}
         id="cooldown"
         name="cooldown"
       /> */}
-      <label htmlFor="grace_period" className="flex items-center gap-2">
-        {t("notification.offline.grace_period")}<Tips>{t("notification.offline.grace_period_tip")}</Tips>
-      </label>
-      <TextField.Root
-        type="number"
-        min={0}
-        value={grace}
-        onChange={(e) => setGrace(Number(e.target.value))}
-        id="grace_period"
-        name="grace_period"
-      />
-      <Flex gap="2" justify="end" className="mt-4">
+      <div className="grid gap-2">
+        <label
+          htmlFor={`${formId}-grace-period`}
+          className="flex items-center gap-2 font-medium"
+        >
+          {t("notification.offline.grace_period")}
+          <Tips>{t("notification.offline.grace_period_tip")}</Tips>
+        </label>
+        <TextField.Root
+          type="number"
+          min={0}
+          value={grace}
+          onChange={(e) => setGrace(Number(e.target.value))}
+          id={`${formId}-grace-period`}
+          name="grace_period"
+        />
+      </div>
+      <Flex gap="2" justify="end" className="mt-2">
         {onCancel && (
           <Dialog.Close>
             <Button
@@ -138,6 +153,13 @@ const InnerLayout = () => {
   const { t } = useTranslation();
   const [batchLoading, setBatchLoading] = React.useState(false);
   const [batchDialogOpen, setBatchDialogOpen] = React.useState(false);
+  const [defaultDialogOpen, setDefaultDialogOpen] = React.useState(false);
+  const [defaultLoading, setDefaultLoading] = React.useState(false);
+  const [defaultSaving, setDefaultSaving] = React.useState(false);
+  const [defaultConfig, setDefaultConfig] = React.useState({
+    enabled: false,
+    grace_period: 180,
+  });
   const [batchForm, setBatchForm] = React.useState({
     enable: true,
     cooldown: 1800,
@@ -164,6 +186,57 @@ const InnerLayout = () => {
       return;
     }
     setSelected((current) => Array.from(new Set([...current, ...filteredNodeIds])));
+  };
+
+  const handleDefaultDialogOpenChange = (open: boolean) => {
+    setDefaultDialogOpen(open);
+    if (!open) return;
+    setDefaultLoading(true);
+    fetch("/api/admin/notification/offline/default", { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(data?.message || response.statusText || "Request failed");
+        }
+        const value = data?.data;
+        setDefaultConfig({
+          enabled: value?.enabled === true,
+          grace_period: Number(value?.grace_period) || 180,
+        });
+      })
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => setDefaultLoading(false));
+  };
+
+  const saveDefaultConfig = (values: {
+    enable: boolean;
+    grace_period: number;
+  }) => {
+    const next = {
+      enabled: values.enable,
+      grace_period: values.grace_period,
+    };
+    setDefaultSaving(true);
+    fetch("/api/admin/notification/offline/default", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(next),
+    })
+      .then(async (response) => {
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(data?.message || response.statusText || "Request failed");
+        }
+        setDefaultConfig(next);
+        toast.success(t("common.updated_successfully"));
+        setDefaultDialogOpen(false);
+      })
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => setDefaultSaving(false));
   };
 
   // 批量修改
@@ -269,7 +342,7 @@ const InnerLayout = () => {
                   {t("notification.offline.batch_edit")}
                 </Button>
               </Dialog.Trigger>
-              <Dialog.Content>
+              <AppDialogContent>
                 <Dialog.Title>{t("notification.offline.batch_edit")}</Dialog.Title>
                 <NotificationEditForm
                   initialValues={batchForm}
@@ -277,7 +350,7 @@ const InnerLayout = () => {
                   onSubmit={handleBatchEdit}
                   onCancel={() => setBatchDialogOpen(false)}
                 />
-              </Dialog.Content>
+              </AppDialogContent>
             </Dialog.Root>
             <TextField.Root
               type="text"
@@ -292,6 +365,40 @@ const InnerLayout = () => {
                 <Search size={16} />
               </TextField.Slot>
             </TextField.Root>
+            <Dialog.Root
+              open={defaultDialogOpen}
+              onOpenChange={handleDefaultDialogOpenChange}
+            >
+              <Dialog.Trigger>
+                <Button type="button" variant="soft">
+                  <Settings2 size={16} />
+                  {t("notification.offline.default_config")}
+                </Button>
+              </Dialog.Trigger>
+              <AppDialogContent
+                title={t("notification.offline.default_config")}
+                description={t("notification.offline.default_config_description")}
+                maxWidth="560px"
+              >
+                {defaultLoading ? (
+                  <Flex align="center" justify="center" py="6">
+                    <Spinner size="3" />
+                  </Flex>
+                ) : (
+                  <NotificationEditForm
+                    initialValues={{
+                      enable: defaultConfig.enabled,
+                      cooldown: 1800,
+                      grace_period: defaultConfig.grace_period,
+                    }}
+                    loading={defaultSaving}
+                    statusLabel={t("notification.offline.default_config_enabled")}
+                    onSubmit={saveDefaultConfig}
+                    onCancel={() => setDefaultDialogOpen(false)}
+                  />
+                )}
+              </AppDialogContent>
+            </Dialog.Root>
           </div>
         </div>
       </div>
@@ -449,7 +556,7 @@ const ActionButtons = ({
             </span>
           </Button>
         </Dialog.Trigger>
-        <Dialog.Content>
+        <AppDialogContent>
           <Dialog.Title>{t("common.edit")}</Dialog.Title>
           <NotificationEditForm
             initialValues={{
@@ -495,7 +602,7 @@ const ActionButtons = ({
             }}
             onCancel={() => setEditOpen(false)}
           />
-        </Dialog.Content>
+        </AppDialogContent>
       </Dialog.Root>
     </Flex>
   );

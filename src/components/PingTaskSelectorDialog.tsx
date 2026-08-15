@@ -1,3 +1,4 @@
+import AppDialogContent from "@/components/AppDialogContent";
 import React from "react";
 import { Button, Dialog, Flex, Text } from "@radix-ui/themes";
 import { useTranslation } from "react-i18next";
@@ -42,7 +43,7 @@ export default function PingTaskSelectorDialog({
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger>{children}</Dialog.Trigger>
-      <Dialog.Content maxWidth="440px">
+      <AppDialogContent maxWidth="440px">
         <Dialog.Title>{title || t("common.select")}</Dialog.Title>
         <Flex direction="column" gap="3">
           <Text size="2" color="gray">
@@ -77,7 +78,7 @@ export default function PingTaskSelectorDialog({
             <Button onClick={save}>{t("common.done")}</Button>
           </Flex>
         </Flex>
-      </Dialog.Content>
+      </AppDialogContent>
     </Dialog.Root>
   );
 }

@@ -129,7 +129,7 @@ test("server details use a centered read-only form dialog", () => {
   assert.match(pageSource, /admin\.nodeDetail\.system/);
   assert.match(pageSource, /admin\.nodeDetail\.resources/);
   assert.match(pageSource, /admin\.nodeDetail\.identity/);
-  assert.match(pageSource, /<Dialog\.Content[\s\S]{0,320}maxWidth="720px"/);
+  assert.match(pageSource, /<AppDialogContent[\s\S]{0,500}maxWidth="720px"/);
   assert.match(pageSource, /onOpenAutoFocus=\{\(event\) => \{[\s\S]*preventDefault\(\)[\s\S]*focus\(\{ preventScroll: true \}\)/);
   assert.match(pageSource, /readOnly/);
   assert.match(pageSource, /<Button variant="soft">\{t\("admin\.nodeDetail\.done"/);

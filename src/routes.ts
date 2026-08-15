@@ -53,8 +53,7 @@ export const preloadAdminRoute = async (target: string): Promise<void> => {
 const likelyAdminRoutes = [
   "/admin/servers",
   "/admin/ping",
-  "/admin/notification/load",
-  "/admin/settings/site",
+  "/admin/return-route",
 ];
 
 export const preloadAdminRoutes = async (): Promise<void> => {

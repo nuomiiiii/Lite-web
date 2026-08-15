@@ -22,10 +22,11 @@ test("admin warmup respects reduced-data connections", () => {
     [
       "/admin/servers",
       "/admin/ping",
-      "/admin/notification/load",
-      "/admin/settings/site",
+      "/admin/return-route",
     ],
   );
+  assert.doesNotMatch(likelyRoutesSource, /\/admin\/notification\/load/);
+  assert.doesNotMatch(likelyRoutesSource, /\/admin\/settings\/site/);
   assert.doesNotMatch(routes, /Object\.values\(adminRoutePreloaders\)/);
 
   const layout = readFileSync("src/pages/admin/_layout.tsx", "utf8");

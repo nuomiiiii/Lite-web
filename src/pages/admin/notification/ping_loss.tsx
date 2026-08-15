@@ -1,3 +1,4 @@
+import AppDialogContent from "@/components/AppDialogContent";
 import Loading from "@/components/loading";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import AdminActiveFilter from "@/components/admin/AdminActiveFilter";
@@ -32,6 +33,7 @@ import {
   Flex,
   IconButton,
   Select,
+  Spinner,
   Switch,
   Tabs,
   TextField,
@@ -41,6 +43,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Settings2,
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
@@ -90,6 +93,16 @@ const defaultForm: FormState = {
   minimumSamples: 1,
   cooldownMinutes: 5,
 };
+
+const isPingLossFormValid = (form: FormState) =>
+  form.windowMinutes >= 1 &&
+  form.windowMinutes <= 1440 &&
+  form.lossThreshold > 0 &&
+  form.lossThreshold <= 100 &&
+  form.minimumSamples >= 1 &&
+  form.minimumSamples <= 100000 &&
+  form.cooldownMinutes >= 1 &&
+  form.cooldownMinutes <= 10080;
 
 const targetKey = (client: string, taskId: number) => `${client}:${taskId}`;
 
@@ -418,6 +431,7 @@ const PingLossContent = () => {
                   <Search size={16} />
                 </TextField.Slot>
               </TextField.Root>
+              <PingLossDefaultDialog />
               <ConfigurationDialog
                 targets={[]}
                 availableTargets={availableTargets}
@@ -601,6 +615,172 @@ const AlertRow = ({
   );
 };
 
+const PingLossConfigurationFields = ({
+  form,
+  onChange,
+  enableLabel,
+}: {
+  form: FormState;
+  onChange: React.Dispatch<React.SetStateAction<FormState>>;
+  enableLabel?: string;
+}) => {
+  const { t } = useTranslation();
+  const enableId = React.useId();
+  return (
+    <>
+      <Flex justify="between" align="center">
+        <label htmlFor={enableId}>{enableLabel ?? t("common.status")}</label>
+        <Switch
+          id={enableId}
+          checked={form.enable}
+          onCheckedChange={(enable) =>
+            onChange((current) => ({ ...current, enable }))
+          }
+        />
+      </Flex>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <NumberField
+          label={t("notification.ping_loss.window_minutes")}
+          value={form.windowMinutes}
+          min={1}
+          max={1440}
+          onChange={(windowMinutes) =>
+            onChange((current) => ({ ...current, windowMinutes }))
+          }
+        />
+        <NumberField
+          label={`${t("notification.ping_loss.threshold")} (%)`}
+          value={form.lossThreshold}
+          min={0.1}
+          max={100}
+          step={0.1}
+          onChange={(lossThreshold) =>
+            onChange((current) => ({ ...current, lossThreshold }))
+          }
+        />
+        <NumberField
+          label={t("notification.ping_loss.minimum_samples")}
+          value={form.minimumSamples}
+          min={1}
+          max={100000}
+          onChange={(minimumSamples) =>
+            onChange((current) => ({ ...current, minimumSamples }))
+          }
+        />
+        <NumberField
+          label={t("notification.ping_loss.cooldown_minutes")}
+          value={form.cooldownMinutes}
+          min={1}
+          max={10080}
+          onChange={(cooldownMinutes) =>
+            onChange((current) => ({ ...current, cooldownMinutes }))
+          }
+        />
+      </div>
+    </>
+  );
+};
+
+const PingLossDefaultDialog = () => {
+  const { t } = useTranslation();
+  const [open, setOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [form, setForm] = React.useState<FormState>(defaultForm);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen) return;
+    setLoading(true);
+    fetch("/api/admin/notification/ping-loss/default", { cache: "no-store" })
+      .then(parseResponse)
+      .then((data) => {
+        const value = data?.data;
+        setForm({
+          enable: value?.enabled === true,
+          windowMinutes: (Number(value?.window_seconds) || 60) / 60,
+          lossThreshold: Number(value?.loss_threshold) || 5,
+          minimumSamples: Number(value?.minimum_samples) || 1,
+          cooldownMinutes: (Number(value?.cooldown_seconds) || 300) / 60,
+        });
+      })
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => setLoading(false));
+  };
+
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!isPingLossFormValid(form)) {
+      toast.error(t("notification.ping_loss.invalid_form"));
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await fetch("/api/admin/notification/ping-loss/default", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: form.enable,
+          window_seconds: Math.round(form.windowMinutes * 60),
+          loss_threshold: form.lossThreshold,
+          minimum_samples: Math.round(form.minimumSamples),
+          cooldown_seconds: Math.round(form.cooldownMinutes * 60),
+        }),
+      });
+      await parseResponse(response);
+      toast.success(t("common.updated_successfully"));
+      setOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
+      <Dialog.Trigger>
+        <Button type="button" variant="soft">
+          <Settings2 size={16} />
+          {t("notification.ping_loss.default_config")}
+        </Button>
+      </Dialog.Trigger>
+      <AppDialogContent
+        title={t("notification.ping_loss.default_config")}
+        description={t("notification.ping_loss.default_config_description")}
+        maxWidth="560px"
+      >
+        {loading ? (
+          <Flex align="center" justify="center" py="6">
+            <Spinner size="3" />
+          </Flex>
+        ) : (
+          <form onSubmit={save} className="mt-4 flex flex-col gap-4">
+            <PingLossConfigurationFields
+              form={form}
+              onChange={setForm}
+              enableLabel={t("notification.ping_loss.default_config_enabled")}
+            />
+            <Flex gap="2" justify="end" className="mt-2">
+              <Dialog.Close>
+                <Button type="button" variant="soft" color="gray">
+                  {t("common.cancel")}
+                </Button>
+              </Dialog.Close>
+              <Button type="submit" loading={saving}>
+                {t("common.save")}
+              </Button>
+            </Flex>
+          </form>
+        )}
+      </AppDialogContent>
+    </Dialog.Root>
+  );
+};
+
 const ConfigurationDialog = ({
   children,
   targets,
@@ -619,7 +799,6 @@ const ConfigurationDialog = ({
   const [saving, setSaving] = React.useState(false);
   const [form, setForm] = React.useState<FormState>(defaultForm);
   const [createTargetKey, setCreateTargetKey] = React.useState("");
-  const enableId = React.useId();
   const createMode = availableTargets !== undefined;
   const availableTargetSignature = (availableTargets || [])
     .map((target) => target.key)
@@ -662,16 +841,7 @@ const ConfigurationDialog = ({
       toast.error(t("notification.ping_loss.select_required"));
       return;
     }
-    if (
-      form.windowMinutes < 1 ||
-      form.windowMinutes > 1440 ||
-      form.lossThreshold <= 0 ||
-      form.lossThreshold > 100 ||
-      form.minimumSamples < 1 ||
-      form.minimumSamples > 100000 ||
-      form.cooldownMinutes < 1 ||
-      form.cooldownMinutes > 10080
-    ) {
+    if (!isPingLossFormValid(form)) {
       toast.error(t("notification.ping_loss.invalid_form"));
       return;
     }
@@ -715,7 +885,7 @@ const ConfigurationDialog = ({
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger>{children}</Dialog.Trigger>
-      <Dialog.Content maxWidth="560px">
+      <AppDialogContent maxWidth="560px">
         <Dialog.Title>{title}</Dialog.Title>
         <Dialog.Description className="sr-only">{title}</Dialog.Description>
         {batch ? (
@@ -742,56 +912,7 @@ const ConfigurationDialog = ({
               </Select.Root>
             </Field>
           ) : null}
-          <Flex justify="between" align="center">
-            <label htmlFor={enableId}>{t("common.status")}</label>
-            <Switch
-              id={enableId}
-              checked={form.enable}
-              onCheckedChange={(enable) =>
-                setForm((current) => ({ ...current, enable }))
-              }
-            />
-          </Flex>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <NumberField
-              label={t("notification.ping_loss.window_minutes")}
-              value={form.windowMinutes}
-              min={1}
-              max={1440}
-              onChange={(windowMinutes) =>
-                setForm((current) => ({ ...current, windowMinutes }))
-              }
-            />
-            <NumberField
-              label={`${t("notification.ping_loss.threshold")} (%)`}
-              value={form.lossThreshold}
-              min={0.1}
-              max={100}
-              step={0.1}
-              onChange={(lossThreshold) =>
-                setForm((current) => ({ ...current, lossThreshold }))
-              }
-            />
-            <NumberField
-              label={t("notification.ping_loss.minimum_samples")}
-              value={form.minimumSamples}
-              min={1}
-              max={100000}
-              onChange={(minimumSamples) =>
-                setForm((current) => ({ ...current, minimumSamples }))
-              }
-            />
-            <NumberField
-              label={t("notification.ping_loss.cooldown_minutes")}
-              value={form.cooldownMinutes}
-              min={1}
-              max={10080}
-              onChange={(cooldownMinutes) =>
-                setForm((current) => ({ ...current, cooldownMinutes }))
-              }
-            />
-          </div>
+          <PingLossConfigurationFields form={form} onChange={setForm} />
 
           <Flex gap="2" justify="end" className="mt-2">
             <Dialog.Close>
@@ -804,7 +925,7 @@ const ConfigurationDialog = ({
             </Button>
           </Flex>
         </form>
-      </Dialog.Content>
+      </AppDialogContent>
     </Dialog.Root>
   );
 };
@@ -891,7 +1012,7 @@ const DeleteRuleButton = ({
           <Trash2 size={16} />
         </IconButton>
       </Dialog.Trigger>
-      <Dialog.Content maxWidth="420px">
+      <AppDialogContent maxWidth="420px">
         <Dialog.Title>{t("notification.ping_loss.delete_title")}</Dialog.Title>
         <Dialog.Description className="sr-only">
           {t("notification.ping_loss.delete_title")}
@@ -906,7 +1027,7 @@ const DeleteRuleButton = ({
             {t("common.delete")}
           </Button>
         </Flex>
-      </Dialog.Content>
+      </AppDialogContent>
     </Dialog.Root>
   );
 };

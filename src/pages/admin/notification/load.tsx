@@ -1,3 +1,4 @@
+import AppDialogContent from "@/components/AppDialogContent";
 import Loading from "@/components/loading";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import {
@@ -602,7 +603,7 @@ const Row = ({ alert }: { alert: LoadAlert }) => {
               <Pencil size="16" />
             </IconButton>
           </Dialog.Trigger>
-          <Dialog.Content>
+          <AppDialogContent>
             <Dialog.Title>{t("common.edit")}</Dialog.Title>
             <form onSubmit={handleEdit} className="flex flex-col gap-2">
               <label>{t("common.name")}</label>
@@ -697,7 +698,7 @@ const Row = ({ alert }: { alert: LoadAlert }) => {
                 </Button>
               </Flex>
             </form>
-          </Dialog.Content>
+          </AppDialogContent>
         </Dialog.Root>
         {/* 删除按钮 */}
         <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
@@ -706,7 +707,7 @@ const Row = ({ alert }: { alert: LoadAlert }) => {
               <Trash size="16" />
             </IconButton>
           </Dialog.Trigger>
-          <Dialog.Content>
+          <AppDialogContent>
             <Dialog.Title>{t("common.delete")}</Dialog.Title>
             <Flex gap="2" justify="end" className="mt-4">
               <Dialog.Close>
@@ -728,7 +729,7 @@ const Row = ({ alert }: { alert: LoadAlert }) => {
                 {t("common.delete")}
               </Button>
             </Flex>
-          </Dialog.Content>
+          </AppDialogContent>
         </Dialog.Root>
         </div>
       </TableCell>
@@ -804,7 +805,7 @@ const AddButton: React.FC = () => {
           {t("common.add")}
         </Button>
       </Dialog.Trigger>
-      <Dialog.Content>
+      <AppDialogContent>
         <Dialog.Title>{t("common.add")}</Dialog.Title>
         <form onSubmit={handleSubmit}>
           <Flex direction="column" justify="end" gap="2" className="font-bold">
@@ -883,7 +884,7 @@ const AddButton: React.FC = () => {
             </div>
           </Flex>
         </form>
-      </Dialog.Content>
+      </AppDialogContent>
     </Dialog.Root>
   );
 };

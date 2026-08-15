@@ -59,9 +59,9 @@ function formatUploadDetail(state: UploadProgressState) {
         : "";
     return `${bytes}${chunks}`;
   }
-  if (state.detail) return state.detail;
-  if (state.stage === "completed") return "100%";
   if (state.errorMessage) return state.errorMessage;
+  if (state.detail) return state.detail;
+  if (state.indeterminate) return state.actionLabel;
   return undefined;
 }
 
@@ -140,6 +140,7 @@ const UploadDialog: React.FC<UploadDialogProps> = ({
   };
 
   const detail = normalizedState ? formatUploadDetail(normalizedState) : undefined;
+  const showUploadPercent = normalizedState?.stage === "uploading";
   const progressValue =
     normalizedState?.stage === "completed"
       ? 100
@@ -203,9 +204,9 @@ const UploadDialog: React.FC<UploadDialogProps> = ({
           />
 
           {normalizedState ? (
-            <Card className="p-5">
+            <Card className="km-upload-status-card p-5">
               <Flex direction="column" gap="3">
-                <Flex align="center" gap="2">
+                <Flex align="center" gap="2" className="km-upload-status-heading">
                   <UploadStageIcon state={normalizedState} />
                   <Text size="3" weight="medium">
                     {normalizedState.label ?? uploadingText ?? title}
@@ -224,10 +225,10 @@ const UploadDialog: React.FC<UploadDialogProps> = ({
                       normalizedState.indeterminate
                         ? "absolute inset-y-0 left-0 w-2/5 rounded-full bg-gradient-to-r from-blue-500 via-blue-400 to-blue-500 km-upload-indeterminate-bar"
                         : normalizedState.stage === "completed"
-                          ? "h-full rounded-full bg-gradient-to-r from-green-500 to-green-600 transition-all duration-300 ease-out"
+                          ? "h-full rounded-full bg-gradient-to-r from-green-500 to-green-600 transition-[width] duration-150 ease-out"
                           : normalizedState.stage === "failed"
-                            ? "h-full rounded-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-300 ease-out"
-                            : "h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 ease-out"
+                            ? "h-full rounded-full bg-gradient-to-r from-red-500 to-red-600 transition-[width] duration-150 ease-out"
+                            : "h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-[width] duration-150 ease-out"
                     }
                     style={
                       typeof progressValue === "number"
@@ -237,46 +238,53 @@ const UploadDialog: React.FC<UploadDialogProps> = ({
                   />
                 </Box>
 
-                <Flex justify="between" align="center" gap="3" wrap="wrap">
+                <Flex
+                  justify="between"
+                  align="center"
+                  gap="3"
+                  className="km-upload-status-detail"
+                >
                   <Text size="2" color="gray">
-                    {detail ?? normalizedState.actionLabel ?? ""}
+                    {detail ?? ""}
                   </Text>
-                  {typeof normalizedState.percent === "number" ? (
+                  {showUploadPercent && typeof normalizedState.percent === "number" ? (
                     <Text size="2" color="gray">
                       {Math.round(normalizedState.percent)}%
                     </Text>
-                  ) : (
-                    <Text size="2" color="gray">
-                      {normalizedState.actionLabel ?? ""}
-                    </Text>
-                  )}
+                  ) : null}
                 </Flex>
-
-                {onCancelUpload ? (
-                  <Flex justify="end">
-                    <Button
-                      variant="soft"
-                      color="gray"
-                      onClick={onCancelUpload}
-                      disabled={!canCancel}
-                    >
-                      {canCancel
-                        ? (cancelUploadLabel ?? "Cancel")
-                        : (normalizedState.actionLabel ?? cancelUploadLabel ?? "Cancel")}
-                    </Button>
-                  </Flex>
-                ) : null}
               </Flex>
             </Card>
           ) : null}
         </Box>
 
-        <Flex gap="3" mt="4" justify="end">
-          <Dialog.Close>
-            <Button variant="soft" color="gray" disabled={uploadActive}>
-              {closeLabel}
+        <Flex gap="3" mt="4" justify="end" className="km-upload-dialog-actions">
+          {normalizedState && canCancel && onCancelUpload ? (
+            <Button
+              variant="soft"
+              color="gray"
+              onClick={() => {
+                onCancelUpload();
+                onOpenChange(false);
+              }}
+            >
+              {cancelUploadLabel ?? "Cancel"}
             </Button>
-          </Dialog.Close>
+          ) : normalizedState &&
+            uploadActive &&
+            normalizedState.stage !== "completed" ? (
+            <Button variant="soft" color="gray" disabled>
+              {cancelUploadLabel ?? closeLabel}
+            </Button>
+          ) : normalizedState?.stage === "completed" ? (
+            null
+          ) : (
+            <Dialog.Close>
+              <Button variant="soft" color="gray">
+                {closeLabel}
+              </Button>
+            </Dialog.Close>
+          )}
         </Flex>
       </AppDialogContent>
     </Dialog.Root>
