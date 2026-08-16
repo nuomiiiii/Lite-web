@@ -12,9 +12,10 @@ test("admin warmup respects reduced-data connections", () => {
   assert.equal(shouldPreloadAdminRoutes({ effectiveType: "slow-2g" }), false);
   assert.equal(shouldPreloadAdminRoutes({ saveData: true, effectiveType: "4g" }), false);
 
+  const preload = readFileSync("src/utils/adminPreload.ts", "utf8");
   const routes = readFileSync("src/routes.ts", "utf8");
-  const likelyRoutesSource = routes.match(
-    /const likelyAdminRoutes = \[([\s\S]*?)\];/,
+  const likelyRoutesSource = preload.match(
+    /export const LIKELY_ADMIN_ROUTES = \[([\s\S]*?)\] as const/,
   )?.[1];
   assert.ok(likelyRoutesSource);
   assert.deepEqual(
@@ -28,6 +29,7 @@ test("admin warmup respects reduced-data connections", () => {
   assert.doesNotMatch(likelyRoutesSource, /\/admin\/notification\/load/);
   assert.doesNotMatch(likelyRoutesSource, /\/admin\/settings\/site/);
   assert.doesNotMatch(routes, /Object\.values\(adminRoutePreloaders\)/);
+  assert.doesNotMatch(routes, /Promise\.allSettled/);
 
   const layout = readFileSync("src/pages/admin/_layout.tsx", "utf8");
   const viewport = readFileSync(

@@ -17,7 +17,7 @@ import "./i18n/config";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Suspense } from "react";
 import { useRoutes } from "react-router-dom";
-import { preloadAdminEntry, preloadAdminRoutes, routes } from "./routes";
+import { preloadAdminEntry, preloadAdminRoute, routes } from "./routes";
 import Loading from "./components/loading";
 import { PublicInfoProvider } from "./contexts/PublicInfoContext";
 import { OfflineIndicator } from "./components/OfflineIndicator";
@@ -29,7 +29,10 @@ import { useAccount } from "./contexts/AccountContext";
 import FullPageLoading from "./components/FullPageLoading";
 import DocumentTitle from "./components/DocumentTitle";
 import AccountPreferenceSync from "./components/AccountPreferenceSync";
-import { shouldPreloadAdminRoutes } from "./utils/adminPreload";
+import {
+  getIdleAdminWarmupTargets,
+  scheduleIdleAdminWarmup,
+} from "./utils/adminPreload";
 
 const AdminRoutePreloader = () => {
   const { account } = useAccount();
@@ -41,30 +44,36 @@ const AdminRoutePreloader = () => {
         connection?: { saveData?: boolean; effectiveType?: string };
       }
     ).connection;
-    if (!shouldPreloadAdminRoutes(connection)) return;
+    const targets = getIdleAdminWarmupTargets(
+      window.location.pathname,
+      connection,
+    );
+    if (targets.length === 0) return;
 
-    let idleHandle: number | undefined;
-    let fallbackHandle: number | undefined;
-    const preloadWhenIdle = () => {
-      if ("requestIdleCallback" in window) {
-        idleHandle = window.requestIdleCallback(() => void preloadAdminRoutes(), {
-          timeout: 2000,
-        });
-        return;
-      }
-      fallbackHandle = Number(globalThis.setTimeout(() => void preloadAdminRoutes(), 800));
+    let stopWarmup: (() => void) | undefined;
+    const startWarmup = () => {
+      stopWarmup = scheduleIdleAdminWarmup({
+        targets,
+        preload: preloadAdminRoute,
+        timers: {
+          requestIdleCallback: window.requestIdleCallback?.bind(window),
+          cancelIdleCallback: window.cancelIdleCallback?.bind(window),
+          setTimeout: (callback, delay) =>
+            Number(globalThis.setTimeout(callback, delay)),
+          clearTimeout: (handle) => globalThis.clearTimeout(handle),
+        },
+      });
     };
 
     if (document.readyState === "complete") {
-      preloadWhenIdle();
+      startWarmup();
     } else {
-      window.addEventListener("load", preloadWhenIdle, { once: true });
+      window.addEventListener("load", startWarmup, { once: true });
     }
 
     return () => {
-      window.removeEventListener("load", preloadWhenIdle);
-      if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle);
-      if (fallbackHandle !== undefined) globalThis.clearTimeout(fallbackHandle);
+      window.removeEventListener("load", startWarmup);
+      stopWarmup?.();
     };
   }, [account?.logged_in]);
 

@@ -52,7 +52,6 @@ import {
 } from "@/utils/uploadProgress";
 
 interface Theme {
-  id: string;
   name: I18nText;
   short: string;
   description: I18nText;
@@ -61,7 +60,6 @@ interface Theme {
   preview?: string;
   url?: string;
   active: boolean;
-  createdAt: string;
   configuration?: any;
 }
 
@@ -526,7 +524,7 @@ const ThemePage = () => {
         <Grid columns={{ initial: "1", sm: "2", md: "3", lg: "4" }} gap="4">
           {themes.map((theme, index) => (
             <Card
-              key={theme.id}
+              key={theme.short}
               className="relative group hover:shadow-lg transition-all duration-200"
             >
               <Box

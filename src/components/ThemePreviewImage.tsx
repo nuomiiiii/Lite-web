@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Flex, Text } from "@radix-ui/themes";
 import { Image as ImageIcon } from "lucide-react";
+import { resolveThemePreviewStatus } from "@/utils/themePreviewImage";
 
 type ThemePreviewImageProps = {
   src?: string | null;
@@ -28,13 +29,18 @@ export default function ThemePreviewImage({
   fallbackLabel,
   iconSize = 40,
 }: ThemePreviewImageProps) {
+  const imageRef = React.useRef<HTMLImageElement | null>(null);
   const [status, setStatus] = React.useState<"loading" | "loaded" | "error">(
     src ? "loading" : "error",
   );
 
-  React.useEffect(() => {
-    setStatus(src ? "loading" : "error");
+  const syncStatus = React.useCallback(() => {
+    setStatus(resolveThemePreviewStatus(src, imageRef.current));
   }, [src]);
+
+  React.useLayoutEffect(() => {
+    syncStatus();
+  }, [syncStatus]);
 
   return (
     <Box
@@ -44,14 +50,16 @@ export default function ThemePreviewImage({
     >
       {src ? (
         <img
+          ref={imageRef}
+          key={src}
           src={src}
           alt={alt}
           loading={loading}
           referrerPolicy={referrerPolicy}
           className={joinClassName("km-theme-preview-image", imageClassName)}
           data-loaded={status === "loaded" ? "true" : "false"}
-          onLoad={() => setStatus("loaded")}
-          onError={() => setStatus("error")}
+          onLoad={syncStatus}
+          onError={syncStatus}
         />
       ) : null}
       <Box className="km-theme-preview-skeleton" aria-hidden="true" />

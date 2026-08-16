@@ -22,6 +22,8 @@ const locales = [
 test("theme pages share preview-image loading treatment", () => {
   assert.match(themeSettingsSource, /ThemePreviewImage/);
   assert.match(marketSource, /ThemePreviewImage/);
+  assert.match(themeSettingsSource, /key=\{theme\.short\}/);
+  assert.doesNotMatch(themeSettingsSource, /key=\{theme\.id\}/);
   assert.match(themeSettingsSource, /loading=\{index < 4 \? "eager" : "lazy"\}/);
   assert.match(marketSource, /loading=\{index < 4 \? "eager" : "lazy"\}/);
   assert.doesNotMatch(themeSettingsSource, /style\.display = "none"/);

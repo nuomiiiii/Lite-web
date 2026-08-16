@@ -332,7 +332,8 @@ test("admin command buttons use motion instead of abrupt active flashes", () => 
 
 test("prewarms admin routes and reuses shared monitoring data", () => {
   assert.match(routesSource, /export const preloadAdminRoutes/);
-  assert.match(mainSource, /requestIdleCallback\(\(\) => void preloadAdminRoutes\(\)/);
+  assert.match(mainSource, /scheduleIdleAdminWarmup/);
+  assert.match(mainSource, /getIdleAdminWarmupTargets/);
   assert.match(
     adminLayoutSource,
     /<NodeDetailsProvider>\s*<PingTaskProvider>\s*<AdminAuthenticatedContent \/>/,
