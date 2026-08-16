@@ -396,16 +396,17 @@ const PingLossContent = () => {
               />
             </Tabs.Content>
           </Box>
-          <div className="order-first flex min-h-10 flex-col gap-2 px-1 md:ml-auto md:w-fit md:self-end md:flex-row md:items-center md:justify-end">
+          <div className="order-first flex min-w-0 flex-col gap-2 px-1 md:ml-auto md:w-fit md:self-end md:flex-row md:items-center md:justify-end">
             <AdminSelectionCount
               count={selectedFilteredCount}
               total={filteredTargets.length}
               className="order-last shrink-0 self-start text-sm text-muted-foreground md:hidden"
             />
-            <Flex align="center" gap="2" className="w-full min-w-0 justify-end md:w-auto">
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 md:w-auto md:justify-end">
               <Button
                 type="button"
                 variant="soft"
+                className="shrink-0"
                 disabled={filteredTargets.length === 0}
                 onClick={toggleSelectAll}
               >
@@ -416,13 +417,13 @@ const PingLossContent = () => {
                 onSaved={handleBatchSaved}
                 batch
               >
-                <Button disabled={selectedTargets.length === 0}>
+                <Button className="shrink-0" disabled={selectedTargets.length === 0}>
                   <SlidersHorizontal size={16} />
                   {t("notification.ping_loss.batch_edit")}
                 </Button>
               </ConfigurationDialog>
               <TextField.Root
-                className="w-24 min-w-0 flex-none sm:w-64"
+                className="order-last min-w-0 w-full basis-full sm:order-none sm:w-64 sm:basis-auto sm:flex-none"
                 value={search}
                 placeholder={t("common.search")}
                 onChange={(event) => setSearch(event.target.value)}
@@ -431,18 +432,20 @@ const PingLossContent = () => {
                   <Search size={16} />
                 </TextField.Slot>
               </TextField.Root>
-              <PingLossDefaultDialog />
+              <div className="shrink-0">
+                <PingLossDefaultDialog />
+              </div>
               <ConfigurationDialog
                 targets={[]}
                 availableTargets={availableTargets}
                 onSaved={refresh}
               >
-                <Button>
+                <Button className="shrink-0">
                   <Plus size={16} />
                   {t("common.add")}
                 </Button>
               </ConfigurationDialog>
-            </Flex>
+            </div>
           </div>
         </div>
       </Tabs.Root>
@@ -743,7 +746,7 @@ const PingLossDefaultDialog = () => {
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Trigger>
-        <Button type="button" variant="soft">
+        <Button type="button" variant="soft" className="shrink-0">
           <Settings2 size={16} />
           {t("notification.ping_loss.default_config")}
         </Button>

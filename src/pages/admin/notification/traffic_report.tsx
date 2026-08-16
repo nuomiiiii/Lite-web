@@ -597,16 +597,17 @@ const InnerLayout = () => {
             />
           }
         />
-        <div className="order-first flex min-h-10 items-center justify-between gap-3 px-1 md:justify-end">
+        <div className="order-first flex min-w-0 flex-col gap-2 px-1 md:flex-row md:items-center md:justify-end">
           <AdminSelectionCount
             count={selectedFilteredCount}
             total={filteredNodeIds.length}
             className="shrink-0 text-sm text-muted-foreground md:hidden"
           />
-          <div className="flex min-w-0 items-center justify-end gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 md:justify-end">
             <Button
               type="button"
               variant="soft"
+              className="shrink-0"
               disabled={filteredNodeIds.length === 0}
               onClick={toggleSelectAll}
             >
@@ -616,6 +617,7 @@ const InnerLayout = () => {
               <Dialog.Trigger>
                 <Button
                   variant="soft"
+                  className="shrink-0"
                   onClick={() => {
                     const first = trafficReportNotification.find(
                       (n) => n.client === selectedFilteredIds[0]
@@ -648,7 +650,7 @@ const InnerLayout = () => {
             </Dialog.Root>
             <TextField.Root
               type="text"
-              className="min-w-0 flex-1 md:w-64 md:flex-none"
+              className="order-last min-w-0 w-full basis-full sm:order-none sm:w-64 sm:basis-auto sm:flex-none"
               placeholder={t("common.search")}
               value={search}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -664,7 +666,7 @@ const InnerLayout = () => {
               onOpenChange={handleDefaultDialogOpenChange}
             >
               <Dialog.Trigger>
-                <Button type="button" variant="soft">
+                <Button type="button" variant="soft" className="shrink-0">
                   <Settings2 size={16} />
                   {t("notification.traffic_report.default_config")}
                 </Button>
