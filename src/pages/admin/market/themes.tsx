@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import AppDialogContent from "@/components/AppDialogContent";
 import ThemePreviewImage from "@/components/ThemePreviewImage";
+import { themePreviewSrc } from "@/utils/themePreviewImage";
 import {
   AdminPagination,
   useAdminPagination,
@@ -364,9 +365,10 @@ export default function ThemeMarketPage() {
               >
                 <Box className="aspect-video bg-gray-3 overflow-hidden relative">
                   <ThemePreviewImage
-                    src={theme.preview}
+                    src={themePreviewSrc(theme.preview, { card: true })}
                     alt={displayText(theme.name)}
-                    loading={index < 4 ? "eager" : "lazy"}
+                    loading="eager"
+                    fetchPriority={index < 8 ? "high" : "low"}
                     referrerPolicy="no-referrer"
                     containerClassName="w-full h-full"
                     imageClassName="w-full h-full"
@@ -461,7 +463,7 @@ export default function ThemeMarketPage() {
               <>
                 <Box className="aspect-video bg-gray-3 overflow-hidden mt-4">
                   <ThemePreviewImage
-                    src={selectedTheme.preview}
+                    src={themePreviewSrc(selectedTheme.preview)}
                     alt={displayText(selectedTheme.name)}
                     loading="eager"
                     referrerPolicy="no-referrer"

@@ -24,8 +24,10 @@ test("theme pages share preview-image loading treatment", () => {
   assert.match(marketSource, /ThemePreviewImage/);
   assert.match(themeSettingsSource, /key=\{theme\.short\}/);
   assert.doesNotMatch(themeSettingsSource, /key=\{theme\.id\}/);
-  assert.match(themeSettingsSource, /loading=\{index < 4 \? "eager" : "lazy"\}/);
-  assert.match(marketSource, /loading=\{index < 4 \? "eager" : "lazy"\}/);
+  assert.match(themeSettingsSource, /themePreviewSrc\(/);
+  assert.match(marketSource, /themePreviewSrc\(/);
+  assert.match(themeSettingsSource, /loading="eager"/);
+  assert.match(marketSource, /loading="eager"/);
   assert.doesNotMatch(themeSettingsSource, /style\.display = "none"/);
   assert.doesNotMatch(marketSource, /style\.display = "none"/);
   assert.match(globalStyles, /km-theme-preview-skeleton/);

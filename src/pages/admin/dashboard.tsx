@@ -141,8 +141,6 @@ export default function AdminDashboard() {
   }, [loadCharts, loadSummary]);
 
   React.useEffect(() => {
-    if (settingsLoading) return;
-
     const cachedSummary = getDashboardSnapshot(summaryKey, accountKey);
     const cachedCharts = getDashboardChartsSnapshot(chartKey, accountKey);
     setData(cachedSummary);
@@ -177,7 +175,6 @@ export default function AdminDashboard() {
     loadSummary,
     settings.chart_refresh_seconds,
     settings.refresh_seconds,
-    settingsLoading,
     accountKey,
     summaryKey,
     summarySections.length,
@@ -405,10 +402,7 @@ export default function AdminDashboard() {
   };
 
   const generatedAt = data?.generated_at || charts?.generated_at;
-  const initialDataPending =
-    settingsLoading ||
-    (summarySections.length > 0 && loading && !data) ||
-    (chartSections.length > 0 && !charts && !chartsError);
+  const initialDataPending = summarySections.length > 0 && loading && !data;
   const formalLayout = (
     <>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">

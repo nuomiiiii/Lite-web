@@ -33,12 +33,18 @@ import {
   getIdleAdminWarmupTargets,
   scheduleIdleAdminWarmup,
 } from "./utils/adminPreload";
+import { prefetchAdminDashboard } from "./utils/dashboardPrefetch";
 
 const AdminRoutePreloader = () => {
   const { account } = useAccount();
 
   React.useEffect(() => {
     if (!account?.logged_in) return;
+    const accountKey = account.uuid || account.username || "authenticated";
+    const pathname = window.location.pathname.replace(/\/$/, "") || "/";
+    if (pathname === "/admin") {
+      void prefetchAdminDashboard(accountKey).catch(() => undefined);
+    }
     const connection = (
       navigator as Navigator & {
         connection?: { saveData?: boolean; effectiveType?: string };

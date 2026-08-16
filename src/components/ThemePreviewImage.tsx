@@ -7,6 +7,7 @@ type ThemePreviewImageProps = {
   src?: string | null;
   alt: string;
   loading?: "eager" | "lazy";
+  fetchPriority?: "high" | "low" | "auto";
   referrerPolicy?: React.ImgHTMLAttributes<HTMLImageElement>["referrerPolicy"];
   containerClassName?: string;
   imageClassName?: string;
@@ -22,6 +23,7 @@ export default function ThemePreviewImage({
   src,
   alt,
   loading = "lazy",
+  fetchPriority,
   referrerPolicy,
   containerClassName,
   imageClassName,
@@ -55,6 +57,8 @@ export default function ThemePreviewImage({
           src={src}
           alt={alt}
           loading={loading}
+          decoding="async"
+          fetchPriority={fetchPriority}
           referrerPolicy={referrerPolicy}
           className={joinClassName("km-theme-preview-image", imageClassName)}
           data-loaded={status === "loaded" ? "true" : "false"}
