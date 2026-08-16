@@ -46,6 +46,7 @@ import {
 } from "@/utils/themeConfiguration";
 import {
   buildAdminMenuItems,
+  syncSubMenuForLocation,
   toggleSingleSubMenu,
 } from "@/utils/adminMenu";
 import { useSettings } from "@/lib/api";
@@ -622,17 +623,9 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
 
   // 根据路径自动展开子菜单（包含动态扩展项）
   useEffect(() => {
-    const newState: { [key: string]: boolean } = {};
-    menuItems.forEach((item) => {
-      if (item.children) {
-        newState[item.path] = item.children.some(
-          (child: MenuItem) =>
-            location.pathname === child.path ||
-            location.pathname.startsWith(child.path),
-        );
-      }
-    });
-    setOpenSubMenus(newState);
+    setOpenSubMenus((current) =>
+      syncSubMenuForLocation(current, menuItems, location.pathname),
+    );
   }, [location.pathname, menuItems]);
 
   // 侧边栏动画变体

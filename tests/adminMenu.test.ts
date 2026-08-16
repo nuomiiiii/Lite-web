@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   APPEARANCE_MENU_PATH,
   buildAdminMenuItems,
+  syncSubMenuForLocation,
   toggleSingleSubMenu,
 } from "../src/utils/adminMenu.ts";
 import type { MenuItem } from "../src/types/menu.ts";
@@ -141,6 +142,48 @@ test("keeps only one sidebar group expanded", () => {
   assert.deepEqual(
     toggleSingleSubMenu({ "/admin/settings": true }, "/admin/settings"),
     {},
+  );
+});
+
+test("keeps the monitoring group open across rapid standalone navigation", () => {
+  let openSubMenus = { "/admin/monitoring": true };
+
+  for (const pathname of [
+    "/admin/servers",
+    "/admin/ping",
+    "/admin/return-route",
+  ]) {
+    const next = syncSubMenuForLocation(
+      openSubMenus,
+      menuConfig.menu,
+      pathname,
+    );
+    assert.equal(next, openSubMenus);
+    openSubMenus = next;
+  }
+});
+
+test("does not match a sibling route that only shares a child prefix", () => {
+  const monitoringOpen = { "/admin/monitoring": true };
+
+  assert.equal(
+    syncSubMenuForLocation(
+      monitoringOpen,
+      menuConfig.menu,
+      "/admin/ping-history",
+    ),
+    monitoringOpen,
+  );
+});
+
+test("switches to the submenu containing the current nested route", () => {
+  assert.deepEqual(
+    syncSubMenuForLocation(
+      { "/admin/monitoring": true },
+      menuConfig.menu,
+      "/admin/settings/site",
+    ),
+    { "/admin/settings": true },
   );
 });
 

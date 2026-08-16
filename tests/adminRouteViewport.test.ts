@@ -81,6 +81,54 @@ test("a newer navigation replaces an unfinished staged route", () => {
   assert.equal(promoteAdminRouteView(settingsStaged, "logs"), settingsStaged);
 });
 
+test("rapid navigation promotes only the final target after an old ready callback", () => {
+  let state = stageAdminRouteView(initialState(), "ping", "ping page");
+  state = stageAdminRouteView(state, "return-route", "return route page");
+
+  const afterOldReady = promoteAdminRouteView(state, "ping");
+  assert.equal(afterOldReady, state);
+
+  const settled = promoteAdminRouteView(afterOldReady, "return-route");
+  assert.equal(settled.activeKey, "return-route");
+  assert.equal(settled.pendingKey, null);
+  assert.deepEqual(settled.views, [
+    { key: "return-route", outlet: "return route page" },
+  ]);
+});
+
+test("an aborted transition and stale callbacks cannot override a later target", () => {
+  const pingStaged = stageAdminRouteView(initialState(), "ping", "ping page");
+  const aborted = stageAdminRouteView(pingStaged, "servers", "server page");
+
+  assert.equal(promoteAdminRouteView(aborted, "ping"), aborted);
+
+  const returnRouteStaged = stageAdminRouteView(
+    aborted,
+    "return-route",
+    "return route page",
+  );
+  assert.equal(
+    promoteAdminRouteView(returnRouteStaged, "ping"),
+    returnRouteStaged,
+  );
+  assert.equal(
+    promoteAdminRouteView(returnRouteStaged, "return-route").activeKey,
+    "return-route",
+  );
+});
+
+test("the final-target reducer remains stable across repeated rapid sequences", () => {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    let state = stageAdminRouteView(initialState(), "ping", "ping page");
+    state = stageAdminRouteView(state, "return-route", "return route page");
+    state = promoteAdminRouteView(state, "ping");
+    state = promoteAdminRouteView(state, "return-route");
+
+    assert.equal(state.activeKey, "return-route");
+    assert.equal(state.pendingKey, null);
+  }
+});
+
 test("returning to the active route cancels an unfinished transition", () => {
   const staged = stageAdminRouteView(initialState(), "logs", "logs page");
   const cancelled = stageAdminRouteView(staged, "servers", "server page");
