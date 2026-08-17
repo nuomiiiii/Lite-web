@@ -31,7 +31,6 @@ import {
   Button,
   Dialog,
   Flex,
-  Spinner,
   Switch,
   TextField,
 } from "@radix-ui/themes";
@@ -154,10 +153,14 @@ const InnerLayout = () => {
   const [batchLoading, setBatchLoading] = React.useState(false);
   const [batchDialogOpen, setBatchDialogOpen] = React.useState(false);
   const [defaultDialogOpen, setDefaultDialogOpen] = React.useState(false);
-  const [defaultLoading, setDefaultLoading] = React.useState(false);
   const [defaultSaving, setDefaultSaving] = React.useState(false);
   const [defaultConfig, setDefaultConfig] = React.useState({
     enabled: false,
+    grace_period: 180,
+  });
+  const [defaultForm, setDefaultForm] = React.useState({
+    enable: false,
+    cooldown: 1800,
     grace_period: 180,
   });
   const [batchForm, setBatchForm] = React.useState({
@@ -188,27 +191,28 @@ const InnerLayout = () => {
     setSelected((current) => Array.from(new Set([...current, ...filteredNodeIds])));
   };
 
-  const handleDefaultDialogOpenChange = (open: boolean) => {
-    setDefaultDialogOpen(open);
-    if (!open) return;
-    setDefaultLoading(true);
+  React.useEffect(() => {
+    let cancelled = false;
     fetch("/api/admin/notification/offline/default", { cache: "no-store" })
       .then(async (response) => {
         const data = await response.json().catch(() => null);
         if (!response.ok) {
           throw new Error(data?.message || response.statusText || "Request failed");
         }
-        const value = data?.data;
+        return data?.data;
+      })
+      .then((value) => {
+        if (cancelled) return;
         setDefaultConfig({
           enabled: value?.enabled === true,
           grace_period: Number(value?.grace_period) || 180,
         });
       })
-      .catch((error) => {
-        toast.error(error instanceof Error ? error.message : String(error));
-      })
-      .finally(() => setDefaultLoading(false));
-  };
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const saveDefaultConfig = (values: {
     enable: boolean;
@@ -367,12 +371,20 @@ const InnerLayout = () => {
                 <Search size={16} />
               </TextField.Slot>
             </TextField.Root>
-            <Dialog.Root
-              open={defaultDialogOpen}
-              onOpenChange={handleDefaultDialogOpenChange}
-            >
+            <Dialog.Root open={defaultDialogOpen} onOpenChange={setDefaultDialogOpen}>
               <Dialog.Trigger>
-                <Button type="button" variant="soft" className="shrink-0">
+                <Button
+                  type="button"
+                  variant="soft"
+                  className="shrink-0"
+                  onClick={() => {
+                    setDefaultForm({
+                      enable: defaultConfig.enabled,
+                      cooldown: 1800,
+                      grace_period: defaultConfig.grace_period,
+                    });
+                  }}
+                >
                   <Settings2 size={16} />
                   {t("notification.offline.default_config")}
                 </Button>
@@ -382,23 +394,13 @@ const InnerLayout = () => {
                 description={t("notification.offline.default_config_description")}
                 maxWidth="560px"
               >
-                {defaultLoading ? (
-                  <Flex align="center" justify="center" py="6">
-                    <Spinner size="3" />
-                  </Flex>
-                ) : (
-                  <NotificationEditForm
-                    initialValues={{
-                      enable: defaultConfig.enabled,
-                      cooldown: 1800,
-                      grace_period: defaultConfig.grace_period,
-                    }}
-                    loading={defaultSaving}
-                    statusLabel={t("notification.offline.default_config_enabled")}
-                    onSubmit={saveDefaultConfig}
-                    onCancel={() => setDefaultDialogOpen(false)}
-                  />
-                )}
+                <NotificationEditForm
+                  initialValues={defaultForm}
+                  loading={defaultSaving}
+                  statusLabel={t("notification.offline.default_config_enabled")}
+                  onSubmit={saveDefaultConfig}
+                  onCancel={() => setDefaultDialogOpen(false)}
+                />
               </AppDialogContent>
             </Dialog.Root>
           </div>

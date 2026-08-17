@@ -33,7 +33,6 @@ import {
   Flex,
   IconButton,
   Select,
-  Spinner,
   Switch,
   Tabs,
   TextField,
@@ -688,19 +687,18 @@ const PingLossConfigurationFields = ({
 const PingLossDefaultDialog = () => {
   const { t } = useTranslation();
   const [open, setOpen] = React.useState(false);
-  const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [cached, setCached] = React.useState<FormState>(defaultForm);
   const [form, setForm] = React.useState<FormState>(defaultForm);
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen);
-    if (!nextOpen) return;
-    setLoading(true);
+  React.useEffect(() => {
+    let cancelled = false;
     fetch("/api/admin/notification/ping-loss/default", { cache: "no-store" })
       .then(parseResponse)
       .then((data) => {
+        if (cancelled) return;
         const value = data?.data;
-        setForm({
+        setCached({
           enable: value?.enabled === true,
           windowMinutes: (Number(value?.window_seconds) || 60) / 60,
           lossThreshold: Number(value?.loss_threshold) || 5,
@@ -708,11 +706,11 @@ const PingLossDefaultDialog = () => {
           cooldownMinutes: (Number(value?.cooldown_seconds) || 300) / 60,
         });
       })
-      .catch((error) => {
-        toast.error(error instanceof Error ? error.message : String(error));
-      })
-      .finally(() => setLoading(false));
-  };
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -735,6 +733,7 @@ const PingLossDefaultDialog = () => {
       });
       await parseResponse(response);
       toast.success(t("common.updated_successfully"));
+      setCached(form);
       setOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
@@ -744,9 +743,14 @@ const PingLossDefaultDialog = () => {
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
+    <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger>
-        <Button type="button" variant="soft" className="shrink-0">
+        <Button
+          type="button"
+          variant="soft"
+          className="shrink-0"
+          onClick={() => setForm(cached)}
+        >
           <Settings2 size={16} />
           {t("notification.ping_loss.default_config")}
         </Button>
@@ -756,29 +760,23 @@ const PingLossDefaultDialog = () => {
         description={t("notification.ping_loss.default_config_description")}
         maxWidth="560px"
       >
-        {loading ? (
-          <Flex align="center" justify="center" py="6">
-            <Spinner size="3" />
-          </Flex>
-        ) : (
-          <form onSubmit={save} className="mt-4 flex flex-col gap-4">
-            <PingLossConfigurationFields
-              form={form}
-              onChange={setForm}
-              enableLabel={t("notification.ping_loss.default_config_enabled")}
-            />
-            <Flex gap="2" justify="end" className="mt-2">
-              <Dialog.Close>
-                <Button type="button" variant="soft" color="gray">
-                  {t("common.cancel")}
-                </Button>
-              </Dialog.Close>
-              <Button type="submit" loading={saving}>
-                {t("common.save")}
+        <form onSubmit={save} className="mt-4 flex flex-col gap-4">
+          <PingLossConfigurationFields
+            form={form}
+            onChange={setForm}
+            enableLabel={t("notification.ping_loss.default_config_enabled")}
+          />
+          <Flex gap="2" justify="end" className="mt-2">
+            <Dialog.Close>
+              <Button type="button" variant="soft" color="gray">
+                {t("common.cancel")}
               </Button>
-            </Flex>
-          </form>
-        )}
+            </Dialog.Close>
+            <Button type="submit" loading={saving}>
+              {t("common.save")}
+            </Button>
+          </Flex>
+        </form>
       </AppDialogContent>
     </Dialog.Root>
   );

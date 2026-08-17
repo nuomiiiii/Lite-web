@@ -31,7 +31,6 @@ import {
   Button,
   Dialog,
   Flex,
-  Spinner,
   Switch,
   TextField,
 } from "@radix-ui/themes";
@@ -299,10 +298,17 @@ const InnerLayout = () => {
   const [batchLoading, setBatchLoading] = React.useState(false);
   const [batchDialogOpen, setBatchDialogOpen] = React.useState(false);
   const [defaultDialogOpen, setDefaultDialogOpen] = React.useState(false);
-  const [defaultLoading, setDefaultLoading] = React.useState(false);
   const [defaultSaving, setDefaultSaving] = React.useState(false);
   const [defaultConfig, setDefaultConfig] = React.useState({
     enabled: false,
+    daily: true,
+    weekly: false,
+    monthly: false,
+    include_traffic: true,
+    include_billing: false,
+  });
+  const [defaultForm, setDefaultForm] = React.useState({
+    enable: false,
     daily: true,
     weekly: false,
     monthly: false,
@@ -343,10 +349,8 @@ const InnerLayout = () => {
     setSelected((current) => Array.from(new Set([...current, ...filteredNodeIds])));
   };
 
-  const handleDefaultDialogOpenChange = (open: boolean) => {
-    setDefaultDialogOpen(open);
-    if (!open) return;
-    setDefaultLoading(true);
+  React.useEffect(() => {
+    let cancelled = false;
     fetch("/api/admin/notification/traffic-report/default", {
       cache: "no-store",
     })
@@ -357,6 +361,7 @@ const InnerLayout = () => {
         )
       )
       .then((payload) => {
+        if (cancelled) return;
         const value = payload?.data;
         setDefaultConfig({
           enabled: value?.enabled === true,
@@ -367,9 +372,11 @@ const InnerLayout = () => {
           include_billing: value?.include_billing === true,
         });
       })
-      .catch((error) => toast.error(getErrorMessage(error, t)))
-      .finally(() => setDefaultLoading(false));
-  };
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
   const saveDefaultConfig = async (values: TrafficReportFormValues) => {
     try {
@@ -661,12 +668,23 @@ const InnerLayout = () => {
                 <Search size={16} />
               </TextField.Slot>
             </TextField.Root>
-            <Dialog.Root
-              open={defaultDialogOpen}
-              onOpenChange={handleDefaultDialogOpenChange}
-            >
+            <Dialog.Root open={defaultDialogOpen} onOpenChange={setDefaultDialogOpen}>
               <Dialog.Trigger>
-                <Button type="button" variant="soft" className="shrink-0">
+                <Button
+                  type="button"
+                  variant="soft"
+                  className="shrink-0"
+                  onClick={() => {
+                    setDefaultForm({
+                      enable: defaultConfig.enabled,
+                      daily: defaultConfig.daily,
+                      weekly: defaultConfig.weekly,
+                      monthly: defaultConfig.monthly,
+                      include_traffic: defaultConfig.include_traffic,
+                      include_billing: defaultConfig.include_billing,
+                    });
+                  }}
+                >
                   <Settings2 size={16} />
                   {t("notification.traffic_report.default_config")}
                 </Button>
@@ -678,28 +696,15 @@ const InnerLayout = () => {
                 )}
                 maxWidth="560px"
               >
-                {defaultLoading ? (
-                  <Flex align="center" justify="center" py="6">
-                    <Spinner size="3" />
-                  </Flex>
-                ) : (
-                  <TrafficReportEditForm
-                    initialValues={{
-                      enable: defaultConfig.enabled,
-                      daily: defaultConfig.daily,
-                      weekly: defaultConfig.weekly,
-                      monthly: defaultConfig.monthly,
-                      include_traffic: defaultConfig.include_traffic,
-                      include_billing: defaultConfig.include_billing,
-                    }}
-                    loading={defaultSaving}
-                    statusLabel={t(
-                      "notification.traffic_report.default_config_enabled",
-                    )}
-                    onSubmit={saveDefaultConfig}
-                    onCancel={() => setDefaultDialogOpen(false)}
-                  />
-                )}
+                <TrafficReportEditForm
+                  initialValues={defaultForm}
+                  loading={defaultSaving}
+                  statusLabel={t(
+                    "notification.traffic_report.default_config_enabled",
+                  )}
+                  onSubmit={saveDefaultConfig}
+                  onCancel={() => setDefaultDialogOpen(false)}
+                />
               </AppDialogContent>
             </Dialog.Root>
           </div>
