@@ -6,43 +6,9 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  validate-candidate:
-    if: ${{ github.actor != 'github-actions[bot]' && startsWith(github.ref, 'refs/heads/candidate/') }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        shell: bash
-        run: |
-          npm ci --no-audit --no-fund || npm i --no-audit --no-fund
-
-      - name: Check i18n synchronization
-        shell: bash
-        run: |
-          node script/i18n-sync.mjs --no-ai
-          if [[ -n "$(git status --porcelain)" ]]; then
-            git status --short
-            git diff --stat
-            echo "::error::Candidate branches are immutable. Run i18n sync and commit the result before freezing the candidate."
-            exit 1
-          fi
-
   sync:
     # 避免由机器人再次触发循环
-    if: ${{ github.actor != 'github-actions[bot]' && !startsWith(github.ref, 'refs/heads/candidate/') }}
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

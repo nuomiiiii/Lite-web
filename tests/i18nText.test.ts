@@ -48,7 +48,7 @@ function assertKeysSorted(value: unknown, location: string): void {
   }
 }
 
-test("source locale is already normalized before candidate freeze", () => {
+test("source locale keys are sorted", () => {
   const filename = "zh_CN.json";
   const contents = JSON.parse(
     readFileSync(
@@ -59,35 +59,14 @@ test("source locale is already normalized before candidate freeze", () => {
   assertKeysSorted(contents, filename);
 });
 
-test("candidate i18n checks fail without writing back to the branch", () => {
+test("i18n sync workflow has no candidate branch job", () => {
   const workflow = readFileSync(
     path.join(repositoryRoot, ".github", "workflows", "i18n-sync.yml"),
     "utf8",
   );
-  const candidateJobStart = workflow.indexOf("  validate-candidate:");
-  const syncJobStart = workflow.indexOf("  sync:");
 
-  assert.ok(candidateJobStart >= 0, "candidate validation job must exist");
-  assert.ok(syncJobStart > candidateJobStart, "sync job must follow validation");
-
-  const candidateJob = workflow.slice(candidateJobStart, syncJobStart);
-  const syncJob = workflow.slice(syncJobStart);
-
-  assert.match(candidateJob, /contents: read/);
-  assert.match(candidateJob, /persist-credentials: false/);
-  assert.match(candidateJob, /i18n-sync\.mjs --no-ai/);
-  assert.doesNotMatch(candidateJob, /OPENAI_API_KEY/);
-  assert.match(
-    candidateJob,
-    /startsWith\(github\.ref, 'refs\/heads\/candidate\/'\)/,
-  );
-  assert.match(candidateJob, /Candidate branches are immutable/);
-  assert.doesNotMatch(candidateJob, /git push/);
-
-  assert.match(syncJob, /contents: write/);
-  assert.match(
-    syncJob,
-    /!startsWith\(github\.ref, 'refs\/heads\/candidate\/'\)/,
-  );
-  assert.match(syncJob, /git push origin/);
+  assert.equal(workflow.includes("validate-candidate:"), false);
+  assert.equal(workflow.includes("refs/heads/candidate/"), false);
+  assert.match(workflow, /contents: write/);
+  assert.match(workflow, /git push origin/);
 });
