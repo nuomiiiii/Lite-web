@@ -1120,10 +1120,13 @@
       "auto_discovery": "自动发现",
       "auto_discovery_key": "自动发现密钥",
       "auto_discovery_key_description": "使用自动发现可以批量注册客户端，留空表示禁用自动发现。",
+      "auto_order_new_clients": "新增服务器自动排序",
+      "auto_order_new_clients_description": "开启后，新服务器第一次上报并识别出国家/地区时，会自动排到同一分组、同一国家的最后一台后面。已有服务器不会被重新排序，之后的上报也不会改动你手动拖过的顺序。关闭后，新服务器保持创建时的位置，仍可在服务器列表里手动拖拽。",
       "interface_motion": "界面动效",
       "page_description": "配置自动发现、GeoIP 与其他全局行为。",
       "reduce_motion": "减少动态效果",
       "reduce_motion_description": "关闭页面、页签和侧栏的过渡动画，恢复为即时切换。",
+      "server_order": "服务器排序",
       "title": "通用"
     },
     "geoip": {
