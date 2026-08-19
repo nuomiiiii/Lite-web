@@ -922,7 +922,7 @@
       "auto_discovery_key": "自動検出キー",
       "auto_discovery_key_description": "自動検出を使用すると、クライアントを一括登録できます。空白の場合、自動検出は無効になります。",
       "auto_order_new_clients": "新規サーバーの自動並び替え",
-      "auto_order_new_clients_description": "オンにすると、新規サーバーが初めて報告され国・地域を識別したとき、同じグループ・同じ国の最後のサーバーの後ろに自動で並びます。たとえば同じグループに既存の米国サーバーがあれば、その後ろに入ります。該当がなければ作成時の位置のままです。既存サーバーは並び替えません。以降の報告も、手動で並び替えた順序は上書きしません。",
+      "auto_order_new_clients_description": "オンにすると、新規サーバーが初めて報告され国・地域を識別したとき、同じグループ・同じ国の最後のサーバーの後ろに自動で並びます。既存サーバーは並び替えません。以降の報告も、手動で並び替えた順序は上書きしません。オフにすると作成時の位置のまま残ります。手動のドラッグ並び替えは常に有効です。",
       "title": "一般",
       "page_description": "自動検出、GeoIP、その他の全体動作を設定します。",
       "admin_default_page_size": "リストの既定ページ件数",
@@ -930,7 +930,8 @@
       "admin_default_page_size_invalid": "{{min}} から {{max}} までの整数を入力してください",
       "interface_motion": "画面のモーション",
       "reduce_motion": "モーションを減らす",
-      "reduce_motion_description": "ページ、タブ、サイドバーの切り替えアニメーションを無効にします。"
+      "reduce_motion_description": "ページ、タブ、サイドバーの切り替えアニメーションを無効にします。",
+      "server_order": "サーバーの並び順"
     },
     "geoip": {
       "enable_description": "ノードの地理位置情報を表示します",

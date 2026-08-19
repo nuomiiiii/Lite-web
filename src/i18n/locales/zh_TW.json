@@ -922,7 +922,7 @@
       "auto_discovery_key": "自動發現密鑰",
       "auto_discovery_key_description": "使用自動發現可以批量註冊客戶端，留空表示禁用自動發現。",
       "auto_order_new_clients": "新增伺服器自動排序",
-      "auto_order_new_clients_description": "開啟後，新伺服器第一次上報並識別出國家/地區時，會自動排到同一分組、同一國家的最後一台後面。例如同一分組裡已有美國節點，新的美國節點會跟在它們後面；沒有同組同國家節點時，保持建立時的位置。既有伺服器不會被重新排序，之後的上報也不會改動你手動拖過的順序。",
+      "auto_order_new_clients_description": "開啟後，新伺服器第一次上報並識別出國家/地區時，會自動排到同一分組、同一國家的最後一台後面。既有伺服器不會被重新排序，之後的上報也不會改動你手動拖過的順序。關閉後，新伺服器保持建立時的位置，仍可在伺服器列表手動拖曳。",
       "title": "通用",
       "page_description": "設定自動探索、GeoIP 與其他全域行為。",
       "admin_default_page_size": "列表預設分頁",
@@ -930,7 +930,8 @@
       "admin_default_page_size_invalid": "請輸入 {{min}} 到 {{max}} 之間的整數",
       "interface_motion": "介面動效",
       "reduce_motion": "減少動態效果",
-      "reduce_motion_description": "關閉頁面、頁籤和側欄的過渡動畫，恢復為即時切換。"
+      "reduce_motion_description": "關閉頁面、頁籤和側欄的過渡動畫，恢復為即時切換。",
+      "server_order": "伺服器排序"
     },
     "geoip": {
       "enable_description": "顯示節點的地理位置信息",

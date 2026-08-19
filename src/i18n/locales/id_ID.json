@@ -922,7 +922,7 @@
       "auto_discovery_key": "Kunci Penemuan Otomatis",
       "auto_discovery_key_description": "Gunakan penemuan otomatis untuk mendaftarkan klien secara massal. Biarkan kosong untuk menonaktifkan penemuan otomatis.",
       "auto_order_new_clients": "Urutan otomatis server baru",
-      "auto_order_new_clients_description": "Saat aktif, server baru akan dipindahkan ke belakang server terakhir pada grup dan negara yang sama setelah wilayahnya dikenali. Misalnya, server AS baru akan mengikuti server AS yang sudah ada di grup itu; jika tidak ada rekan di grup dan negara yang sama, posisinya tetap seperti saat dibuat. Server yang sudah ada tidak diurutkan ulang, dan laporan berikutnya tidak akan menimpa urutan seret manual.",
+      "auto_order_new_clients_description": "Saat aktif, server baru akan dipindahkan ke belakang server terakhir pada grup dan negara yang sama setelah wilayahnya dikenali. Server yang sudah ada tidak diurutkan ulang, dan laporan berikutnya tidak akan menimpa urutan seret manual. Jika dimatikan, server baru tetap di posisi saat dibuat. Anda tetap dapat menyeret untuk mengatur urutan.",
       "title": "Umum",
       "page_description": "Konfigurasikan penemuan otomatis, GeoIP, dan perilaku global lainnya.",
       "admin_default_page_size": "Paginasi daftar bawaan",
@@ -930,7 +930,8 @@
       "admin_default_page_size_invalid": "Masukkan bilangan bulat antara {{min}} dan {{max}}",
       "interface_motion": "Gerakan antarmuka",
       "reduce_motion": "Kurangi gerakan",
-      "reduce_motion_description": "Nonaktifkan transisi halaman, tab, dan bilah samping untuk perpindahan langsung."
+      "reduce_motion_description": "Nonaktifkan transisi halaman, tab, dan bilah samping untuk perpindahan langsung.",
+      "server_order": "Urutan server"
     },
     "geoip": {
       "enable_description": "Tampilkan lokasi geografis node",
