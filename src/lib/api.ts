@@ -11,7 +11,6 @@ export interface SettingsResponse {
   admin_default_page_size: number;
   reduce_motion: boolean;
   cors_origin_check_enabled: boolean;
-  auto_order_new_clients_by_region: boolean;
   geo_ip_enabled: boolean;
   geo_ip_provider: string;
   o_auth_provider: string;
@@ -28,7 +27,6 @@ const createDefaultSettings = (): SettingsResponse => ({
   admin_default_page_size: 10,
   reduce_motion: false,
   cors_origin_check_enabled: true,
-  auto_order_new_clients_by_region: true,
   geo_ip_enabled: false,
   geo_ip_provider: "",
   o_auth_provider: "",

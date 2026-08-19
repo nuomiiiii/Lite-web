@@ -1023,8 +1023,6 @@
       "auto_discovery": "Auto discovery",
       "auto_discovery_key": "Auto discovery key",
       "auto_discovery_key_description": "Use automatic discovery to register clients in bulk. Leave blank to disable automatic discovery.",
-      "auto_order_new_clients": "Auto-order new servers",
-      "auto_order_new_clients_description": "When enabled, a newly added server is placed after the last server in the same group and country once GeoIP identifies its region. Existing servers keep their current order, and later reports will not override a manual drag. Turning this off leaves new servers where they were created; you can still drag to reorder them.",
       "title": "General",
       "page_description": "Configure auto discovery, GeoIP, and other global behavior.",
       "admin_default_page_size": "Default list pagination",
@@ -1032,8 +1030,7 @@
       "admin_default_page_size_invalid": "Enter an integer between {{min}} and {{max}}",
       "interface_motion": "Interface motion",
       "reduce_motion": "Reduce motion",
-      "reduce_motion_description": "Disable page, tab, and sidebar transitions and switch views immediately.",
-      "server_order": "Server order"
+      "reduce_motion_description": "Disable page, tab, and sidebar transitions and switch views immediately."
     },
     "geoip": {
       "enable_description": "Display node geographic locations",
