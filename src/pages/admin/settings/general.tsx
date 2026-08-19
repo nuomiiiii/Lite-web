@@ -88,21 +88,6 @@ export default function GeneralSettings() {
         }}
       />
       <SettingCardLabel>
-        {t("settings.general.server_order")}
-      </SettingCardLabel>
-      <SettingCardSwitch
-        title={t("settings.general.auto_order_new_clients")}
-        description={t("settings.general.auto_order_new_clients_description")}
-        defaultChecked={settings.auto_order_new_clients_by_region ?? true}
-        onChange={async (checked) => {
-          await updateSettingsWithToast(
-            { auto_order_new_clients_by_region: checked },
-            t,
-          );
-          await refetch();
-        }}
-      />
-      <SettingCardLabel>
         {t("settings.general.auto_discovery")}
       </SettingCardLabel>
       <ApiCard settings={settings} />
@@ -113,6 +98,17 @@ export default function GeneralSettings() {
         defaultChecked={settings.geo_ip_enabled}
         onChange={async (checked) => {
           await updateSettingsWithToast({ geo_ip_enabled: checked }, t);
+        }}
+      />
+      <SettingCardSwitch
+        title={t("settings.general.auto_order_new_clients")}
+        description={t("settings.general.auto_order_new_clients_description")}
+        defaultChecked={Boolean(settings.auto_order_new_clients_by_region)}
+        onChange={async (checked) => {
+          await updateSettingsWithToast(
+            { auto_order_new_clients_by_region: checked },
+            t,
+          );
         }}
       />
       <SettingCardSelect
