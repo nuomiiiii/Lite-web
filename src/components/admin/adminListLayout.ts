@@ -98,7 +98,7 @@ export const ADMIN_LIST_SEARCH_SX = {
   bgcolor: "transparent",
   "& .MuiOutlinedInput-root": {
     borderRadius: "8px",
-    bgcolor: (theme) => `${fieldFill(theme)} !important`,
+    bgcolor: (theme: Theme) => `${fieldFill(theme)} !important`,
     fontSize: ADMIN_MENU_FONT_SIZE,
     minHeight: 40,
     height: 40,
