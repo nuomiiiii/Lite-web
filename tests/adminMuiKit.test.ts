@@ -45,6 +45,8 @@ test("node list filters use a gray toolbar and white search field", () => {
   assert.match(css, /\.km-admin-node-list-filters \.MuiOutlinedInput-root \{\s*background-color: #fff;/);
   assert.match(layout, /const FILTER_BAR = NEBURST_NEUTRAL/);
   assert.match(layout, /const FILTER_FIELD = "#FFFFFF"/);
+  assert.match(layout, /palette\.mode === "dark" \? INPUT_FILL_DARK : FILTER_FIELD/);
+  assert.match(css, /html\.dark \[data-admin-shell\] \.km-admin-node-list-filters \.MuiOutlinedInput-root \{\s*background-color: #212b36;/);
   const theme = readFileSync("src/theme/createAppTheme.ts", "utf8");
   assert.match(theme, /primary: \{\s*main: ACCENT/);
 });

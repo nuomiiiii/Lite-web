@@ -1576,8 +1576,7 @@ const NodeTable = ({
         previousDropId={PREVIOUS_PAGE_DROP_ID}
         nextDropId={NEXT_PAGE_DROP_ID}
         dragging={isDragging}
-        showSummary
-        summary={`${pageStart + 1}-${Math.min(pageStart + pageSize, localNodes.length)} 共 ${localNodes.length}`}
+        showSummary={false}
       />
       </DndContext>
     </div>

@@ -1,8 +1,18 @@
+import type { Theme } from "@mui/material/styles";
+
 import { ADMIN_MENU_FONT_SIZE } from "@/components/admin/adminMenu";
-import { LITE_BLUE, NEBURST_NEUTRAL } from "@/theme/brand";
+import { INPUT_FILL_DARK, LITE_BLUE, NEBURST_NEUTRAL } from "@/theme/brand";
 
 export const FILTER_BAR = NEBURST_NEUTRAL;
 export const FILTER_FIELD = "#FFFFFF";
+
+const fieldFill = (theme: Theme) =>
+  theme.palette.mode === "dark" ? INPUT_FILL_DARK : FILTER_FIELD;
+
+export const ADMIN_LIST_FILTERS_BAR_SX = {
+  bgcolor: (theme: Theme) =>
+    theme.palette.mode === "dark" ? theme.palette.background.default : FILTER_BAR,
+};
 
 export const ADMIN_FILTER_MENU_ITEM_SX = {
   gap: 1,
@@ -34,7 +44,7 @@ export const ADMIN_LIST_FIELD_SX = {
     color: LITE_BLUE,
   },
   "& .MuiOutlinedInput-root": {
-    bgcolor: FILTER_FIELD,
+    bgcolor: fieldFill,
     borderRadius: "8px",
     fontSize: ADMIN_MENU_FONT_SIZE,
     minHeight: 40,
@@ -88,7 +98,7 @@ export const ADMIN_LIST_SEARCH_SX = {
   bgcolor: "transparent",
   "& .MuiOutlinedInput-root": {
     borderRadius: "8px",
-    bgcolor: `${FILTER_FIELD} !important`,
+    bgcolor: (theme) => `${fieldFill(theme)} !important`,
     fontSize: ADMIN_MENU_FONT_SIZE,
     minHeight: 40,
     height: 40,

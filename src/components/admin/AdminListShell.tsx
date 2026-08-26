@@ -18,8 +18,8 @@ import { getAdminMenuProps } from "@/components/admin/adminMenu";
 import {
   ADMIN_FILTER_MENU_ITEM_SX,
   ADMIN_LIST_FIELD_SX,
+  ADMIN_LIST_FILTERS_BAR_SX,
   ADMIN_LIST_SEARCH_SX,
-  FILTER_BAR,
 } from "@/components/admin/adminListLayout";
 import { Search } from "@/components/admin/muiIcons";
 import { cn } from "@/lib/utils";
@@ -36,7 +36,7 @@ export function AdminListShell({
 
 export function AdminListFiltersBar({ children }: { children: ReactNode }) {
   return (
-    <Box className="km-admin-node-list-filters" sx={{ bgcolor: FILTER_BAR }}>
+    <Box className="km-admin-node-list-filters" sx={ADMIN_LIST_FILTERS_BAR_SX}>
       {children}
     </Box>
   );

@@ -19,7 +19,7 @@ alwaysApply: true
 
 分支：`main`、`Snapshot`。发快照：不改 `main`。远端没有 `Snapshot` 时，先从当前 `main` 新建 `Snapshot`，再在该分支上改；远端已有 `Snapshot` 时，直接在 `Snapshot` 上改。有 UI 改动时先推本仓 `Snapshot`，再推 Lite `Snapshot`（服务端 snapshot 构建固定 clone 本仓 Snapshot 分支）。**快照不要创建本仓 GitHub Release、tag 或 `dist-release.zip`。**
 
-稳定 / 同版本再发：有 UI 改动时，先发本仓正式版，再发 Lite。把 `x.y.z` tag 移到本仓 `main`，更新 Release 说明（标题等于 `x.y.z`）。`dist-release.zip` 由 `publish-dist-release.yml` 构建并上传，不要在本地打包上传。不要恢复已删的 `follow-komari-release.yaml` / `build.yaml` 去自动镜像。快照显示名若出现在别处，必须是 `Snapshot-YYMMDDHHMM`（如 `Snapshot-2608162321`），不要「Lite 2.2.3 Snapshot」。
+稳定 / 同版本再发：有 UI 改动时，先发本仓正式版，再发 Lite。把 `x.y.z` tag 移到本仓 `main`，更新 Release 说明（标题等于 `x.y.z`）。`dist-release.zip` 由 `publish-dist-release.yml` 构建并上传，不要在本地打包上传。Lite 发版时不要手填 web 版本号，它会按本次 `x.y.z` 拉本仓同号 tag。不要恢复已删的 `follow-komari-release.yaml` / `build.yaml` 去自动镜像。快照显示名若出现在别处，必须是 `Snapshot-YYMMDDHHMM`（如 `Snapshot-2608162321`），不要写成带稳定号的 Snapshot 标题。
 
 本仓工作流留 `i18n-sync.yml`、`generate-release-notes.yml` 和 `publish-dist-release.yml`。本地和 GitHub 都已删除、不要找回：`follow-komari-release.yaml`、`build.yaml`、`development.yaml`（SSH 部署）。没有 `dev`、`candidate/*`。
 

@@ -376,7 +376,7 @@ test("list toolbars and pagination follow the compact layout", () => {
   assert.match(paginationSource, /adminMenuProps/);
   assert.match(pageSource, /nodeSearchHaystack\(node\)/);
   assert.doesNotMatch(pageSource, /onRefresh=\{refresh\}/);
-  assert.match(pageSource, /showSummary/);
+  assert.match(pageSource, /showSummary=\{false\}/);
   assert.match(loadSource, /<Tabs\.Content value="configuration"[\s\S]*<AdminListShell[\s\S]*<LoadListToolbar[\s\S]*showAdd[\s\S]*<LoadConfigurationTable/);
   assert.match(loadSource, /<Tabs\.Content value="current"[\s\S]*<AdminListShell[\s\S]*<LoadListToolbar[\s\S]*<CurrentLoadAlertsTable/);
   assert.match(loadSource, /<AdminListSearch/);

@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import Flag from "@/components/Flag";
 import AdminMultiSelect from "@/components/admin/AdminMultiSelect";
 import { Filter, FilterOff, Search, X } from "@/components/admin/muiIcons";
-import { ADMIN_LIST_SEARCH_SX, FILTER_BAR } from "@/components/admin/adminListLayout";
+import { ADMIN_LIST_FILTERS_BAR_SX, ADMIN_LIST_SEARCH_SX } from "@/components/admin/adminListLayout";
 import type { NodeDetail } from "@/contexts/NodeDetailsContext";
 import { getRegionCode, getRegionDisplayName } from "@/utils/regionHelper";
 
@@ -135,7 +135,7 @@ export default function AdminNodeListFilters({
   };
 
   return (
-    <Box className="km-admin-node-list-filters" sx={{ bgcolor: FILTER_BAR }}>
+    <Box className="km-admin-node-list-filters" sx={ADMIN_LIST_FILTERS_BAR_SX}>
       <Stack
         direction="row"
         spacing={1.5}
