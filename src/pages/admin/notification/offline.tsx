@@ -1,6 +1,11 @@
-import AppDialogContent from "@/components/AppDialogContent";
 import { Checkbox } from "@/components/ui/checkbox";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import {
+  AdminListFiltersBar,
+  AdminListSearch,
+  AdminListShell,
+} from "@/components/admin/AdminListShell";
+import { ADMIN_LIST_OUTLINE_SX } from "@/components/admin/adminListLayout";
 import { AdminSelectionCount } from "@/components/admin/AdminSelectionCount";
 import {
   AdminPagination,
@@ -24,19 +29,22 @@ import {
   type OfflineNotification,
 } from "@/contexts/NotificationContext";
 import React from "react";
-import { Pencil, Search, Settings2 } from "lucide-react";
+import { Pencil, Settings2 } from "@/components/admin/muiIcons";
 import { useTranslation } from "react-i18next";
 import {
+  AppDialogContent,
   Badge,
   Button,
   Dialog,
   Flex,
   Switch,
   TextField,
-} from "@radix-ui/themes";
+} from "@/components/admin/ui";
 import { toast } from "sonner";
 import Loading from "@/components/loading";
 import Tips from "@/components/ui/tips";
+import MuiButton from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
 
 const OfflinePage = () => {
   return (
@@ -299,7 +307,101 @@ const InnerLayout = () => {
       >
         {t("notification.offline.full_title", "离线通知设置")}
       </AdminPageTitle>
-      <div className="flex flex-col gap-3">
+      <AdminListShell>
+        <AdminListFiltersBar>
+          <Stack
+            direction="row"
+            spacing={1.5}
+            useFlexGap
+            sx={{ flexWrap: "wrap", alignItems: "center" }}
+          >
+            <AdminListSearch
+              value={search}
+              onChange={setSearch}
+              placeholder={t("common.search")}
+            />
+            <Stack direction="row" spacing={1} sx={{ flexShrink: 0, alignItems: "center" }}>
+              <MuiButton
+                type="button"
+                variant="outlined"
+                disabled={filteredNodeIds.length === 0}
+                onClick={toggleSelectAll}
+                sx={ADMIN_LIST_OUTLINE_SX}
+              >
+                {t(allFilteredSelected ? "common.deselect_all" : "common.select_all")}
+              </MuiButton>
+              <Dialog.Root open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
+                <Dialog.Trigger asChild>
+                  <MuiButton
+                    type="button"
+                    variant="outlined"
+                    startIcon={<Pencil size={16} />}
+                    onClick={() => {
+                      const first = offlineNotification.find(
+                        (n) => n.client === selectedFilteredIds[0]
+                      );
+                      setBatchForm({
+                        enable: first?.enable ?? true,
+                        cooldown: first?.cooldown ?? 1800,
+                        grace_period: first?.grace_period ?? 300,
+                      });
+                    }}
+                    disabled={batchLoading || selectedFilteredCount === 0}
+                    sx={ADMIN_LIST_OUTLINE_SX}
+                  >
+                    {t("notification.offline.batch_edit")}
+                  </MuiButton>
+                </Dialog.Trigger>
+                <AppDialogContent>
+                  <Dialog.Title>{t("notification.offline.batch_edit")}</Dialog.Title>
+                  <NotificationEditForm
+                    initialValues={batchForm}
+                    loading={batchLoading}
+                    onSubmit={handleBatchEdit}
+                    onCancel={() => setBatchDialogOpen(false)}
+                  />
+                </AppDialogContent>
+              </Dialog.Root>
+              <Dialog.Root open={defaultDialogOpen} onOpenChange={setDefaultDialogOpen}>
+                <Dialog.Trigger asChild>
+                  <MuiButton
+                    type="button"
+                    variant="outlined"
+                    startIcon={<Settings2 size={16} />}
+                    onClick={() => {
+                      setDefaultForm({
+                        enable: defaultConfig.enabled,
+                        cooldown: 1800,
+                        grace_period: defaultConfig.grace_period,
+                      });
+                    }}
+                    sx={ADMIN_LIST_OUTLINE_SX}
+                  >
+                    {t("notification.offline.default_config")}
+                  </MuiButton>
+                </Dialog.Trigger>
+                <AppDialogContent
+                  title={t("notification.offline.default_config")}
+                  description={t("notification.offline.default_config_description")}
+                  maxWidth="560px"
+                >
+                  <NotificationEditForm
+                    initialValues={defaultForm}
+                    loading={defaultSaving}
+                    statusLabel={t("notification.offline.default_config_enabled")}
+                    onSubmit={saveDefaultConfig}
+                    onCancel={() => setDefaultDialogOpen(false)}
+                  />
+                </AppDialogContent>
+              </Dialog.Root>
+            </Stack>
+          </Stack>
+          <AdminSelectionCount
+            count={selectedFilteredCount}
+            total={filteredNodeIds.length}
+            className="mt-2 shrink-0 text-sm text-muted-foreground md:hidden"
+          />
+        </AdminListFiltersBar>
         <OfflineNotificationTable
           search={search}
           selected={selected}
@@ -312,100 +414,7 @@ const InnerLayout = () => {
             />
           }
         />
-        <div className="order-first flex min-w-0 flex-col gap-2 px-1 md:flex-row md:items-center md:justify-end">
-          <AdminSelectionCount
-            count={selectedFilteredCount}
-            total={filteredNodeIds.length}
-            className="shrink-0 text-sm text-muted-foreground md:hidden"
-          />
-          <div className="flex min-w-0 flex-wrap items-center gap-2 md:justify-end">
-            <Button
-              type="button"
-              variant="soft"
-              className="shrink-0"
-              disabled={filteredNodeIds.length === 0}
-              onClick={toggleSelectAll}
-            >
-              {t(allFilteredSelected ? "common.deselect_all" : "common.select_all")}
-            </Button>
-            <Dialog.Root open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
-              <Dialog.Trigger>
-                <Button
-                  variant="soft"
-                  className="shrink-0"
-                  onClick={() => {
-                    const first = offlineNotification.find(
-                      (n) => n.client === selectedFilteredIds[0]
-                    );
-                    setBatchForm({
-                      enable: first?.enable ?? true,
-                      cooldown: first?.cooldown ?? 1800,
-                      grace_period: first?.grace_period ?? 300,
-                    });
-                  }}
-                  disabled={batchLoading || selectedFilteredCount === 0}
-                >
-                  {t("notification.offline.batch_edit")}
-                </Button>
-              </Dialog.Trigger>
-              <AppDialogContent>
-                <Dialog.Title>{t("notification.offline.batch_edit")}</Dialog.Title>
-                <NotificationEditForm
-                  initialValues={batchForm}
-                  loading={batchLoading}
-                  onSubmit={handleBatchEdit}
-                  onCancel={() => setBatchDialogOpen(false)}
-                />
-              </AppDialogContent>
-            </Dialog.Root>
-            <TextField.Root
-              type="text"
-              className="order-last min-w-0 w-full basis-full sm:order-none sm:w-64 sm:basis-auto sm:flex-none"
-              placeholder={t("common.search")}
-              value={search}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setSearch(e.target.value)
-              }
-            >
-              <TextField.Slot>
-                <Search size={16} />
-              </TextField.Slot>
-            </TextField.Root>
-            <Dialog.Root open={defaultDialogOpen} onOpenChange={setDefaultDialogOpen}>
-              <Dialog.Trigger>
-                <Button
-                  type="button"
-                  variant="soft"
-                  className="shrink-0"
-                  onClick={() => {
-                    setDefaultForm({
-                      enable: defaultConfig.enabled,
-                      cooldown: 1800,
-                      grace_period: defaultConfig.grace_period,
-                    });
-                  }}
-                >
-                  <Settings2 size={16} />
-                  {t("notification.offline.default_config")}
-                </Button>
-              </Dialog.Trigger>
-              <AppDialogContent
-                title={t("notification.offline.default_config")}
-                description={t("notification.offline.default_config_description")}
-                maxWidth="560px"
-              >
-                <NotificationEditForm
-                  initialValues={defaultForm}
-                  loading={defaultSaving}
-                  statusLabel={t("notification.offline.default_config_enabled")}
-                  onSubmit={saveDefaultConfig}
-                  onCancel={() => setDefaultDialogOpen(false)}
-                />
-              </AppDialogContent>
-            </Dialog.Root>
-          </div>
-        </div>
-      </div>
+      </AdminListShell>
       <div className="border-l-2 border-[var(--accent-8)] pl-3 text-sm leading-6 text-muted-foreground">
         <span
           dangerouslySetInnerHTML={{ __html: t("notification.offline.tips") }}
@@ -436,9 +445,9 @@ const OfflineNotificationTable = ({
     useAdminPagination(filtered);
   React.useEffect(() => setPage(1), [search, setPage]);
   return (
-    <div className="admin-responsive-table-wrap overflow-hidden rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)]">
-      <div className="overflow-x-auto">
-      <Table className="admin-responsive-table admin-selection-table min-w-[720px]">
+    <>
+      <div className="admin-responsive-table-wrap overflow-x-auto">
+      <Table container={false} className="admin-responsive-table admin-selection-table min-w-[720px]">
         <TableHeader>
           <TableRow>
             <TableHead className="w-12 px-3 text-center">
@@ -530,7 +539,7 @@ const OfflineNotificationTable = ({
         onPageSizeChange={setPageSize}
         summary={paginationSummary}
       />
-    </div>
+    </>
   );
 };
 

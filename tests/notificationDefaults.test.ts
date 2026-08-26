@@ -14,7 +14,7 @@ const trafficReportSource = readFileSync(
   "src/pages/admin/notification/traffic_report.tsx",
   "utf8",
 );
-const locales = ["en", "id_ID", "ja_JP", "zh_CN", "zh_TW"].map((locale) =>
+const locales = ["en", "ja_JP", "zh_CN", "zh_TW"].map((locale) =>
   JSON.parse(readFileSync(`src/i18n/locales/${locale}.json`, "utf8")),
 );
 

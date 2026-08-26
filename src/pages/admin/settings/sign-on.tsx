@@ -5,7 +5,7 @@ import {
   SettingCardSwitch,
 } from "@/components/admin/SettingCard";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
-import { Button, Text } from "@radix-ui/themes";
+import { Button, Text } from "@/components/admin/ui";
 import { useTranslation } from "react-i18next";
 import Loading from "@/components/loading";
 import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
@@ -164,7 +164,7 @@ const ApiCard = () => {
   // 生成32位随机字符串
   const generateRandomString = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = 'komari-';
+    let result = 'lite-';
     for (let i = 0; i < 32; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }

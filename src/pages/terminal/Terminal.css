@@ -481,30 +481,41 @@
 .remote-file-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  background: transparent !important;
+  color: inherit;
+  font-size: 12px;
   table-layout: fixed;
 }
 
 .remote-file-table th,
 .remote-file-table td {
   box-sizing: border-box;
-  height: 34px;
+  height: 36px;
   border-bottom: 1px solid #1e2228;
-  padding: 0 7px;
+  padding: 0 8px !important;
   overflow: hidden;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.remote-workspace .remote-file-table .admin-table-header,
+.remote-workspace .remote-file-table .admin-table-header tr,
+.remote-workspace .remote-file-table .admin-table-header tr:hover {
+  background: #1c2128 !important;
+}
+
 .remote-file-table th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #171b20;
-  color: #858d97;
-  font-size: 10px;
-  font-weight: 500;
+  height: 40px !important;
+  background: #1c2128 !important;
+  color: #919eab;
+  font-size: 13px;
+  font-weight: 600;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .remote-file-table th:first-child,
@@ -524,16 +535,16 @@
 }
 
 .remote-file-table tbody tr:hover {
-  background: #171c22;
+  background: #171c22 !important;
 }
 
 .remote-file-table tbody tr.is-selected {
-  background: #173239;
+  background: #173239 !important;
   box-shadow: inset 2px 0 #4fd1c5;
 }
 
 .remote-file-table tbody tr.is-selected:hover {
-  background: #1b3b43;
+  background: #1b3b43 !important;
 }
 
 .remote-file-table td:nth-child(2) {

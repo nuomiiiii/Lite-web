@@ -106,7 +106,7 @@ test("keeps the terminal portal aligned with the dashboard visual language", () 
   assert.match(pickerStyles, /\.remote-node-picker-addresses \{[\s\S]*justify-content: center/);
   assert.equal(pickerSource.includes('t("terminal.copy_address"'), false);
   assert.equal(pickerSource.includes('role="button"'), true);
-  assert.equal(pickerSource.includes('if (online) onSelect(node)'), true);
+  assert.equal(pickerSource.includes("if (knownOnline) onSelect(node)"), true);
   assert.equal(pickerSource.includes('event.key !== "Enter" && event.key !== " "'), true);
   assert.equal(portalSource.includes("openRemoteTerminal(node.uuid)"), true);
   assert.equal(portalSource.includes("window.location.assign"), false);

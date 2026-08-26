@@ -11,6 +11,11 @@
       "icon": "Server"
     },
     {
+      "labelKey": "navigation.billing",
+      "path": "/admin/billing",
+      "icon": "Payments"
+    },
+    {
       "labelKey": "navigation.monitoring",
       "path": "/admin/monitoring",
       "icon": "Activity",

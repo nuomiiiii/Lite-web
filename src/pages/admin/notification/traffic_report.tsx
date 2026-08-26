@@ -1,4 +1,3 @@
-import AppDialogContent from "@/components/AppDialogContent";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
@@ -19,24 +18,33 @@ import {
 } from "@/contexts/TrafficReportContext";
 import React from "react";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import {
+  AdminListFiltersBar,
+  AdminListSearch,
+  AdminListShell,
+} from "@/components/admin/AdminListShell";
+import { ADMIN_LIST_OUTLINE_SX } from "@/components/admin/adminListLayout";
 import { AdminSelectionCount } from "@/components/admin/AdminSelectionCount";
 import {
   AdminPagination,
   useAdminPagination,
 } from "@/components/admin/AdminPagination";
-import { Clock3, Pencil, Save, Search, Send, Settings2 } from "lucide-react";
+import { Pencil, Settings2 } from "@/components/admin/muiIcons";
 import { useTranslation } from "react-i18next";
 import {
+  AppDialogContent,
   Badge,
   Button,
   Dialog,
   Flex,
   Switch,
   TextField,
-} from "@radix-ui/themes";
+} from "@/components/admin/ui";
 import { toast } from "sonner";
 import Loading from "@/components/loading";
 import { useSettings } from "@/lib/api";
+import MuiButton from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
 
 type TrafficReportFormValues = {
   enable: boolean;
@@ -523,34 +531,30 @@ const InnerLayout = () => {
         </AdminPageTitle>
       </Flex>
 
-      <div className="grid overflow-hidden rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)] lg:grid-cols-2">
+      <div className="grid overflow-hidden rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)] xl:grid-cols-2">
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <Clock3
-              className="mt-0.5 shrink-0 text-[var(--accent-10)]"
-              size={18}
-            />
-            <div className="min-w-0">
-              <div className="font-medium">
-                {t("notification.traffic_report.report_time")}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {t("notification.traffic_report.report_time_description")}
-              </div>
+          <div className="min-w-0">
+            <div className="font-medium">
+              {t("notification.traffic_report.report_time")}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {t("notification.traffic_report.report_time_description")}
             </div>
           </div>
           <Flex gap="2" align="center" className="w-full shrink-0 sm:w-auto">
-            <TextField.Root
-              type="time"
-              aria-label={t("notification.traffic_report.report_time")}
-              className="min-w-0 flex-1 sm:w-32 sm:flex-none"
-              value={reportTime}
-              onChange={(event) => setReportTime(event.target.value)}
-              disabled={reportTimeSaving}
-            />
+            <div className="min-w-0 flex-1 sm:w-28 sm:flex-none">
+              <TextField.Root
+                type="time"
+                aria-label={t("notification.traffic_report.report_time")}
+                value={reportTime}
+                onChange={(event) => setReportTime(event.target.value)}
+                disabled={reportTimeSaving}
+              />
+            </div>
             <Button
               type="button"
               variant="soft"
+              className="shrink-0"
               onClick={saveReportTime}
               disabled={
                 reportTimeSaving ||
@@ -558,25 +562,18 @@ const InnerLayout = () => {
                 reportTime === savedReportTime
               }
             >
-              <Save size={16} />
               {t("common.save")}
             </Button>
           </Flex>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-[var(--gray-a5)] p-4 sm:flex-row sm:items-center sm:justify-between lg:border-l lg:border-t-0">
-          <div className="flex min-w-0 items-start gap-3">
-            <Send
-              className="mt-0.5 shrink-0 text-[var(--accent-10)]"
-              size={18}
-            />
-            <div className="min-w-0">
-              <div className="font-medium">
-                {t("notification.traffic_report.send_daily")}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {t("notification.traffic_report.send_daily_description")}
-              </div>
+        <div className="flex flex-col gap-3 border-t border-[var(--gray-a5)] p-4 sm:flex-row sm:items-center sm:justify-between xl:border-l xl:border-t-0">
+          <div className="min-w-0">
+            <div className="font-medium">
+              {t("notification.traffic_report.send_daily")}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {t("notification.traffic_report.send_daily_description")}
             </div>
           </div>
           <Button
@@ -585,13 +582,118 @@ const InnerLayout = () => {
             onClick={sendDailyReport}
             disabled={dailySending}
           >
-            <Send size={16} />
             {t("notification.traffic_report.send_now")}
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <AdminListShell>
+        <AdminListFiltersBar>
+          <Stack
+            direction="row"
+            spacing={1.5}
+            useFlexGap
+            sx={{ flexWrap: "wrap", alignItems: "center" }}
+          >
+            <AdminListSearch
+              value={search}
+              onChange={setSearch}
+              placeholder={t("common.search")}
+            />
+            <Stack direction="row" spacing={1} sx={{ flexShrink: 0, alignItems: "center" }}>
+              <MuiButton
+                type="button"
+                variant="outlined"
+                disabled={filteredNodeIds.length === 0}
+                onClick={toggleSelectAll}
+                sx={ADMIN_LIST_OUTLINE_SX}
+              >
+                {t(allFilteredSelected ? "common.deselect_all" : "common.select_all")}
+              </MuiButton>
+              <Dialog.Root open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
+                <Dialog.Trigger asChild>
+                  <MuiButton
+                    type="button"
+                    variant="outlined"
+                    startIcon={<Pencil size={16} />}
+                    onClick={() => {
+                      const first = trafficReportNotification.find(
+                        (n) => n.client === selectedFilteredIds[0]
+                      );
+                      setBatchForm({
+                        enable: first?.enable ?? true,
+                        daily: first?.daily ?? false,
+                        weekly: first?.weekly ?? false,
+                        monthly: first?.monthly ?? false,
+                        include_traffic: first?.include_traffic ?? true,
+                        include_billing: first?.include_billing ?? false,
+                      });
+                    }}
+                    disabled={batchLoading || selectedFilteredCount === 0}
+                    sx={ADMIN_LIST_OUTLINE_SX}
+                  >
+                    {t("notification.traffic_report.batch_edit")}
+                  </MuiButton>
+                </Dialog.Trigger>
+                <AppDialogContent maxWidth="560px">
+                  <Dialog.Title>
+                    {t("notification.traffic_report.batch_edit")}
+                  </Dialog.Title>
+                  <TrafficReportEditForm
+                    initialValues={batchForm}
+                    loading={batchLoading}
+                    onSubmit={handleBatchEdit}
+                    onCancel={() => setBatchDialogOpen(false)}
+                  />
+                </AppDialogContent>
+              </Dialog.Root>
+              <Dialog.Root open={defaultDialogOpen} onOpenChange={setDefaultDialogOpen}>
+                <Dialog.Trigger asChild>
+                  <MuiButton
+                    type="button"
+                    variant="outlined"
+                    startIcon={<Settings2 size={16} />}
+                    onClick={() => {
+                      setDefaultForm({
+                        enable: defaultConfig.enabled,
+                        daily: defaultConfig.daily,
+                        weekly: defaultConfig.weekly,
+                        monthly: defaultConfig.monthly,
+                        include_traffic: defaultConfig.include_traffic,
+                        include_billing: defaultConfig.include_billing,
+                      });
+                    }}
+                    sx={ADMIN_LIST_OUTLINE_SX}
+                  >
+                    {t("notification.traffic_report.default_config")}
+                  </MuiButton>
+                </Dialog.Trigger>
+                <AppDialogContent
+                  title={t("notification.traffic_report.default_config")}
+                  description={t(
+                    "notification.traffic_report.default_config_description",
+                  )}
+                  maxWidth="560px"
+                >
+                  <TrafficReportEditForm
+                    initialValues={defaultForm}
+                    loading={defaultSaving}
+                    statusLabel={t(
+                      "notification.traffic_report.default_config_enabled",
+                    )}
+                    onSubmit={saveDefaultConfig}
+                    onCancel={() => setDefaultDialogOpen(false)}
+                  />
+                </AppDialogContent>
+              </Dialog.Root>
+            </Stack>
+          </Stack>
+          <AdminSelectionCount
+            count={selectedFilteredCount}
+            total={filteredNodeIds.length}
+            className="mt-2 shrink-0 text-sm text-muted-foreground md:hidden"
+          />
+        </AdminListFiltersBar>
         <TrafficReportTable
           search={search}
           selected={selected}
@@ -604,112 +706,7 @@ const InnerLayout = () => {
             />
           }
         />
-        <div className="order-first flex min-w-0 flex-col gap-2 px-1 md:flex-row md:items-center md:justify-end">
-          <AdminSelectionCount
-            count={selectedFilteredCount}
-            total={filteredNodeIds.length}
-            className="shrink-0 text-sm text-muted-foreground md:hidden"
-          />
-          <div className="flex min-w-0 flex-wrap items-center gap-2 md:justify-end">
-            <Button
-              type="button"
-              variant="soft"
-              className="shrink-0"
-              disabled={filteredNodeIds.length === 0}
-              onClick={toggleSelectAll}
-            >
-              {t(allFilteredSelected ? "common.deselect_all" : "common.select_all")}
-            </Button>
-            <Dialog.Root open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
-              <Dialog.Trigger>
-                <Button
-                  variant="soft"
-                  className="shrink-0"
-                  onClick={() => {
-                    const first = trafficReportNotification.find(
-                      (n) => n.client === selectedFilteredIds[0]
-                    );
-                    setBatchForm({
-                      enable: first?.enable ?? true,
-                      daily: first?.daily ?? false,
-                      weekly: first?.weekly ?? false,
-                      monthly: first?.monthly ?? false,
-                      include_traffic: first?.include_traffic ?? true,
-                      include_billing: first?.include_billing ?? false,
-                    });
-                  }}
-                  disabled={batchLoading || selectedFilteredCount === 0}
-                >
-                  {t("notification.traffic_report.batch_edit")}
-                </Button>
-              </Dialog.Trigger>
-              <AppDialogContent maxWidth="560px">
-                <Dialog.Title>
-                  {t("notification.traffic_report.batch_edit")}
-                </Dialog.Title>
-                <TrafficReportEditForm
-                  initialValues={batchForm}
-                  loading={batchLoading}
-                  onSubmit={handleBatchEdit}
-                  onCancel={() => setBatchDialogOpen(false)}
-                />
-              </AppDialogContent>
-            </Dialog.Root>
-            <TextField.Root
-              type="text"
-              className="order-last min-w-0 w-full basis-full sm:order-none sm:w-64 sm:basis-auto sm:flex-none"
-              placeholder={t("common.search")}
-              value={search}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setSearch(e.target.value)
-              }
-            >
-              <TextField.Slot>
-                <Search size={16} />
-              </TextField.Slot>
-            </TextField.Root>
-            <Dialog.Root open={defaultDialogOpen} onOpenChange={setDefaultDialogOpen}>
-              <Dialog.Trigger>
-                <Button
-                  type="button"
-                  variant="soft"
-                  className="shrink-0"
-                  onClick={() => {
-                    setDefaultForm({
-                      enable: defaultConfig.enabled,
-                      daily: defaultConfig.daily,
-                      weekly: defaultConfig.weekly,
-                      monthly: defaultConfig.monthly,
-                      include_traffic: defaultConfig.include_traffic,
-                      include_billing: defaultConfig.include_billing,
-                    });
-                  }}
-                >
-                  <Settings2 size={16} />
-                  {t("notification.traffic_report.default_config")}
-                </Button>
-              </Dialog.Trigger>
-              <AppDialogContent
-                title={t("notification.traffic_report.default_config")}
-                description={t(
-                  "notification.traffic_report.default_config_description",
-                )}
-                maxWidth="560px"
-              >
-                <TrafficReportEditForm
-                  initialValues={defaultForm}
-                  loading={defaultSaving}
-                  statusLabel={t(
-                    "notification.traffic_report.default_config_enabled",
-                  )}
-                  onSubmit={saveDefaultConfig}
-                  onCancel={() => setDefaultDialogOpen(false)}
-                />
-              </AppDialogContent>
-            </Dialog.Root>
-          </div>
-        </div>
-      </div>
+      </AdminListShell>
     </div>
   );
 };
@@ -737,9 +734,9 @@ const TrafficReportTable = ({
   React.useEffect(() => setPage(1), [search, setPage]);
 
   return (
-    <div className="admin-responsive-table-wrap overflow-hidden rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)]">
-      <div className="overflow-x-auto">
-      <Table className="admin-responsive-table admin-selection-table min-w-[640px]">
+    <>
+      <div className="admin-responsive-table-wrap overflow-x-auto">
+      <Table container={false} className="admin-responsive-table admin-selection-table min-w-[640px]">
         <TableHeader>
           <TableRow>
             <TableHead className="w-12 px-3 text-center">
@@ -804,7 +801,7 @@ const TrafficReportTable = ({
         onPageSizeChange={setPageSize}
         summary={paginationSummary}
       />
-    </div>
+    </>
   );
 };
 

@@ -96,8 +96,11 @@ test("reserves enough chart space for complete traffic labels on desktop and mob
   assert.ok(dashboardTrafficAxisWidth([Number.MAX_VALUE]) <= 104);
 });
 
-test("dashboard alert links preserve category and exact target filters", () => {
-  assert.equal(dashboardAlertCategoryPath("offline"), "/admin/servers?alert=offline");
+test("dashboard alert links reuse existing destination filters", () => {
+  assert.equal(dashboardAlertCategoryPath("offline"), "/admin/servers?status=offline");
+  assert.equal(dashboardAlertCategoryPath("resource"), "/admin/servers?alert=resource");
+  assert.equal(dashboardAlertCategoryPath("traffic"), "/admin/servers?alert=traffic");
+  assert.equal(dashboardAlertCategoryPath("billing"), "/admin/servers?alert=billing");
   assert.equal(
     dashboardAlertCategoryPath("latency_loss"),
     "/admin/notification/ping-loss?state=active",
@@ -117,6 +120,27 @@ test("dashboard alert links preserve category and exact target filters", () => {
   assert.equal(
     dashboardAlertDetailPath("return_route", { title: "route", task_id: 9 }),
     "/admin/return-route?task=9",
+  );
+  assert.equal(
+    dashboardAlertDetailPath("resource", {
+      title: "cpu",
+      node_uuid: "00000000-0000-4000-8000-000000000001",
+    }),
+    "/admin/servers/00000000-0000-4000-8000-000000000001?tab=metrics",
+  );
+  assert.equal(
+    dashboardAlertDetailPath("traffic", {
+      title: "quota",
+      node_uuid: "00000000-0000-4000-8000-000000000001",
+    }),
+    "/admin/servers/00000000-0000-4000-8000-000000000001?tab=overview",
+  );
+  assert.equal(
+    dashboardAlertDetailPath("billing", {
+      title: "due",
+      node_uuid: "00000000-0000-4000-8000-000000000001",
+    }),
+    "/admin/servers/00000000-0000-4000-8000-000000000001?tab=billing",
   );
 });
 

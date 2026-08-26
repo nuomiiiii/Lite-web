@@ -10,6 +10,7 @@ import type {
 } from "../types/rpc2";
 import { RPC2ConnectionState } from "../types/rpc2";
 import i18n from "../i18n/config";
+import { sameOriginApiPath, sameOriginFetchInit } from "../utils/security";
 
 /**
  * RPC2 客户端类
@@ -36,7 +37,7 @@ export class RPC2Client {
     baseUrl = "/api/rpc2",
     options: RPC2ConnectionOptions = {}
   ) {
-    this.baseUrl = baseUrl;
+    this.baseUrl = sameOriginApiPath(baseUrl);
     this.options = {
       autoConnect: true,
       autoReconnect: true,
@@ -222,12 +223,15 @@ export class RPC2Client {
     };
 
     try {
-      const response = await fetch(this.baseUrl, {
-        method: "POST",
-        headers: this.options.headers,
-        body: JSON.stringify(request),
-        signal: options.timeout ? AbortSignal.timeout(options.timeout) : undefined,
-      });
+      const response = await fetch(
+        this.baseUrl,
+        sameOriginFetchInit({
+          method: "POST",
+          headers: this.options.headers,
+          body: JSON.stringify(request),
+          signal: options.timeout ? AbortSignal.timeout(options.timeout) : undefined,
+        }),
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -268,11 +272,14 @@ export class RPC2Client {
     }));
 
     try {
-      const response = await fetch(this.baseUrl, {
-        method: "POST",
-        headers: this.options.headers,
-        body: JSON.stringify(batchRequest),
-      });
+      const response = await fetch(
+        this.baseUrl,
+        sameOriginFetchInit({
+          method: "POST",
+          headers: this.options.headers,
+          body: JSON.stringify(batchRequest),
+        }),
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

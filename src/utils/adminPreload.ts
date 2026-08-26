@@ -5,6 +5,7 @@ interface NetworkInformationLike {
 
 export const LIKELY_ADMIN_ROUTES = [
   "/admin/servers",
+  "/admin/billing",
   "/admin/ping",
   "/admin/return-route",
 ] as const;

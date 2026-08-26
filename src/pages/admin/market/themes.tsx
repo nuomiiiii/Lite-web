@@ -2,6 +2,7 @@ import Loading from "@/components/loading";
 import { useSettings } from "@/lib/api";
 import { resolveI18nText, type I18nText } from "@/utils/i18nText";
 import {
+  AppDialogContent,
   Badge,
   Box,
   Button,
@@ -15,7 +16,7 @@ import {
   Switch,
   Text,
   TextField,
-} from "@radix-ui/themes";
+} from "@/components/admin/ui";
 import {
   AlertTriangle,
   Download,
@@ -27,12 +28,11 @@ import {
   Search,
   Settings2,
   Trash2,
-} from "lucide-react";
+} from "@/components/admin/muiIcons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
-import AppDialogContent from "@/components/AppDialogContent";
 import ThemePreviewImage from "@/components/ThemePreviewImage";
 import { themePreviewSrc } from "@/utils/themePreviewImage";
 import {

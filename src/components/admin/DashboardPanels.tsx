@@ -1,4 +1,6 @@
-import { Callout, Skeleton } from "@radix-ui/themes";
+import { Callout, Skeleton } from "@/components/admin/ui";
+import Box from "@mui/material/Box";
+import { alpha } from "@mui/material/styles";
 import {
   Activity,
   AlertCircle,
@@ -13,10 +15,10 @@ import {
   Route,
   Timer,
   WifiOff,
-} from "lucide-react";
+} from "@/components/admin/muiIcons";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -41,8 +43,6 @@ import {
   dashboardAlertCategoryPath,
   dashboardAlertDetailPath,
   formatBillingAlertStatus,
-  prefetchDashboardAlertItems,
-  serverAlertKinds,
 } from "@/utils/adminAlertFilters";
 import { formatBytes } from "@/utils/unitHelper";
 
@@ -57,7 +57,7 @@ export function OverviewSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
       {[0, 1, 2].map((item) => (
-        <div key={item} className="h-[112px] rounded-md border bg-[var(--color-panel-solid)] p-3">
+        <div key={item} className="h-[112px] km-admin-surface p-3">
           <Skeleton width="7rem" height="1rem" />
           <Skeleton className="mt-4" width="9rem" height="1.9rem" />
           <Skeleton className="mt-3" width="72%" height="0.85rem" />
@@ -78,18 +78,41 @@ export function SummaryPanel({
   label: string;
   value: string;
   children: React.ReactNode;
-  tone?: "accent" | "green" | "orange";
+  tone?: "accent" | "green" | "orange" | "muted";
 }) {
-  const toneClass = {
-    accent: "text-[var(--accent-11)]",
-    green: "text-[var(--green-11)]",
-    orange: "text-[var(--orange-11)]",
-  }[tone];
   return (
-    <section className="min-h-[112px] rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="min-h-[112px] km-admin-surface p-3">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-muted-foreground">{label}</span>
-        <span className={`flex size-7 items-center justify-center ${toneClass}`}>{icon}</span>
+        <Box
+          sx={(theme) => ({
+            width: 32,
+            height: 32,
+            borderRadius: 1,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            bgcolor:
+              tone === "accent"
+                ? alpha(theme.palette.info.main, 0.08)
+                : tone === "green"
+                  ? alpha(theme.palette.success.main, 0.08)
+                  : tone === "orange"
+                    ? alpha(theme.palette.warning.main, 0.12)
+                    : theme.palette.action.hover,
+            color:
+              tone === "accent"
+                ? "info.main"
+                : tone === "green"
+                  ? "success.main"
+                  : tone === "orange"
+                    ? "warning.main"
+                    : "text.secondary",
+            "& .MuiSvgIcon-root": { fontSize: 18 },
+          })}
+        >
+          {icon}
+        </Box>
       </div>
       <div className="mt-2 text-2xl font-bold tabular-nums text-foreground">{value}</div>
       <div className="mt-2 text-sm text-muted-foreground">{children}</div>
@@ -211,40 +234,12 @@ function relativeTime(value: string | null, locale: string, fallback: string): s
 export function AlertOverviewPanel({
   data,
   locale,
-  accountKey = "authenticated",
 }: {
   data: DashboardData;
   locale: string;
   accountKey?: string;
 }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const prepareCategory = React.useCallback((kind: DashboardAlertKind) => {
-    if (serverAlertKinds.has(kind)) {
-      void prefetchDashboardAlertItems(kind, accountKey).catch(() => undefined);
-    }
-  }, [accountKey]);
-  const openCategory = React.useCallback(async (
-    event: React.MouseEvent<HTMLAnchorElement>,
-    kind: DashboardAlertKind,
-    to: string,
-  ) => {
-    if (
-      !serverAlertKinds.has(kind)
-      || event.button !== 0
-      || event.metaKey
-      || event.ctrlKey
-      || event.shiftKey
-      || event.altKey
-    ) return;
-    event.preventDefault();
-    try {
-      await prefetchDashboardAlertItems(kind, accountKey);
-    } catch {
-      // The destination page keeps its normal error handling if prefetch fails.
-    }
-    navigate(to);
-  }, [accountKey, navigate]);
   const items: Array<{
     kind: DashboardAlertKind;
     label: string;
@@ -265,7 +260,7 @@ export function AlertOverviewPanel({
 
   return (
     <section
-      className="flex h-full min-w-0 flex-col rounded-md border bg-[var(--color-panel-solid)] p-3"
+      className="flex h-full min-w-0 flex-col km-admin-surface p-3"
       style={{ containerType: "inline-size" }}
     >
       <PanelHeader
@@ -304,10 +299,6 @@ export function AlertOverviewPanel({
             >
               <Link
                 to={categoryTo}
-                onPointerEnter={() => prepareCategory(item.kind)}
-                onFocus={() => prepareCategory(item.kind)}
-                onTouchStart={() => prepareCategory(item.kind)}
-                onClick={(event) => void openCategory(event, item.kind, categoryTo)}
                 className="flex min-w-0 items-start justify-between gap-2 rounded-sm text-xs outline-none hover:text-[var(--accent-11)] focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]"
               >
                 <span className="flex min-w-0 items-start gap-1.5 font-medium">
@@ -344,10 +335,6 @@ export function AlertOverviewPanel({
               ) : (
                 <Link
                   to={categoryTo}
-                  onPointerEnter={() => prepareCategory(item.kind)}
-                  onFocus={() => prepareCategory(item.kind)}
-                  onTouchStart={() => prepareCategory(item.kind)}
-                  onClick={(event) => void openCategory(event, item.kind, categoryTo)}
                   className="break-words text-[11px] leading-4 text-muted-foreground hover:text-foreground"
                 >
                   {t("admin_dashboard.affected_nodes", { count: item.summary.affected_nodes })}
@@ -381,7 +368,7 @@ export function LatencyPanel({
     [charts?.latency.points, locale],
   );
   return (
-    <section className="min-h-[148px] rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="min-h-[148px] km-admin-surface p-3">
       <PanelHeader
         title={t("admin_dashboard.latency_overview")}
         description={t("admin_dashboard.latency_overview_hint")}
@@ -462,7 +449,7 @@ export function ReturnRouteStatusPanel({ data, locale }: { data: DashboardData; 
       to="/admin/return-route"
       className="group block h-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]"
     >
-      <section className="h-full min-h-[286px] rounded-md border bg-[var(--color-panel-solid)] p-3 transition-colors group-hover:border-[var(--accent-a7)]">
+      <section className="h-full min-h-[286px] km-admin-surface p-3 transition-colors group-hover:border-[var(--accent-a7)]">
         <PanelHeader
           title={t("admin_dashboard.return_route_status")}
           description={t("admin_dashboard.return_route_status_hint")}
@@ -561,7 +548,7 @@ export function StoragePanel({ data, locale }: { data: DashboardData; locale: st
   ];
 
   return (
-    <section className="h-full rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="h-full km-admin-surface p-3">
       <PanelHeader
         title={t("admin_dashboard.database_usage")}
         trailing={<span className="text-sm font-semibold tabular-nums text-foreground">{formatBytes(storageTotal)}</span>}
@@ -645,7 +632,7 @@ export function ResourceRankingPanel({ data, limit }: { data: DashboardData; lim
   ];
 
   return (
-    <section className="rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="km-admin-surface p-3">
       <PanelHeader
         title={t("admin_dashboard.resource_ranking")}
         description={t("admin_dashboard.resource_ranking_hint")}
@@ -708,7 +695,7 @@ export function TrafficTrendPanel({
 }) {
   const { t } = useTranslation();
   return (
-    <section className="@container flex h-full min-w-0 flex-col rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="@container flex h-full min-w-0 flex-col km-admin-surface p-3">
       <PanelHeader
         title={t("admin_dashboard.today_traffic")}
         description={t("admin_dashboard.hourly_traffic_hint")}
@@ -767,7 +754,7 @@ export function BillingTrendPanel({
 }) {
   const { t } = useTranslation();
   return (
-    <section className="@container flex h-full min-w-0 flex-col rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="@container flex h-full min-w-0 flex-col km-admin-surface p-3">
       <PanelHeader
         title={t("admin_dashboard.daily_billable")}
         description={t("admin_dashboard.daily_billable_hint")}
@@ -817,7 +804,7 @@ export function DailyTrafficRankingPanel({
   const items = charts?.traffic.ranking ?? [];
   const maximum = items[0]?.billable ?? 0;
   return (
-    <section className="h-full min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="h-full min-w-0 km-admin-surface p-3">
       <PanelHeader
         title={t("admin_dashboard.daily_traffic_ranking")}
         description={t("admin_dashboard.daily_traffic_ranking_hint")}
@@ -894,7 +881,7 @@ export function LatencyRankingPanel({
   const items = charts?.latency.ranking ?? [];
   const maximum = items[0]?.average ?? 0;
   return (
-    <section className="h-full min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="h-full min-w-0 km-admin-surface p-3">
       <PanelHeader
         title={t("admin_dashboard.latency_ranking")}
         description={t("admin_dashboard.latency_ranking_hint")}
@@ -950,7 +937,7 @@ export function LatencyJitterRankingPanel({
   const items = charts?.latency.jitter_ranking ?? [];
   const maximum = Math.max(0, ...items.map((item) => Math.abs(item.delta)));
   return (
-    <section className="h-full min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="h-full min-w-0 km-admin-surface p-3">
       <PanelHeader
         title={t("admin_dashboard.latency_jitter_ranking")}
         description={t("admin_dashboard.latency_jitter_ranking_hint")}
@@ -1020,7 +1007,7 @@ export function PacketLossRankingPanel({
   const items = charts?.packet_loss?.ranking ?? [];
   const maximum = items[0]?.loss_rate ?? 0;
   return (
-    <section className="h-full min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+    <section className="h-full min-w-0 km-admin-surface p-3">
       <PanelHeader
         title={t("admin_dashboard.packet_loss_ranking")}
         description={t("admin_dashboard.packet_loss_ranking_hint")}
@@ -1252,7 +1239,7 @@ function LegacyAdminDashboard() {
                 warningCount={data.alerts.latency_loss.error ? 0 : data.alerts.latency_loss.current}
               />
 
-              <section className="min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+              <section className="min-w-0 km-admin-surface p-3">
                 <PanelHeader
                   title={t("admin_dashboard.today_traffic")}
                   description={t("admin_dashboard.hourly_traffic_hint")}
@@ -1293,7 +1280,7 @@ function LegacyAdminDashboard() {
                 </ChartContainer> : <Skeleton className="h-[220px] w-full" />}
               </section>
 
-              <section className="min-w-0 rounded-md border bg-[var(--color-panel-solid)] p-3">
+              <section className="min-w-0 km-admin-surface p-3">
                 <PanelHeader
                   title={t("admin_dashboard.daily_billable")}
                   description={t("admin_dashboard.daily_billable_hint")}

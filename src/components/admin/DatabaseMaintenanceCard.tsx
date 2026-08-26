@@ -1,8 +1,8 @@
-import AppDialogContent from "@/components/AppDialogContent";
 import { formatBytes } from "@/utils/unitHelper";
 import { getDatabaseRuntimeHealth } from "@/lib/databaseRuntime";
-import { Badge, Button, Dialog, Flex, Progress, Text } from "@radix-ui/themes";
-import { Activity, DatabaseZap, RefreshCw } from "lucide-react";
+import {
+  AppDialogContent, Badge, Button, Dialog, Flex, Progress, Text } from "@/components/admin/ui";
+import { Activity, DatabaseZap, RefreshCw } from "@/components/admin/muiIcons";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";

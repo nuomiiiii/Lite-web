@@ -7,7 +7,6 @@ import {
   ThemeContext,
   THEME_DEFAULTS,
   type Appearance,
-  type Colors,
 } from "./contexts/ThemeContext";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { useSystemTheme } from "./hooks/useSystemTheme";
@@ -34,6 +33,8 @@ import {
   scheduleIdleAdminWarmup,
 } from "./utils/adminPreload";
 import { prefetchAdminDashboard } from "./utils/dashboardPrefetch";
+import MuiAppProvider from "./theme/MuiAppProvider";
+import { clientCookieSuffix, isSafeTempKey } from "./utils/security";
 
 const AdminRoutePreloader = () => {
   const { account } = useAccount();
@@ -103,8 +104,8 @@ const App = () => {
     const params = new URLSearchParams(window.location.search);
     const tempKey = params.get("temp_key");
 
-    if (tempKey) {
-      document.cookie = `temp_key=${tempKey}; path=/; max-age=${60 * 60 * 24 * 365 * 100}`;
+    if (tempKey && isSafeTempKey(tempKey)) {
+      document.cookie = `temp_key=${encodeURIComponent(tempKey)}; max-age=${60 * 60 * 24 * 365 * 100}${clientCookieSuffix()}`;
       params.delete("temp_key");
       window.history.replaceState(
         {},
@@ -113,16 +114,18 @@ const App = () => {
       );
     }
   }, []);
+  React.useEffect(() => {
+    try {
+      window.localStorage.removeItem("color");
+    } catch {
+      /* leftover Radix accent from older builds */
+    }
+  }, []);
   const [appearance, setAppearance] = useLocalStorage<Appearance>(
     "appearance",
     THEME_DEFAULTS.appearance,
   );
-  const [color, setColor] = useLocalStorage<Colors>(
-    "color",
-    THEME_DEFAULTS.color,
-  );
 
-  // Use the system theme hook to resolve "system" to actual theme
   const resolvedAppearance = useSystemTheme(appearance);
 
   React.useEffect(() => {
@@ -134,18 +137,20 @@ const App = () => {
     () => ({
       appearance,
       setAppearance,
-      color,
-      setColor,
     }),
-    [appearance, setAppearance, color, setColor],
+    [appearance, setAppearance],
   );
   const routing = useRoutes(routes);
   return (
     <ThemeContext.Provider value={themeContextValue}>
+      <MuiAppProvider appearance={resolvedAppearance}>
+      <ErrorBoundary>
       <Theme
           appearance={resolvedAppearance}
-          accentColor={color}
-          scaling="110%"
+          accentColor="blue"
+          grayColor="slate"
+          radius="large"
+          scaling={isAdminRoute ? "100%" : "110%"}
           className="theme-root"
           style={{
             backgroundColor: "transparent",
@@ -156,7 +161,9 @@ const App = () => {
 		  <PublicInfoProvider>
 			<DocumentTitle />
 			<Toaster />
-			<Suspense fallback={<Loading />}>{routing}</Suspense>
+			<Suspense fallback={<Loading fullscreen />}>
+			  {routing}
+			</Suspense>
 		  </PublicInfoProvider>
 		) : (
 		  <AccountProvider>
@@ -169,7 +176,7 @@ const App = () => {
 				  <Toaster />
 				  <OfflineIndicator />
 				  <Suspense
-					fallback={isAdminRoute ? <FullPageLoading /> : <Loading />}
+					fallback={isAdminRoute ? <FullPageLoading /> : <Loading fullscreen />}
 				  >
 					{routing}
 				  </Suspense>
@@ -179,16 +186,16 @@ const App = () => {
 		  </AccountProvider>
 		)}
       </Theme>
+      </ErrorBoundary>
+      </MuiAppProvider>
     </ThemeContext.Provider>
   );
 };
 
 createRoot(document.getElementById("root")!).render(
-  <ErrorBoundary>
-    <StrictMode>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </StrictMode>
-  </ErrorBoundary>,
+  <StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </StrictMode>,
 );

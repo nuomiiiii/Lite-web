@@ -11,6 +11,7 @@ import {
 const importAdminLayout = () => import("./pages/admin/_layout");
 const importAdminDashboard = () => import("./pages/admin/dashboard");
 const importAdminServers = () => import("./pages/admin");
+const importAdminBilling = () => import("./pages/admin/billing");
 const importAdminPing = () => import("./pages/admin/pingTask");
 const importAdminReturnRoute = () => import("./pages/admin/returnRoute");
 const importAdminSettingsLayout = () =>
@@ -18,6 +19,7 @@ const importAdminSettingsLayout = () =>
 let adminLayoutModule: ReturnType<typeof importAdminLayout> | undefined;
 let adminDashboardModule: ReturnType<typeof importAdminDashboard> | undefined;
 let adminServersModule: ReturnType<typeof importAdminServers> | undefined;
+let adminBillingModule: ReturnType<typeof importAdminBilling> | undefined;
 let adminPingModule: ReturnType<typeof importAdminPing> | undefined;
 let adminReturnRouteModule: ReturnType<typeof importAdminReturnRoute> | undefined;
 let adminSettingsLayoutModule: ReturnType<
@@ -27,6 +29,7 @@ const loadAdminLayout = () => (adminLayoutModule ??= importAdminLayout());
 const loadAdminDashboard = () =>
   (adminDashboardModule ??= importAdminDashboard());
 const loadAdminServers = () => (adminServersModule ??= importAdminServers());
+const loadAdminBilling = () => (adminBillingModule ??= importAdminBilling());
 const loadAdminPing = () => (adminPingModule ??= importAdminPing());
 const loadAdminReturnRoute = () =>
   (adminReturnRouteModule ??= importAdminReturnRoute());
@@ -41,6 +44,7 @@ export const preloadAdminEntry = (pathname: string) => {
 const adminRoutePreloaders: Record<string, () => Promise<unknown>> = {
   "/admin": loadAdminDashboard,
   "/admin/servers": loadAdminServers,
+  "/admin/billing": loadAdminBilling,
   "/admin/ping": loadAdminPing,
   "/admin/return-route": loadAdminReturnRoute,
   "/admin/logs": () => import("./pages/admin/log"),
@@ -88,6 +92,7 @@ export const preloadAdminRoutes = async (
 const AdminLayout = lazy(loadAdminLayout);
 const AdminDashboard = lazy(loadAdminDashboard);
 const AdminServers = lazy(loadAdminServers);
+const AdminBilling = lazy(loadAdminBilling);
 const AdminPing = lazy(loadAdminPing);
 const AdminReturnRoute = lazy(loadAdminReturnRoute);
 const AdminSettingsLayout = lazy(loadAdminSettingsLayout);
@@ -118,6 +123,16 @@ export const routes: RouteObject[] = [
       {
         path: "servers",
         element: React.createElement(AdminServers),
+      },
+      {
+        path: "billing",
+        element: React.createElement(AdminBilling),
+      },
+      {
+        path: "servers/:uuid",
+        element: React.createElement(
+          lazy(() => import("./pages/admin/NodeDetailPage")),
+        ),
       },
       {
         path: "theme_managed",

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Flex, Callout, Button } from "@radix-ui/themes";
+import { Flex, Callout, Button } from "@/components/admin/ui";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";
 import ThemeConfigTabs from "@/components/admin/ThemeConfigTabs";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import {
   THEME_CONFIGURATION_MANAGED,
   type ThemeConfiguration,
 } from "@/utils/themeConfiguration";
+import { fetchThemeManifest } from "@/utils/themeManifest";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import type { ThemeConfigTabField } from "@/utils/themeConfigTabs";
 
@@ -70,7 +71,7 @@ const ThemeManaged: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const resp = await fetch(`/themes/${theme}/komari-theme.json`, {
+        const resp = await fetchThemeManifest(theme, {
           cache: "no-cache",
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);

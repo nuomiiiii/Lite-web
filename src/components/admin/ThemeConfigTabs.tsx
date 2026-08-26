@@ -6,8 +6,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Box, Button, Flex, Heading, Tabs } from "@radix-ui/themes";
-import { ChevronLeft, ChevronRight, ListChecks } from "lucide-react";
+import { Box, Button, Flex, Heading, Tabs } from "@/components/admin/ui";
+import { AdminTabLabel } from "@/components/admin/AdminSheetTabs";
+import { ChevronLeft, ChevronRight, ListChecks, Settings2 } from "@/components/admin/muiIcons";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import {
@@ -24,7 +25,8 @@ import {
   groupThemeConfigFields,
   type ThemeConfigTabField,
 } from "@/utils/themeConfigTabs";
-import { useSettings } from "@/lib/api";
+import { useReduceMotionPreference } from "@/lib/api";
+import { useAdminTabParam } from "@/hooks/useAdminTabParam";
 
 interface ThemeConfigTabsProps {
   fields: ThemeConfigTabField[];
@@ -42,17 +44,23 @@ const ThemeConfigTabs = ({
   footer,
 }: ThemeConfigTabsProps) => {
   const { t } = useTranslation();
-  const { settings } = useSettings();
-  const reduceMotion = Boolean(settings.reduce_motion);
+  const reduceMotion = useReduceMotionPreference();
   const groups = useMemo(() => groupThemeConfigFields(fields), [fields]);
-  const [activeTab, setActiveTab] = useState(0);
+  const tabIds = useMemo(
+    () => (groups.length > 0 ? groups.map((_, index) => String(index)) : ["0"]),
+    [groups.length],
+  );
+  const [activeTabValue, setActiveTabValue] = useAdminTabParam(tabIds, "0");
+  const activeTab = Math.min(
+    Number(activeTabValue) || 0,
+    Math.max(groups.length - 1, 0),
+  );
   const [tabDirection, setTabDirection] = useState(1);
   const [scrollEdges, setScrollEdges] = useState({ left: false, right: false });
   const tabsListRef = useRef<HTMLDivElement | null>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
-    setActiveTab(0);
     tabRefs.current = tabRefs.current.slice(0, groups.length);
   }, [groups]);
 
@@ -113,8 +121,8 @@ const ThemeConfigTabs = ({
   const handleTabChange = (value: string) => {
     const index = Number(value);
     if (Number.isNaN(index) || index < 0 || index >= groups.length) return;
-    setTabDirection(index >= currentTab ? 1 : -1);
-    setActiveTab(index);
+    setTabDirection(index >= activeTab ? 1 : -1);
+    setActiveTabValue(value);
   };
 
   const renderField = (field: ThemeConfigTabField) => {
@@ -266,7 +274,7 @@ const ThemeConfigTabs = ({
   return (
     <Flex direction="column" gap="4" className="km-theme-config-form">
       {groups.length > 1 && (
-        <Box className="km-theme-config-tabs">
+        <Box className="km-theme-config-tabs km-admin-sheet-tabs">
           <Tabs.Root
             value={String(currentTab)}
             onValueChange={handleTabChange}
@@ -288,9 +296,11 @@ const ThemeConfigTabs = ({
                     value={String(index)}
                     className="km-theme-config-tabs-trigger"
                   >
-                    {group.title
-                      ? resolveText(group.title) || t("common.title")
-                      : t("settings.general.title")}
+                    <AdminTabLabel icon={<Settings2 size={18} />}>
+                      {group.title
+                        ? resolveText(group.title) || t("common.title")
+                        : t("settings.general.title")}
+                    </AdminTabLabel>
                   </Tabs.Trigger>
                 ))}
               </Tabs.List>

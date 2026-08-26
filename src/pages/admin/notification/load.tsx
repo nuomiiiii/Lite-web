@@ -1,6 +1,12 @@
-import AppDialogContent from "@/components/AppDialogContent";
 import Loading from "@/components/loading";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import { AdminSheetTabs, AdminTabLabel } from "@/components/admin/AdminSheetTabs";
+import {
+  AdminListFiltersBar,
+  AdminListSearch,
+  AdminListShell,
+} from "@/components/admin/AdminListShell";
+import { ADMIN_LIST_ACTION_SX } from "@/components/admin/adminListLayout";
 import {
   AdminPagination,
   useAdminPagination,
@@ -26,6 +32,7 @@ import {
 } from "@/contexts/NodeDetailsContext";
 
 import {
+  AppDialogContent,
   Badge,
   Button,
   Callout,
@@ -36,7 +43,7 @@ import {
   Select,
   Tabs,
   TextField,
-} from "@radix-ui/themes";
+} from "@/components/admin/ui";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   BellOff,
@@ -44,13 +51,17 @@ import {
   CircleAlert,
   MoreHorizontal,
   Pencil,
-  Plus,
-  Search,
+  Settings2,
   Trash,
-} from "lucide-react";
+} from "@/components/admin/muiIcons";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { useAdminTabParam } from "@/hooks/useAdminTabParam";
 import { toast } from "sonner";
+import MuiButton from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
+
+const LOAD_VIEWS = ["configuration", "current"] as const;
 
 const LoadPage = () => {
   return (
@@ -76,9 +87,9 @@ const InnerLayout = () => {
     useNodeDetails();
   const { nodeDetail } = useNodeDetails();
   const { t } = useTranslation();
-  const [view, setView] = React.useState<"configuration" | "current">(
-    "configuration",
-  );
+  const [view, setView] = useAdminTabParam(LOAD_VIEWS, "configuration", {
+    param: "view",
+  });
   const [search, setSearch] = React.useState("");
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const sortedAlerts = React.useMemo(
@@ -159,41 +170,49 @@ const InnerLayout = () => {
         </Callout.Root>
       ) : null}
 
-      <Tabs.Root value={view} onValueChange={(value) => setView(value as typeof view)}>
-        <div className="w-full overflow-x-auto pb-1">
-          <Tabs.List className="w-max min-w-full">
-            <Tabs.Trigger value="configuration" className="min-w-[8rem] flex-1">
-              {t("notification.load.configuration")}
+      <Tabs.Root value={view} onValueChange={setView}>
+        <AdminSheetTabs>
+          <Tabs.List>
+            <Tabs.Trigger value="configuration">
+              <AdminTabLabel icon={<Settings2 size={18} />}>
+                {t("notification.load.configuration")}
+              </AdminTabLabel>
             </Tabs.Trigger>
-            <Tabs.Trigger value="current" className="min-w-[8rem] flex-1">
-              {t("notification.load.current_alerts")}
+            <Tabs.Trigger value="current">
+              <AdminTabLabel icon={<BellRing size={18} />}>
+                {t("notification.load.current_alerts")}
+              </AdminTabLabel>
             </Tabs.Trigger>
           </Tabs.List>
-        </div>
+        </AdminSheetTabs>
         <Tabs.Content value="configuration" className="admin-tab-panel pt-3">
-          <LoadListToolbar search={search} onSearchChange={setSearch} showAdd />
-          <LoadConfigurationTable
-            alerts={configurationPagination.pageItems}
-            total={sortedAlerts.length}
-            pagination={configurationPagination}
-          />
+          <AdminListShell>
+            <LoadListToolbar search={search} onSearchChange={setSearch} showAdd />
+            <LoadConfigurationTable
+              alerts={configurationPagination.pageItems}
+              total={sortedAlerts.length}
+              pagination={configurationPagination}
+            />
+          </AdminListShell>
         </Tabs.Content>
         <Tabs.Content value="current" className="admin-tab-panel pt-3">
-          <LoadListToolbar search={search} onSearchChange={setSearch} />
-          {currentError ? (
-            <Callout.Root color="red" className="mb-3" role="alert">
-              <Callout.Icon>
-                <CircleAlert size={16} />
-              </Callout.Icon>
-              <Callout.Text>{currentError}</Callout.Text>
-            </Callout.Root>
-          ) : null}
-          <CurrentLoadAlertsTable
-            alerts={currentPagination.pageItems}
-            total={sortedCurrentAlerts.length}
-            pagination={currentPagination}
-            loading={currentLoading && currentAlerts === null}
-          />
+          <AdminListShell>
+            <LoadListToolbar search={search} onSearchChange={setSearch} />
+            {currentError ? (
+              <Callout.Root color="red" className="mb-3" role="alert">
+                <Callout.Icon>
+                  <CircleAlert size={16} />
+                </Callout.Icon>
+                <Callout.Text>{currentError}</Callout.Text>
+              </Callout.Root>
+            ) : null}
+            <CurrentLoadAlertsTable
+              alerts={currentPagination.pageItems}
+              total={sortedCurrentAlerts.length}
+              pagination={currentPagination}
+              loading={currentLoading && currentAlerts === null}
+            />
+          </AdminListShell>
           <div className="mt-4 border-l-2 border-[var(--accent-8)] pl-3 text-sm leading-6 text-muted-foreground">
             <span
               dangerouslySetInnerHTML={{ __html: t("notification.load.silence_tips") }}
@@ -216,19 +235,25 @@ const LoadListToolbar = ({
 }) => {
   const { t } = useTranslation();
   return (
-    <div className="mb-3 flex min-w-0 items-center justify-end gap-2">
-      <TextField.Root
-        className="min-w-0 flex-1 sm:max-w-64"
-        value={search}
-        placeholder={t("common.search")}
-        onChange={(event) => onSearchChange(event.target.value)}
+    <AdminListFiltersBar>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        useFlexGap
+        sx={{ flexWrap: "wrap", alignItems: "center" }}
       >
-        <TextField.Slot>
-          <Search size={16} />
-        </TextField.Slot>
-      </TextField.Root>
-      {showAdd ? <AddButton /> : null}
-    </div>
+        <AdminListSearch
+          value={search}
+          onChange={onSearchChange}
+          placeholder={t("common.search")}
+        />
+        {showAdd ? (
+          <Stack direction="row" spacing={1} sx={{ flexShrink: 0, alignItems: "center" }}>
+            <AddButton />
+          </Stack>
+        ) : null}
+      </Stack>
+    </AdminListFiltersBar>
   );
 };
 
@@ -254,17 +279,19 @@ const LoadConfigurationTable = ({
     return <EmptyState>{t("notification.load.empty_configuration")}</EmptyState>;
   }
   return (
-    <div className="admin-responsive-table-wrap overflow-hidden rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)]">
-      <div className="overflow-x-auto">
-        <Table className="admin-responsive-table admin-primary-first-table min-w-[840px]">
+    <>
+      <div className="admin-responsive-table-wrap overflow-x-auto">
+        <Table container={false} className="admin-responsive-table admin-primary-first-table table-fixed min-w-[840px]">
           <TableHeader>
-            <TableHead>{t("common.name")}</TableHead>
-            <TableHead>{t("common.server")}</TableHead>
-            <TableHead>{t("loadAlert.metric")}</TableHead>
-            <TableHead>{t("common.threshold")}</TableHead>
-            <TableHead>{t("loadAlert.ratio")}</TableHead>
-            <TableHead>{t("ping.interval")}</TableHead>
-            <TableHead>{t("common.action")}</TableHead>
+            <TableRow>
+              <TableHead className="w-[16%]">{t("common.name")}</TableHead>
+              <TableHead className="w-[30%]">{t("common.server")}</TableHead>
+              <TableHead>{t("loadAlert.metric")}</TableHead>
+              <TableHead>{t("common.threshold")}</TableHead>
+              <TableHead>{t("loadAlert.ratio")}</TableHead>
+              <TableHead>{t("ping.interval")}</TableHead>
+              <TableHead className="w-[10%]">{t("common.action")}</TableHead>
+            </TableRow>
           </TableHeader>
           <TableBody>
             {alerts.map((alert) => <Row key={alert.id} alert={alert} />)}
@@ -279,14 +306,12 @@ const LoadConfigurationTable = ({
         onPageSizeChange={pagination.setPageSize}
         showSummary={false}
       />
-    </div>
+    </>
   );
 };
 
 const EmptyState = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex min-h-36 items-center justify-center rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)] px-4 text-sm text-muted-foreground">
-    {children}
-  </div>
+  <div className="km-admin-list-empty">{children}</div>
 );
 
 const CurrentLoadAlertsTable = ({
@@ -301,23 +326,31 @@ const CurrentLoadAlertsTable = ({
   loading: boolean;
 }) => {
   const { t } = useTranslation();
-  if (loading) return <Loading />;
+  if (loading) {
+    return (
+      <div className="km-admin-list-empty">
+        <Loading />
+      </div>
+    );
+  }
   if (total === 0) {
     return <EmptyState>{t("notification.load.no_current_alerts")}</EmptyState>;
   }
   return (
-    <div className="admin-responsive-table-wrap overflow-hidden rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)]">
-      <div className="overflow-x-auto">
-        <Table className="admin-responsive-table admin-primary-first-table min-w-[940px]">
+    <>
+      <div className="admin-responsive-table-wrap overflow-x-auto">
+        <Table container={false} className="admin-responsive-table admin-primary-first-table min-w-[940px]">
           <TableHeader>
-            <TableHead>{t("common.name")}</TableHead>
-            <TableHead>{t("common.server")}</TableHead>
-            <TableHead>{t("loadAlert.metric")}</TableHead>
-            <TableHead>{t("notification.load.current_value")}</TableHead>
-            <TableHead>{t("common.threshold")}</TableHead>
-            <TableHead>{t("notification.load.triggered_at")}</TableHead>
-            <TableHead>{t("notification.load.silence_status")}</TableHead>
-            <TableHead>{t("common.action")}</TableHead>
+            <TableRow>
+              <TableHead>{t("common.name")}</TableHead>
+              <TableHead>{t("common.server")}</TableHead>
+              <TableHead>{t("loadAlert.metric")}</TableHead>
+              <TableHead>{t("notification.load.current_value")}</TableHead>
+              <TableHead>{t("common.threshold")}</TableHead>
+              <TableHead>{t("notification.load.triggered_at")}</TableHead>
+              <TableHead>{t("notification.load.silence_status")}</TableHead>
+              <TableHead>{t("common.action")}</TableHead>
+            </TableRow>
           </TableHeader>
           <TableBody>
             {alerts.map((alert) => (
@@ -337,7 +370,7 @@ const CurrentLoadAlertsTable = ({
         onPageSizeChange={pagination.setPageSize}
         showSummary={false}
       />
-    </div>
+    </>
   );
 };
 
@@ -553,26 +586,34 @@ const Row = ({ alert }: { alert: LoadAlert }) => {
       .finally(() => setDeleteLoading(false));
   };
 
+  const serverNames =
+    alert.clients && alert.clients.length > 0
+      ? alert.clients
+          .map(
+            (uuid) =>
+              nodeDetail.find((node) => node.uuid === uuid)?.name || uuid,
+          )
+          .join(", ")
+      : "";
+
   return (
     <TableRow key={alert.id}>
       <TableCell data-label={t("common.name")}>{alert.name}</TableCell>
-      <TableCell data-label={t("common.server")}>
-        <div className="flex min-w-0 items-start gap-2">
-          <span className="min-w-0 flex-1 whitespace-normal break-words">
-            {alert.clients && alert.clients.length > 0
-              ? alert.clients
-                  .map(
-                    (uuid) =>
-                      nodeDetail.find((node) => node.uuid === uuid)?.name || uuid,
-                  )
-                  .join(", ")
-              : t("common.none")}
-          </span>
-          {alert.default_on && (
-            <span className="shrink-0 text-xs text-accent-11">
-              {t("ping.default_on_short")}
-            </span>
-          )}
+      <TableCell className="max-w-0" data-label={t("common.server")}>
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <div
+              className="truncate whitespace-nowrap leading-5"
+              title={serverNames || undefined}
+            >
+              {serverNames || t("common.none")}
+            </div>
+            {alert.default_on && (
+              <div className="mt-1 truncate text-xs text-accent-11">
+                {t("ping.default_on_short")}
+              </div>
+            )}
+          </div>
           <NodeSelectorDialog
             value={form.clients ?? []}
             hiddenUuidOnlyClient
@@ -799,11 +840,14 @@ const AddButton: React.FC = () => {
   };
   return (
     <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
-      <Dialog.Trigger>
-        <Button className="w-full sm:w-auto">
-          <Plus size={16} />
+      <Dialog.Trigger asChild>
+        <MuiButton
+          type="button"
+          variant="contained"
+          sx={ADMIN_LIST_ACTION_SX}
+        >
           {t("common.add")}
-        </Button>
+        </MuiButton>
       </Dialog.Trigger>
       <AppDialogContent>
         <Dialog.Title>{t("common.add")}</Dialog.Title>

@@ -5,8 +5,8 @@ import {
   IconButton,
   Select,
   Tooltip,
-} from "@radix-ui/themes";
-import { Checkbox } from "@/components/ui/checkbox";
+} from "@/components/admin/ui";
+import MuiCheckbox from "@mui/material/Checkbox";
 import {
   DndContext,
   KeyboardSensor,
@@ -30,25 +30,13 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  Activity,
   AlertCircle,
   ArrowDown,
   ArrowUp,
-  ArrowUpDown,
-  BellRing,
-  ChartNoAxesCombined,
-  CircleGauge,
-  Database,
-  Gauge,
   GripVertical,
-  LayoutDashboard,
   RefreshCw,
-  Route,
   Save,
-  Server,
-  Timer,
-  WalletCards,
-} from "lucide-react";
+} from "@/components/admin/muiIcons";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -70,23 +58,6 @@ import {
   type DashboardSettings,
 } from "@/utils/dashboardSettings";
 
-const moduleIcons: Record<DashboardModuleId, React.ComponentType<{ size?: number; className?: string }>> = {
-  server_status: Server,
-  traffic_summary: WalletCards,
-  storage_summary: Database,
-  resource_ranking: Gauge,
-  daily_traffic_ranking: ArrowUpDown,
-  latency_ranking: Timer,
-  latency_jitter_ranking: Activity,
-  packet_loss_ranking: Activity,
-  latency_trend: Activity,
-  traffic_trend: ChartNoAxesCombined,
-  billing_trend: CircleGauge,
-  return_route: Route,
-  alerts: BellRing,
-  storage_detail: Database,
-};
-
 const previewSpan: Record<number, string> = {
   1: "col-span-1",
   2: "col-span-1 sm:col-span-2",
@@ -103,7 +74,6 @@ type SortableModuleRowProps = {
   onlyEnabled: boolean;
   first: boolean;
   last: boolean;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
   description: string;
   dragLabel: string;
@@ -125,7 +95,6 @@ function SortableModuleRow({
   onlyEnabled,
   first,
   last,
-  icon: Icon,
   label,
   description,
   dragLabel,
@@ -159,15 +128,17 @@ function SortableModuleRow({
           <span className="sr-only">{dragLabel}</span>
         </button>
       </Tooltip>
-      <Checkbox
+      <MuiCheckbox
         checked={enabled}
         disabled={onlyEnabled}
-        onCheckedChange={(checked) => onToggle(Boolean(checked))}
-        aria-label={label}
+        onChange={(_, checked) => onToggle(checked)}
+        slotProps={{ input: { "aria-label": label } }}
+        sx={{
+          p: 0.5,
+          color: "text.secondary",
+          "&.Mui-checked": { color: "primary.main" },
+        }}
       />
-      <span className="flex size-7 shrink-0 items-center justify-center text-[var(--accent-11)]">
-        <Icon size={17} />
-      </span>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{label}</div>
         <div className="mt-0.5 truncate text-xs text-muted-foreground">{description}</div>
@@ -329,13 +300,11 @@ export default function DashboardSettingsPage() {
   );
 
   const previewModule = (id: DashboardModuleId, className = "") => {
-    const Icon = moduleIcons[id];
     return (
       <div
         key={id}
-        className={`${className} flex min-h-12 items-center gap-2 rounded border border-[var(--accent-a6)] bg-[var(--color-panel-solid)] px-2.5 py-2 text-xs`}
+        className={`${className} flex min-h-12 items-center rounded border border-[var(--gray-a5)] bg-[var(--color-panel-solid)] px-2.5 py-2 text-xs font-medium`}
       >
-        <Icon size={14} className="shrink-0 text-[var(--accent-11)]" />
         <span className="min-w-0 truncate">{t(`settings.dashboard.module_${id}`)}</span>
       </div>
     );
@@ -349,7 +318,6 @@ export default function DashboardSettingsPage() {
 
       <section className="rounded-md border bg-[var(--color-panel-solid)] p-3">
         <div className="mb-3 flex items-center gap-2">
-          <LayoutDashboard size={17} className="text-[var(--accent-11)]" />
           <h2 className="text-sm font-semibold">{t("settings.dashboard.presets")}</h2>
           {draft.preset === "custom" ? (
             <span className="rounded-full bg-[var(--accent-a3)] px-2 py-0.5 text-xs text-[var(--accent-11)]">
@@ -477,7 +445,6 @@ export default function DashboardSettingsPage() {
                     onlyEnabled={module.enabled && enabledCount === 1}
                     first={index === 0}
                     last={index === draft.modules.length - 1}
-                    icon={moduleIcons[module.id]}
                     label={t(`settings.dashboard.module_${module.id}`)}
                     description={t(`settings.dashboard.module_${module.id}_description`)}
                     dragLabel={t("settings.dashboard.drag_to_sort")}

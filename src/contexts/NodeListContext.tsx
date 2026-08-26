@@ -68,7 +68,7 @@ interface NodeListContextType {
   refresh: () => void;
 }
 
-const NODE_LIST_CONTEXT_KEY = "__komariNodeListContext" as const;
+const NODE_LIST_CONTEXT_KEY = "__liteNodeListContext" as const;
 
 type NodeListContextGlobal = typeof globalThis & {
   [NODE_LIST_CONTEXT_KEY]?: React.Context<NodeListContextType | undefined>;

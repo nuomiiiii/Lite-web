@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import {
+  AppDialogContent,
   Text,
   Card,
   Button,
@@ -12,7 +13,7 @@ import {
   TextField,
   Callout,
   Separator,
-} from "@radix-ui/themes";
+} from "@/components/admin/ui";
 import { useState, useEffect, useRef } from "react";
 import {
   Upload,
@@ -25,13 +26,12 @@ import {
   AlertTriangle,
   Loader2,
   Store,
-} from "lucide-react";
+} from "@/components/admin/muiIcons";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";
 import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import { useSettings } from "@/lib/api";
-import AppDialogContent from "@/components/AppDialogContent";
 import ThemePreviewImage from "@/components/ThemePreviewImage";
 import { themePreviewSrc } from "@/utils/themePreviewImage";
 import UploadDialog from "@/components/UploadDialog";
@@ -39,6 +39,7 @@ import {
   getThemeConfigurationType,
   THEME_CONFIGURATION_MANAGED,
 } from "@/utils/themeConfiguration";
+import { fetchThemeManifest } from "@/utils/themeManifest";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import { uploadArchive } from "@/utils/archiveUpload";
 import { resolveI18nText, type I18nText } from "@/utils/i18nText";
@@ -64,7 +65,8 @@ interface Theme {
   configuration?: any;
 }
 
-const THEME_CHANGE_STORAGE_KEY = "komari-active-theme-changed";
+const THEME_CHANGE_STORAGE_KEY = "lite-active-theme-changed";
+const LEGACY_THEME_CHANGE_STORAGE_KEY = "komari-active-theme-changed";
 
 const ThemePage = () => {
   const { t, i18n } = useTranslation();
@@ -136,7 +138,7 @@ const ThemePage = () => {
       }
       try {
         // 强制不缓存
-        const resp = await fetch(`/themes/${themeShort}/komari-theme.json`, {
+        const resp = await fetchThemeManifest(themeShort, {
           cache: "no-cache",
         });
         if (!resp.ok) {
@@ -256,10 +258,9 @@ const ThemePage = () => {
 
       await clearThemeNavigationCache();
       try {
-        window.localStorage.setItem(
-          THEME_CHANGE_STORAGE_KEY,
-          `${themeShort}:${Date.now()}`,
-        );
+        const stamp = `${themeShort}:${Date.now()}`;
+        window.localStorage.setItem(THEME_CHANGE_STORAGE_KEY, stamp);
+        window.localStorage.setItem(LEGACY_THEME_CHANGE_STORAGE_KEY, stamp);
       } catch {
         // Theme switching still works when browser storage is unavailable.
       }
@@ -355,10 +356,9 @@ const ThemePage = () => {
       if (themeShort === currentTheme) {
         await clearThemeNavigationCache();
         try {
-          window.localStorage.setItem(
-            THEME_CHANGE_STORAGE_KEY,
-            `${payload?.data?.theme || "fallback"}:${Date.now()}`,
-          );
+          const stamp = `${payload?.data?.theme || "fallback"}:${Date.now()}`;
+          window.localStorage.setItem(THEME_CHANGE_STORAGE_KEY, stamp);
+          window.localStorage.setItem(LEGACY_THEME_CHANGE_STORAGE_KEY, stamp);
         } catch {
           // Other public tabs will update on their next navigation.
         }

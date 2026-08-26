@@ -11,7 +11,6 @@ const archiveUploadSource = readFileSync("src/utils/archiveUpload.ts", "utf8");
 const globalStyles = readFileSync("src/global.css", "utf8");
 const locales = [
   "en",
-  "id_ID",
   "ja_JP",
   "zh_CN",
   "zh_TW",
@@ -21,6 +20,7 @@ const locales = [
 
 test("theme pages share preview-image loading treatment", () => {
   assert.match(themeSettingsSource, /ThemePreviewImage/);
+  assert.match(themeSettingsSource, /fetchThemeManifest\(/);
   assert.match(marketSource, /ThemePreviewImage/);
   assert.match(themeSettingsSource, /key=\{theme\.short\}/);
   assert.doesNotMatch(themeSettingsSource, /key=\{theme\.id\}/);

@@ -14,11 +14,13 @@ import {
 test("idle warmup skips the current page and throttles 3g", () => {
   assert.deepEqual(getIdleAdminWarmupTargets("/admin"), [
     "/admin/servers",
+    "/admin/billing",
     "/admin/ping",
     "/admin/return-route",
   ]);
   assert.deepEqual(getIdleAdminWarmupTargets("/admin/ping"), [
     "/admin/servers",
+    "/admin/billing",
     "/admin/return-route",
   ]);
   assert.deepEqual(

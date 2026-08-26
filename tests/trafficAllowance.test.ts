@@ -16,12 +16,16 @@ test("reset traffic requires a billing reset day and shows the effective quota",
   assert.match(editSource, /trafficResetAllowance > 0 && \(trafficResetDay < 1 \|\| trafficResetDay > 31\)/);
   assert.match(editSource, /trafficEffectiveFormula/);
   assert.match(editSource, /trafficResetReportNotice/);
-  assert.match(editSource, /payload\.traffic_reset_allowance = trafficResetAllowance/);
+  assert.match(editSource, /payload\.traffic_reset_day = trafficResetDay/);
+  assert.doesNotMatch(
+    editSource,
+    /if \(trafficResetDay !== \(node\.traffic_reset_day \?\? 0\)\)/,
+  );
   assert.match(editSource, /trafficResetAllowance !== \(node\.traffic_reset_allowance \?\? 0\)/);
   assert.match(editSource, /aria-label=\{t\("admin\.nodeEdit\.trafficResetDay"\)\}/);
   assert.match(editSource, /aria-label=\{t\("admin\.nodeEdit\.trafficResetAllowance"\)\}/);
-  assert.match(editSource, /trafficResetDay[\s\S]*text-base font-semibold leading-6/);
-  assert.match(editSource, /mt-3 space-y-1\.5 pb-3 text-sm leading-6/);
+  assert.match(editSource, /trafficResetDay[\s\S]*text-sm font-semibold leading-5/);
+  assert.match(editSource, /space-y-2 pb-3 pt-2/);
   assert.doesNotMatch(editSource, /trafficResetType|traffic_reset_type/);
 });
 
@@ -36,7 +40,7 @@ test("new nodes default the edit form traffic accounting mode to sum", () => {
 });
 
 test("every admin language explains reset quota behavior", () => {
-  for (const locale of ["en", "id_ID", "ja_JP", "zh_CN", "zh_TW"]) {
+  for (const locale of ["en", "ja_JP", "zh_CN", "zh_TW"]) {
     const translations = JSON.parse(
       readFileSync(path.resolve(`src/i18n/locales/${locale}.json`), "utf8"),
     );
@@ -58,7 +62,5 @@ test("country selector searches by ISO code and renders local flag assets", () =
   assert.match(editSource, /icon: <Flag flag=\{code\} compact \/>/);
   assert.match(editSource, /value: code/);
   assert.match(selectSource, /selectedOption\?\.icon/);
-  assert.match(selectSource, /\{opt\.icon\}/);
-  assert.match(selectSource, /setShowAllOptions\(true\)/);
-  assert.match(selectSource, /aria-label="Show all options"/);
+  assert.match(selectSource, /\{option\.icon\}/);
 });

@@ -1,5 +1,14 @@
+import { clientCookieSuffix } from "./security";
+
 export const LANGUAGE_STORAGE_KEY = "language";
 export const LANGUAGE_COOKIE_KEY = "language";
+
+export const ADMIN_UI_LANGUAGES = [
+  { code: "zh-CN", name: "简体中文" },
+  { code: "zh-TW", name: "繁體中文" },
+  { code: "en-US", name: "English" },
+  { code: "ja-JP", name: "日本語" },
+] as const;
 
 const LANGUAGE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
@@ -45,5 +54,5 @@ export const writeLanguageCookie = (language?: string | null) => {
   }
   document.cookie = `${LANGUAGE_COOKIE_KEY}=${encodeURIComponent(
     normalized,
-  )}; path=/; max-age=${LANGUAGE_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`;
+  )}; max-age=${LANGUAGE_COOKIE_MAX_AGE_SECONDS}${clientCookieSuffix()}`;
 };

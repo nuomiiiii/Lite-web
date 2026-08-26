@@ -1,12 +1,23 @@
-import AppDialogContent from "@/components/AppDialogContent";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
-import AdminActiveFilter from "@/components/admin/AdminActiveFilter";
+import { AdminSheetTabs, AdminTabLabel } from "@/components/admin/AdminSheetTabs";
+import {
+  AdminListFiltersBar,
+  AdminListSearch,
+  AdminListSelect,
+  AdminListShell,
+} from "@/components/admin/AdminListShell";
+import {
+  ADMIN_LIST_ACTION_SX,
+  ADMIN_LIST_OUTLINE_SX,
+} from "@/components/admin/adminListLayout";
+import AdminMultiSelect from "@/components/admin/AdminMultiSelect";
 import {
   AdminPagination,
 } from "@/components/admin/AdminPagination";
 import { useAdminDefaultPageSize } from "@/hooks/useAdminDefaultPageSize";
 import {
+  AppDialogContent,
   Badge,
   Box,
   Button,
@@ -14,38 +25,49 @@ import {
   Dialog,
   Flex,
   IconButton,
-  Popover,
   Select,
   Switch,
   Tabs,
   Text,
   TextField,
-} from "@radix-ui/themes";
+} from "@/components/admin/ui";
 import { Checkbox } from "@/components/ui/checkbox";
+import MuiButton from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Collapse from "@mui/material/Collapse";
+import MenuItem from "@mui/material/MenuItem";
+import Stack from "@mui/material/Stack";
 import {
-  Activity,
+  Table,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   AlertTriangle,
-  BookOpen,
-  Check,
   CheckCircle2,
-  ChevronDown,
   Download,
+  FilterOff,
   History,
+  ListChecks,
   Pencil,
   Play,
   Plus,
   RefreshCw,
   Route,
-  Search,
   Trash2,
   Upload,
-} from "lucide-react";
+  X,
+} from "@/components/admin/muiIcons";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
+import { useAdminTabParam } from "@/hooks/useAdminTabParam";
 import Loading from "@/components/loading";
 import { useNodeDetails } from "@/contexts/NodeDetailsContext";
 import { useAccount } from "@/contexts/AccountContext";
+
+const RETURN_ROUTE_TABS = ["tasks", "records", "rules"] as const;
 
 type Task = {
   id?: number;
@@ -127,6 +149,24 @@ type RouteEvent = {
 type TaskPage = { tasks: Task[]; statuses: Status[]; probing_task_ids: number[]; total: number; page: number; page_size: number };
 type RecordPage = { events: RouteEvent[]; total: number; page: number; page_size: number };
 type SummaryData = { tasks: number; healthy: number; switched: number; recent_events: number };
+type TaskFilterQuery = {
+  page: number;
+  page_size: number;
+  keyword: string;
+  carriers: string[];
+  states: string[];
+};
+type RecordFilterQuery = {
+  page: number;
+  page_size: number;
+  keyword: string;
+  range: string;
+  kinds: string[];
+  carriers: string[];
+  regions: string[];
+  expectedLines: string[];
+  actualLines: string[];
+};
 type RuleDocument = {
   schema_version: number;
   rule_version: string;
@@ -159,8 +199,8 @@ const returnRouteSummarySnapshots = new Map<string, SummaryData>();
 
 function returnRouteTaskSnapshotKey(
   accountKey: string,
-  query: { page: number; page_size: number; keyword: string; carrier: string; state: string },
-  routeState: string,
+  query: TaskFilterQuery,
+  _routeState: string,
   routeTask: number,
 ) {
   return JSON.stringify([
@@ -168,8 +208,8 @@ function returnRouteTaskSnapshotKey(
     query.page,
     query.page_size,
     query.keyword,
-    query.carrier,
-    routeTask ? "" : routeState || query.state,
+    query.carriers,
+    query.states,
     routeTask || 0,
   ]);
 }
@@ -273,6 +313,21 @@ const carrierNames: Record<Task["carrier"], string> = {
   unicom: "中国联通",
 };
 
+const TASK_STATE_LABELS: Record<string, string> = {
+  healthy: "线路正常",
+  probing: "探测中",
+  observing: "确认中",
+  switched: "已切线",
+  unknown: "无法识别",
+  pending: "等待探测",
+  disabled: "已暂停",
+};
+
+const RECORD_KIND_LABELS: Record<string, string> = {
+  switch: "切线",
+  recovery: "恢复",
+};
+
 async function request(path: string, body?: unknown) {
   const response = await fetch(`/api/admin/return-route${path}`, {
     method: body === undefined ? "GET" : "POST",
@@ -289,14 +344,14 @@ async function request(path: string, body?: unknown) {
 function stateBadge(status?: Status) {
   if (!status) return <Badge color="gray">等待首次探测</Badge>;
   const states = {
-    pending: { color: "gray" as const, text: "等待首次探测" },
-    observing: { color: "amber" as const, text: "确认中" },
-    healthy: { color: "green" as const, text: "线路正常" },
-    switched: { color: "red" as const, text: "已切线" },
-    unknown: { color: "gray" as const, text: "暂时无法识别" },
+    pending: { color: "gray" as const, text: "等待首次探测", icon: null },
+    observing: { color: "amber" as const, text: "确认中", icon: <RefreshCw size={12} /> },
+    healthy: { color: "green" as const, text: "线路正常", icon: <CheckCircle2 size={12} /> },
+    switched: { color: "red" as const, text: "已切线", icon: <AlertTriangle size={12} /> },
+    unknown: { color: "gray" as const, text: "暂时无法识别", icon: <AlertTriangle size={12} /> },
   };
   const item = states[status.state] || states.unknown;
-  return <Badge color={item.color}>{item.text}</Badge>;
+  return <Badge color={item.color}>{item.icon}{item.text}</Badge>;
 }
 
 function formatTime(value?: string) {
@@ -314,90 +369,29 @@ function MultiNodeSelect({
   value: string[];
   onChange: (clients: string[]) => void;
 }) {
-  const listboxRef = useRef<HTMLDivElement>(null);
-  const selected = useMemo(() => new Set(value), [value]);
-  const selectedNames = value.map(
-    (uuid) => nodes.find((node) => node.uuid === uuid)?.name || uuid,
-  );
-  const triggerLabel = selectedNames.length > 0
-    ? selectedNames.join("、")
-    : "选择服务器（支持多选）";
-
-  const toggle = (uuid: string) => {
-    if (selected.has(uuid)) {
-      onChange(value.filter((item) => item !== uuid));
-    } else {
-      onChange([...value, uuid]);
-    }
-  };
-
   return (
-    <Popover.Root>
-      <Popover.Trigger>
-        <button
-          type="button"
-          className="rt-reset rt-SelectTrigger rt-r-size-2 rt-variant-surface w-full"
-          aria-label="选择探测节点"
-        >
-          <span
-            className={`rt-SelectTriggerInner ${selectedNames.length === 0 ? "text-[var(--gray-a10)]" : ""}`}
-          >
-            {triggerLabel}
-          </span>
-          <ChevronDown className="rt-SelectIcon" size={14} aria-hidden="true" />
-        </button>
-      </Popover.Trigger>
-      <Popover.Content
-        align="start"
-        sideOffset={4}
-        style={{
-          padding: 4,
-          width: "var(--radix-popover-trigger-width)",
-          minWidth: 260,
-          maxWidth: "min(420px, calc(100vw - 24px))",
-        }}
-      >
-        <div
-          ref={listboxRef}
-          tabIndex={-1}
-          className="max-h-[320px] overflow-y-auto py-1 focus:outline-none"
-          role="listbox"
-          aria-multiselectable="true"
-        >
-          {nodes.length === 0 ? (
-            <Text as="div" size="2" color="gray" className="px-3 py-2">
-              暂无可选服务器
-            </Text>
-          ) : nodes.map((node) => {
-            const checked = selected.has(node.uuid);
-            return (
-              <button
-                key={node.uuid}
-                type="button"
-                role="option"
-                aria-selected={checked}
-                data-state={checked ? "checked" : "unchecked"}
-                className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm font-normal text-[var(--gray-12)] transition-colors duration-150 hover:bg-[var(--accent-9)] hover:text-[var(--accent-contrast)] focus-visible:bg-[var(--accent-9)] focus-visible:text-[var(--accent-contrast)] focus-visible:outline-none"
-                onClick={(event) => {
-                  toggle(node.uuid);
-                  if (event.detail > 0) {
-                    listboxRef.current?.focus({ preventScroll: true });
-                  }
-                }}
-              >
-                <span
-                  className="flex size-4 shrink-0 items-center justify-center"
-                  aria-hidden="true"
-                >
-                  {checked ? <Check size={16} strokeWidth={2.5} /> : null}
-                </span>
-                <span className="min-w-0 truncate">{node.name || node.uuid}</span>
-              </button>
-            );
-          })}
-        </div>
-      </Popover.Content>
-    </Popover.Root>
+    <AdminMultiSelect
+      fullWidth
+      ariaLabel="选择探测节点"
+      placeholder="选择服务器（支持多选）"
+      value={value}
+      onChange={onChange}
+      menuMinWidth={260}
+      options={nodes.map((node) => ({
+        value: node.uuid,
+        label: node.name || node.uuid,
+      }))}
+      sx={{
+        "& .MuiOutlinedInput-root": { minHeight: 40, height: 40 },
+        "& .MuiSelect-select": {
+          display: "flex",
+          height: 40,
+          boxSizing: "border-box",
+          alignItems: "center",
+          py: 0,
+        },
+      }}
+    />
   );
 }
 
@@ -485,7 +479,7 @@ function RouteTaskDialog({
 
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
-      <Dialog.Trigger>{children}</Dialog.Trigger>
+      <Dialog.Trigger asChild>{children}</Dialog.Trigger>
       <AppDialogContent maxWidth="760px">
         <Dialog.Title>{task?.id ? "编辑回程监测" : "新建回程监测"}</Dialog.Title>
         <Dialog.Description size="2" color="gray">
@@ -621,7 +615,7 @@ function RouteTaskBatchDialog({
 
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
-      <Dialog.Trigger>{children}</Dialog.Trigger>
+      <Dialog.Trigger asChild>{children}</Dialog.Trigger>
       <AppDialogContent maxWidth="760px">
         <Dialog.Title>批量修改回程监测</Dialog.Title>
         <Dialog.Description size="2" color="gray">
@@ -718,14 +712,33 @@ function ReturnRouteContent() {
   const defaultPageSize = useAdminDefaultPageSize();
   const { nodeDetail, isLoading: nodesLoading } = useNodeDetails();
   const nodes = Array.isArray(nodeDetail) ? nodeDetail.map((node) => ({ uuid: node.uuid, name: node.name })) : [];
-  const [activeTab, setActiveTab] = useState<"tasks" | "records" | "rules">("tasks");
-  const [taskQuery, setTaskQuery] = useState({ page: 1, page_size: defaultPageSize, keyword: "", carrier: "", state: "" });
+  const [activeTab, setActiveTab] = useAdminTabParam(
+    RETURN_ROUTE_TABS,
+    "tasks",
+  );
+  const [taskQuery, setTaskQuery] = useState<TaskFilterQuery>({
+    page: 1,
+    page_size: defaultPageSize,
+    keyword: "",
+    carriers: [],
+    states: routeState ? [routeState] : [],
+  });
   const taskSnapshotKey = useMemo(
     () => returnRouteTaskSnapshotKey(accountKey, taskQuery, routeState, routeTask),
     [accountKey, routeState, routeTask, taskQuery],
   );
   const initialTaskSnapshot = returnRouteTaskSnapshots.get(taskSnapshotKey);
-  const [recordQuery, setRecordQuery] = useState({ page: 1, page_size: defaultPageSize, keyword: "", range: "24h", kind: "", carrier: "", region: "", expected_line: "", actual_line: "" });
+  const [recordQuery, setRecordQuery] = useState<RecordFilterQuery>({
+    page: 1,
+    page_size: defaultPageSize,
+    keyword: "",
+    range: "24h",
+    kinds: [],
+    carriers: [],
+    regions: [],
+    expectedLines: [],
+    actualLines: [],
+  });
   const [taskData, setTaskData] = useState<TaskPage>(() => initialTaskSnapshot || { tasks: [], statuses: [], probing_task_ids: [], total: 0, page: 1, page_size: defaultPageSize });
   const [recordData, setRecordData] = useState<RecordPage>({ events: [], total: 0, page: 1, page_size: defaultPageSize });
   const initialSummarySnapshot = returnRouteSummarySnapshots.get(accountKey);
@@ -759,9 +772,12 @@ function ReturnRouteContent() {
     if (!quiet && !hasRenderedTaskData.current && !returnRouteTaskSnapshots.has(taskSnapshotKey)) setTaskLoading(true);
     try {
       const data = await request("/tasks/query", {
-        ...taskQuery,
+        page: taskQuery.page,
+        page_size: taskQuery.page_size,
+        keyword: taskQuery.keyword,
+        carriers: taskQuery.carriers,
+        states: taskQuery.states,
         task_id: routeTask || undefined,
-        state: routeTask ? "" : routeState || taskQuery.state,
       });
       const probingTaskIDs = data?.probing_task_ids || [];
       const next = { tasks: data?.tasks || [], statuses: data?.statuses || [], probing_task_ids: probingTaskIDs, total: data?.total || 0, page: data?.page || 1, page_size: data?.page_size || taskQuery.page_size };
@@ -780,7 +796,17 @@ function ReturnRouteContent() {
     if (!quiet) setRecordLoading(true);
     try {
       const start = recordRangeStart(recordQuery.range);
-      const data = await request("/events/query", { ...recordQuery, range: undefined, start });
+      const data = await request("/events/query", {
+        page: recordQuery.page,
+        page_size: recordQuery.page_size,
+        keyword: recordQuery.keyword,
+        kinds: recordQuery.kinds,
+        carriers: recordQuery.carriers,
+        regions: recordQuery.regions,
+        expected_lines: recordQuery.expectedLines,
+        actual_lines: recordQuery.actualLines,
+        start,
+      });
       setRecordData({ events: data?.events || [], total: data?.total || 0, page: data?.page || 1, page_size: data?.page_size || recordQuery.page_size });
     } catch (error) {
       if (!quiet) toast.error(error instanceof Error ? error.message : "监测记录加载失败");
@@ -811,13 +837,10 @@ function ReturnRouteContent() {
 
   useEffect(() => {
     if (!routeState && !routeTask) return;
+    if (searchParams.get("tab")) return;
     setActiveTab("tasks");
-    setTaskQuery((current) => ({
-      ...current,
-      page: 1,
-      state: routeTask ? "" : routeState,
-    }));
-  }, [routeState, routeTask]);
+    setTaskQuery((current) => ({ ...current, page: 1 }));
+  }, [routeState, routeTask, searchParams, setActiveTab]);
 
   useEffect(() => {
     if (activeTab !== "tasks") return;
@@ -889,14 +912,6 @@ function ReturnRouteContent() {
     if (taskQuery.page === 1) loadTasks();
     else updateTaskQuery({ page: 1 });
   };
-  const activeFilterLabel = useMemo(() => {
-    if (routeTask) {
-      const task = taskData.tasks.find((item) => item.id === routeTask);
-      return task?.name || `#${routeTask}`;
-    }
-    if (routeState === "switched") return "已确认切线";
-    return routeState;
-  }, [routeState, routeTask, taskData.tasks]);
 
   const runNow = async (id?: number) => {
     if (!id) return;
@@ -998,10 +1013,6 @@ function ReturnRouteContent() {
         {t("return_route.title", "回程线路监测")}
       </AdminPageTitle>
 
-      {activeFilterLabel ? (
-        <AdminActiveFilter label={activeFilterLabel} clearTo="/admin/return-route" />
-      ) : null}
-
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Summary label="监测任务" value={summary.tasks} icon={<Route size={20} />} />
         <Summary label="线路正常" value={summary.healthy} tone="green" icon={<CheckCircle2 size={20} />} />
@@ -1009,62 +1020,148 @@ function ReturnRouteContent() {
         <Summary label="最近事件" value={summary.recent_events} icon={<History size={20} />} />
       </div>
 
-      <Tabs.Root value={activeTab} onValueChange={(value) => setActiveTab(value as "tasks" | "records" | "rules")}>
-        <Tabs.List>
-          <Tabs.Trigger value="tasks"><Route size={15} />监测任务</Tabs.Trigger>
-          <Tabs.Trigger value="records"><History size={15} />监测记录</Tabs.Trigger>
-          <Tabs.Trigger value="rules"><BookOpen size={15} />规则库</Tabs.Trigger>
-        </Tabs.List>
+      <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+        <AdminSheetTabs>
+          <Tabs.List>
+            <Tabs.Trigger value="tasks">
+              <AdminTabLabel icon={<Route size={18} />}>监测任务</AdminTabLabel>
+            </Tabs.Trigger>
+            <Tabs.Trigger value="records">
+              <AdminTabLabel icon={<History size={18} />}>监测记录</AdminTabLabel>
+            </Tabs.Trigger>
+            <Tabs.Trigger value="rules">
+              <AdminTabLabel icon={<ListChecks size={18} />}>规则库</AdminTabLabel>
+            </Tabs.Trigger>
+          </Tabs.List>
+        </AdminSheetTabs>
 
-        <Box pt="4">
-          <Tabs.Content value="tasks">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div className="flex flex-wrap items-end gap-3">
-                  <Field label="搜索任务、节点或目标">
-                    <TextField.Root className="min-w-[240px]" value={taskQuery.keyword} placeholder="输入关键词" onChange={(event) => updateTaskQuery({ keyword: event.target.value })}>
-                      <TextField.Slot><Search size={16} /></TextField.Slot>
-                    </TextField.Root>
-                  </Field>
-                  <Field label="运营商">
-                    <Select.Root value={taskQuery.carrier || "all"} onValueChange={(carrier) => updateTaskQuery({ carrier: carrier === "all" ? "" : carrier })}>
-                      <Select.Trigger className="min-w-[130px]" />
-                      <Select.Content><Select.Item value="all">全部</Select.Item>{Object.entries(carrierNames).map(([value, label]) => <Select.Item key={value} value={value}>{label}</Select.Item>)}</Select.Content>
-                    </Select.Root>
-                  </Field>
-                  <Field label="状态">
-                    <Select.Root disabled={Boolean(routeState || routeTask)} value={(routeTask ? "" : routeState || taskQuery.state) || "all"} onValueChange={(state) => updateTaskQuery({ state: state === "all" ? "" : state })}>
-                      <Select.Trigger className="min-w-[130px]" />
-                      <Select.Content><Select.Item value="all">全部</Select.Item><Select.Item value="healthy">线路正常</Select.Item><Select.Item value="probing">探测中</Select.Item><Select.Item value="observing">确认中</Select.Item><Select.Item value="switched">已切线</Select.Item><Select.Item value="unknown">无法识别</Select.Item><Select.Item value="pending">等待探测</Select.Item><Select.Item value="disabled">已暂停</Select.Item></Select.Content>
-                    </Select.Root>
-                  </Field>
+        <Box pt="3">
+          <Tabs.Content value="tasks" className="admin-tab-panel">
+            <AdminListShell>
+              <AdminListFiltersBar>
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  useFlexGap
+                  sx={{ flexWrap: { xs: "wrap", md: "nowrap" }, alignItems: "center" }}
+                >
+                  <AdminMultiSelect
+                    label="运营商"
+                    ariaLabel="运营商"
+                    value={taskQuery.carriers}
+                    onChange={(carriers) => updateTaskQuery({ carriers })}
+                    options={Object.entries(carrierNames).map(([value, label]) => ({ value, label }))}
+                  />
+                  <AdminMultiSelect
+                    label="状态"
+                    ariaLabel="状态"
+                    value={taskQuery.states}
+                    onChange={(states) => updateTaskQuery({ states })}
+                    options={Object.entries(TASK_STATE_LABELS).map(([value, label]) => ({ value, label }))}
+                  />
+                  <AdminListSearch
+                    value={taskQuery.keyword}
+                    onChange={(keyword) => updateTaskQuery({ keyword })}
+                    placeholder="搜索任务、节点或目标"
+                  />
+                  <Stack direction="row" spacing={1} sx={{ flexShrink: 0, alignItems: "center" }}>
+                    <MuiButton
+                      type="button"
+                      variant="outlined"
+                      disabled={visibleTaskIDs.length === 0}
+                      onClick={toggleVisibleTaskSelection}
+                      sx={ADMIN_LIST_OUTLINE_SX}
+                    >
+                      {allVisibleTasksSelected ? "取消全选" : "全选"}
+                    </MuiButton>
+                    <RouteTaskBatchDialog
+                      tasks={selectedTasks}
+                      onClear={() => setSelectedTaskIDs(new Set())}
+                      onSaved={refreshTasksAfterChange}
+                    >
+                      <MuiButton
+                        type="button"
+                        variant="outlined"
+                        disabled={selectedTasks.length === 0}
+                        startIcon={<Pencil size={16} />}
+                        sx={ADMIN_LIST_OUTLINE_SX}
+                      >
+                        批量修改{selectedTasks.length > 0 ? ` (${selectedTasks.length})` : ""}
+                      </MuiButton>
+                    </RouteTaskBatchDialog>
+                    <RouteTaskDialog nodes={nodes} onSaved={refreshTasksAfterChange}>
+                      <MuiButton variant="contained" startIcon={<Plus size={16} />} sx={ADMIN_LIST_ACTION_SX}>
+                        新建任务
+                      </MuiButton>
+                    </RouteTaskDialog>
+                  </Stack>
+                </Stack>
+                <Collapse
+                  in={Boolean(taskQuery.keyword || taskQuery.carriers.length || taskQuery.states.length)}
+                  timeout={{ enter: 260, exit: 180 }}
+                  easing={{
+                    enter: "cubic-bezier(0.22, 1, 0.36, 1)",
+                    exit: "cubic-bezier(0.4, 0, 1, 1)",
+                  }}
+                  unmountOnExit
+                >
+                  <Stack className="km-admin-active-filters" direction="row" spacing={1} useFlexGap sx={{ mt: 2, flexWrap: "wrap", alignItems: "center" }}>
+                    {taskQuery.carriers.map((carrier) => (
+                      <Chip
+                        key={`carrier-${carrier}`}
+                        className="km-admin-filter-chip"
+                        size="small"
+                        onDelete={() => updateTaskQuery({ carriers: taskQuery.carriers.filter((item) => item !== carrier) })}
+                        deleteIcon={<X size={14} />}
+                        label={`运营商: ${carrierNames[carrier as Task["carrier"]] || carrier}`}
+                      />
+                    ))}
+                    {taskQuery.states.map((state) => (
+                      <Chip
+                        key={`state-${state}`}
+                        className="km-admin-filter-chip"
+                        size="small"
+                        onDelete={() => updateTaskQuery({ states: taskQuery.states.filter((item) => item !== state) })}
+                        deleteIcon={<X size={14} />}
+                        label={`状态: ${TASK_STATE_LABELS[state] || state}`}
+                      />
+                    ))}
+                    {taskQuery.keyword.trim() ? (
+                      <Chip className="km-admin-filter-chip" size="small" onDelete={() => updateTaskQuery({ keyword: "" })} deleteIcon={<X size={14} />} label={`搜索: ${taskQuery.keyword.trim()}`} />
+                    ) : null}
+                    <MuiButton
+                      color="error"
+                      size="small"
+                      startIcon={<FilterOff size={16} />}
+                      onClick={() => setTaskQuery((current) => ({ ...current, page: 1, keyword: "", carriers: [], states: [] }))}
+                    >
+                      清除全部
+                    </MuiButton>
+                  </Stack>
+                </Collapse>
+              </AdminListFiltersBar>
+              {taskLoading ? (
+                <div className="km-admin-list-empty"><Loading text="" /></div>
+              ) : taskData.tasks.length === 0 ? (
+                <div className="km-admin-list-empty">
+                  {taskData.total === 0 && !taskQuery.keyword && taskQuery.carriers.length === 0 && taskQuery.states.length === 0 ? "暂无任务" : "没有符合条件的任务"}
                 </div>
-                <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-2 sm:w-auto">
-                  <Button variant="soft" disabled={!taskQuery.keyword && !taskQuery.carrier && (!taskQuery.state || Boolean(routeState || routeTask))} onClick={() => setTaskQuery((current) => ({ ...current, page: 1, keyword: "", carrier: "", state: routeTask ? "" : routeState }))}>重置</Button>
-                  <Button type="button" variant="soft" disabled={visibleTaskIDs.length === 0} onClick={toggleVisibleTaskSelection}>
-                    {allVisibleTasksSelected ? "取消全选" : "全选"}
-                  </Button>
-                  <RouteTaskBatchDialog
-                    tasks={selectedTasks}
-                    onClear={() => setSelectedTaskIDs(new Set())}
-                    onSaved={refreshTasksAfterChange}
-                  >
-                    <Button type="button" variant="soft" disabled={selectedTasks.length === 0}>
-                      <Pencil size={16} />批量修改
-                      {selectedTasks.length > 0 ? <Badge color="blue">{selectedTasks.length}</Badge> : null}
-                    </Button>
-                  </RouteTaskBatchDialog>
-                  <RouteTaskDialog nodes={nodes} onSaved={refreshTasksAfterChange}><Button><Plus size={16} />新建任务</Button></RouteTaskDialog>
-                </div>
-              </div>
-
-              {taskLoading ? <Loading text="" /> : taskData.tasks.length === 0 ? (
-                <Callout.Root color="gray"><Callout.Icon><Activity size={16} /></Callout.Icon><Callout.Text>{taskData.total === 0 && !taskQuery.keyword && !taskQuery.carrier && !taskQuery.state ? "暂无任务" : "没有符合条件的任务"}</Callout.Text></Callout.Root>
               ) : (
-                <section className="admin-responsive-table-wrap overflow-hidden rounded-md border border-[var(--gray-a5)]">
-                  <div className="admin-responsive-table-scroll overflow-x-auto">
-                    <table className="admin-responsive-table w-full min-w-[1120px] text-left text-sm">
-                      <thead className="admin-table-header text-sm"><tr><th className="w-11 p-3"><span className="sr-only">选择</span></th><th className="p-3">任务 / 节点</th><th className="p-3">运营商 / 地区</th><th className="p-3">线路</th><th className="p-3">状态</th><th className="p-3">关键 ASN</th><th className="p-3">最后探测</th><th className="py-3 pl-6 pr-3">操作</th></tr></thead>
+                <>
+                  <div className="admin-responsive-table-wrap overflow-x-auto">
+                    <Table container={false} className="admin-responsive-table w-full min-w-[1120px] text-left text-sm">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-11"><span className="sr-only">选择</span></TableHead>
+                          <TableHead>任务 / 节点</TableHead>
+                          <TableHead>运营商 / 地区</TableHead>
+                          <TableHead>线路</TableHead>
+                          <TableHead>状态</TableHead>
+                          <TableHead>关键 ASN</TableHead>
+                          <TableHead>最后探测</TableHead>
+                          <TableHead>操作</TableHead>
+                        </TableRow>
+                      </TableHeader>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                         {taskData.tasks.map((task) => {
                           const status = statuses.get(task.id || 0);
@@ -1083,7 +1180,7 @@ function ReturnRouteContent() {
                           </tr>;
                         })}
                       </tbody>
-                    </table>
+                    </Table>
                   </div>
                   <AdminPagination
                     page={taskQuery.page}
@@ -1093,43 +1190,137 @@ function ReturnRouteContent() {
                     onPageSizeChange={(page_size) => updateTaskQuery({ page_size })}
                     showSummary={false}
                   />
-                </section>
+                </>
               )}
-            </div>
+            </AdminListShell>
           </Tabs.Content>
 
-          <Tabs.Content value="records">
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Field label="搜索任务、节点、目标、ASN 或 IP">
-                  <TextField.Root value={recordQuery.keyword} placeholder="输入关键词" onChange={(event) => updateRecordQuery({ keyword: event.target.value })}><TextField.Slot><Search size={16} /></TextField.Slot></TextField.Root>
-                </Field>
-                <Field label="时间范围">
-                  <Select.Root value={recordQuery.range} onValueChange={(range) => updateRecordQuery({ range })}><Select.Trigger className="w-full" /><Select.Content><Select.Item value="24h">最近 24 小时</Select.Item><Select.Item value="7d">最近 7 天</Select.Item><Select.Item value="30d">最近 30 天</Select.Item><Select.Item value="all">全部时间</Select.Item></Select.Content></Select.Root>
-                </Field>
-                <Field label="记录类型">
-                  <Select.Root value={recordQuery.kind || "all"} onValueChange={(kind) => updateRecordQuery({ kind: kind === "all" ? "" : kind })}><Select.Trigger className="w-full" /><Select.Content><Select.Item value="all">全部</Select.Item><Select.Item value="switch">切线</Select.Item><Select.Item value="recovery">恢复</Select.Item></Select.Content></Select.Root>
-                </Field>
-                <Field label="运营商">
-                  <Select.Root value={recordQuery.carrier || "all"} onValueChange={(carrier) => updateRecordQuery({ carrier: carrier === "all" ? "" : carrier })}><Select.Trigger className="w-full" /><Select.Content><Select.Item value="all">全部</Select.Item>{Object.entries(carrierNames).map(([value, label]) => <Select.Item key={value} value={value}>{label}</Select.Item>)}</Select.Content></Select.Root>
-                </Field>
-                <Field label="地区">
-                  <Select.Root value={recordQuery.region || "all"} onValueChange={(region) => updateRecordQuery({ region: region === "all" ? "" : region })}><Select.Trigger className="w-full" /><Select.Content><Select.Item value="all">全部</Select.Item>{regionOptions.map((region) => <Select.Item key={region} value={region}>{region}</Select.Item>)}</Select.Content></Select.Root>
-                </Field>
-                <Field label="预期线路">
-                  <Select.Root value={recordQuery.expected_line || "all"} onValueChange={(expected_line) => updateRecordQuery({ expected_line: expected_line === "all" ? "" : expected_line })}><Select.Trigger className="w-full" /><Select.Content><Select.Item value="all">全部</Select.Item>{allLineOptions.map((line) => <Select.Item key={line} value={line}>{line}</Select.Item>)}</Select.Content></Select.Root>
-                </Field>
-                <Field label="实际线路">
-                  <Select.Root value={recordQuery.actual_line || "all"} onValueChange={(actual_line) => updateRecordQuery({ actual_line: actual_line === "all" ? "" : actual_line })}><Select.Trigger className="w-full" /><Select.Content><Select.Item value="all">全部</Select.Item>{allLineOptions.map((line) => <Select.Item key={line} value={line}>{line}</Select.Item>)}</Select.Content></Select.Root>
-                </Field>
-                <div className="flex items-end"><Button variant="soft" disabled={!recordQuery.keyword && recordQuery.range === "24h" && !recordQuery.kind && !recordQuery.carrier && !recordQuery.region && !recordQuery.expected_line && !recordQuery.actual_line} onClick={() => setRecordQuery((current) => ({ ...current, page: 1, keyword: "", range: "24h", kind: "", carrier: "", region: "", expected_line: "", actual_line: "" }))}>重置筛选</Button></div>
-              </div>
-
-              {recordLoading ? <Loading text="" /> : recordData.events.length === 0 ? <div className="rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)] p-10 text-center text-sm text-gray-500">暂无符合条件的监测记录</div> : (
-                <section className="admin-responsive-table-wrap overflow-hidden rounded-md border border-[var(--gray-a5)]">
-                  <div className="admin-responsive-table-scroll overflow-x-auto">
-                    <table className="admin-responsive-table w-full min-w-[1120px] text-left text-sm">
-                      <thead className="admin-table-header text-sm"><tr><th className="p-3">发生时间</th><th className="p-3">类型</th><th className="p-3">任务 / 节点</th><th className="p-3">目标</th><th className="p-3">预期线路</th><th className="p-3">线路变化</th><th className="p-3">关键 ASN</th><th className="p-3">路径</th></tr></thead>
+          <Tabs.Content value="records" className="admin-tab-panel">
+            <AdminListShell>
+              <AdminListFiltersBar>
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  useFlexGap
+                  sx={{ flexWrap: "wrap", alignItems: "center" }}
+                >
+                  <AdminListSelect label="时间范围" value={recordQuery.range} onChange={(range) => updateRecordQuery({ range })}>
+                    <MenuItem value="24h">最近 24 小时</MenuItem>
+                    <MenuItem value="7d">最近 7 天</MenuItem>
+                    <MenuItem value="30d">最近 30 天</MenuItem>
+                    <MenuItem value="all">全部时间</MenuItem>
+                  </AdminListSelect>
+                  <AdminMultiSelect
+                    label="记录类型"
+                    ariaLabel="记录类型"
+                    value={recordQuery.kinds}
+                    onChange={(kinds) => updateRecordQuery({ kinds })}
+                    options={Object.entries(RECORD_KIND_LABELS).map(([value, label]) => ({ value, label }))}
+                  />
+                  <AdminMultiSelect
+                    label="运营商"
+                    ariaLabel="运营商"
+                    value={recordQuery.carriers}
+                    onChange={(carriers) => updateRecordQuery({ carriers })}
+                    options={Object.entries(carrierNames).map(([value, label]) => ({ value, label }))}
+                  />
+                  <AdminMultiSelect
+                    label="地区"
+                    ariaLabel="地区"
+                    value={recordQuery.regions}
+                    onChange={(regions) => updateRecordQuery({ regions })}
+                    options={regionOptions.map((region) => ({ value: region, label: region }))}
+                  />
+                  <AdminMultiSelect
+                    label="预期线路"
+                    ariaLabel="预期线路"
+                    value={recordQuery.expectedLines}
+                    onChange={(expectedLines) => updateRecordQuery({ expectedLines })}
+                    options={allLineOptions.map((line) => ({ value: line, label: line }))}
+                  />
+                  <AdminMultiSelect
+                    label="实际线路"
+                    ariaLabel="实际线路"
+                    value={recordQuery.actualLines}
+                    onChange={(actualLines) => updateRecordQuery({ actualLines })}
+                    options={allLineOptions.map((line) => ({ value: line, label: line }))}
+                  />
+                  <AdminListSearch
+                    value={recordQuery.keyword}
+                    onChange={(keyword) => updateRecordQuery({ keyword })}
+                    placeholder="搜索任务、节点、目标、ASN 或 IP"
+                  />
+                </Stack>
+                <Collapse
+                  in={Boolean(
+                    recordQuery.keyword ||
+                    recordQuery.range !== "24h" ||
+                    recordQuery.kinds.length ||
+                    recordQuery.carriers.length ||
+                    recordQuery.regions.length ||
+                    recordQuery.expectedLines.length ||
+                    recordQuery.actualLines.length
+                  )}
+                  timeout={{ enter: 260, exit: 180 }}
+                  easing={{
+                    enter: "cubic-bezier(0.22, 1, 0.36, 1)",
+                    exit: "cubic-bezier(0.4, 0, 1, 1)",
+                  }}
+                  unmountOnExit
+                >
+                  <Stack className="km-admin-active-filters" direction="row" spacing={1} useFlexGap sx={{ mt: 2, flexWrap: "wrap", alignItems: "center" }}>
+                    {recordQuery.range !== "24h" ? (
+                      <Chip className="km-admin-filter-chip" size="small" onDelete={() => updateRecordQuery({ range: "24h" })} deleteIcon={<X size={14} />} label={`时间范围: ${recordQuery.range === "7d" ? "最近 7 天" : recordQuery.range === "30d" ? "最近 30 天" : "全部时间"}`} />
+                    ) : null}
+                    {recordQuery.kinds.map((kind) => (
+                      <Chip key={`kind-${kind}`} className="km-admin-filter-chip" size="small" onDelete={() => updateRecordQuery({ kinds: recordQuery.kinds.filter((item) => item !== kind) })} deleteIcon={<X size={14} />} label={`记录类型: ${RECORD_KIND_LABELS[kind] || kind}`} />
+                    ))}
+                    {recordQuery.carriers.map((carrier) => (
+                      <Chip key={`record-carrier-${carrier}`} className="km-admin-filter-chip" size="small" onDelete={() => updateRecordQuery({ carriers: recordQuery.carriers.filter((item) => item !== carrier) })} deleteIcon={<X size={14} />} label={`运营商: ${carrierNames[carrier as Task["carrier"]] || carrier}`} />
+                    ))}
+                    {recordQuery.regions.map((region) => (
+                      <Chip key={`region-${region}`} className="km-admin-filter-chip" size="small" onDelete={() => updateRecordQuery({ regions: recordQuery.regions.filter((item) => item !== region) })} deleteIcon={<X size={14} />} label={`地区: ${region}`} />
+                    ))}
+                    {recordQuery.expectedLines.map((line) => (
+                      <Chip key={`expected-${line}`} className="km-admin-filter-chip" size="small" onDelete={() => updateRecordQuery({ expectedLines: recordQuery.expectedLines.filter((item) => item !== line) })} deleteIcon={<X size={14} />} label={`预期线路: ${line}`} />
+                    ))}
+                    {recordQuery.actualLines.map((line) => (
+                      <Chip key={`actual-${line}`} className="km-admin-filter-chip" size="small" onDelete={() => updateRecordQuery({ actualLines: recordQuery.actualLines.filter((item) => item !== line) })} deleteIcon={<X size={14} />} label={`实际线路: ${line}`} />
+                    ))}
+                    {recordQuery.keyword.trim() ? (
+                      <Chip className="km-admin-filter-chip" size="small" onDelete={() => updateRecordQuery({ keyword: "" })} deleteIcon={<X size={14} />} label={`搜索: ${recordQuery.keyword.trim()}`} />
+                    ) : null}
+                    <MuiButton
+                      color="error"
+                      size="small"
+                      startIcon={<FilterOff size={16} />}
+                      onClick={() => setRecordQuery((current) => ({ ...current, page: 1, keyword: "", range: "24h", kinds: [], carriers: [], regions: [], expectedLines: [], actualLines: [] }))}
+                    >
+                      清除全部
+                    </MuiButton>
+                  </Stack>
+                </Collapse>
+              </AdminListFiltersBar>
+              {recordLoading ? (
+                <div className="km-admin-list-empty"><Loading text="" /></div>
+              ) : recordData.events.length === 0 ? (
+                <div className="km-admin-list-empty">暂无符合条件的监测记录</div>
+              ) : (
+                <>
+                  <div className="admin-responsive-table-wrap overflow-x-auto">
+                    <Table container={false} className="admin-responsive-table w-full min-w-[1120px] text-left text-sm">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>发生时间</TableHead>
+                          <TableHead>类型</TableHead>
+                          <TableHead>任务 / 节点</TableHead>
+                          <TableHead>目标</TableHead>
+                          <TableHead>预期线路</TableHead>
+                          <TableHead>线路变化</TableHead>
+                          <TableHead>关键 ASN</TableHead>
+                          <TableHead>路径</TableHead>
+                        </TableRow>
+                      </TableHeader>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                         {recordData.events.map((event) => <tr key={event.id} className="align-top hover:bg-gray-50/60 dark:hover:bg-gray-900/50">
                           <td data-label="发生时间" className="p-3 whitespace-nowrap">{formatTime(event.occurred_at)}</td>
@@ -1142,7 +1333,7 @@ function ReturnRouteContent() {
                           <td data-label="路径" className="p-3">{event.route_path?.length ? <details className="text-xs text-gray-500"><summary className="cursor-pointer">查看完整路径</summary><div className="mt-2 max-h-48 overflow-auto whitespace-pre font-mono leading-5">{event.route_path.join("\n")}</div></details> : <span className="text-gray-400">-</span>}</td>
                         </tr>)}
                       </tbody>
-                    </table>
+                    </Table>
                   </div>
                   <AdminPagination
                     page={recordQuery.page}
@@ -1152,29 +1343,45 @@ function ReturnRouteContent() {
                     onPageSizeChange={(page_size) => updateRecordQuery({ page_size })}
                     showSummary={false}
                   />
-                </section>
+                </>
               )}
-            </div>
+            </AdminListShell>
           </Tabs.Content>
 
-          <Tabs.Content value="rules">
-            {rulesLoading && !ruleView ? <Loading text="" /> : ruleView ? (
-              <div className="flex flex-col gap-5">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <Text size="2" weight="medium">识别方式</Text>
-                    <Text as="p" size="2" color="gray" className="mt-1">本地骨干特征库（BGPtools 定时更新） + 有序路径判断 + Cymru/RIPEstat/BGPView 按需回退</Text>
-                  </div>
-                  <Flex gap="2" wrap="wrap">
-                    <Button variant="soft" color="gray" onClick={exportRules}><Download size={16} />导出规则</Button>
-                    <input ref={ruleFileInput} type="file" accept="application/json,.json" className="hidden" onChange={importRules} />
-                    <Button variant="soft" color="gray" loading={rulesBusy === "upload"} disabled={Boolean(rulesBusy)} onClick={() => ruleFileInput.current?.click()}><Upload size={16} />导入规则</Button>
-                    <Button variant="soft" color="gray" loading={rulesBusy === "reload"} disabled={Boolean(rulesBusy)} onClick={reloadRules}><RefreshCw size={16} />重新加载</Button>
-                    <Button loading={rulesBusy === "refresh"} disabled={Boolean(rulesBusy)} onClick={refreshBGPRules}><RefreshCw size={16} />更新 BGP</Button>
-                  </Flex>
-                </div>
-
-                <section className="border-y border-gray-200 py-4 dark:border-gray-800">
+          <Tabs.Content value="rules" className="admin-tab-panel">
+            {rulesLoading && !ruleView ? (
+              <AdminListShell className="km-return-route-rules">
+                <div className="km-admin-list-empty"><Loading text="" /></div>
+              </AdminListShell>
+            ) : ruleView ? (
+              <AdminListShell className="km-return-route-rules">
+                <AdminListFiltersBar>
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    useFlexGap
+                    sx={{ flexWrap: "wrap", alignItems: "center" }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-[#1C252E]">识别方式</div>
+                      <div className="mt-0.5 text-xs text-[#637381]">本地骨干特征库（BGPtools 定时更新） + 有序路径判断 + Cymru/RIPEstat/BGPView 按需回退</div>
+                    </div>
+                    <Stack direction="row" spacing={1} useFlexGap sx={{ flexShrink: 0, flexWrap: "wrap", alignItems: "center" }}>
+                      <MuiButton variant="outlined" startIcon={<Download size={16} />} onClick={exportRules} sx={ADMIN_LIST_OUTLINE_SX}>导出规则</MuiButton>
+                      <input ref={ruleFileInput} type="file" accept="application/json,.json" className="hidden" onChange={importRules} />
+                      <MuiButton variant="outlined" disabled={Boolean(rulesBusy)} startIcon={<Upload size={16} />} onClick={() => ruleFileInput.current?.click()} sx={ADMIN_LIST_OUTLINE_SX}>
+                        {rulesBusy === "upload" ? "导入中..." : "导入规则"}
+                      </MuiButton>
+                      <MuiButton variant="outlined" disabled={Boolean(rulesBusy)} startIcon={<RefreshCw size={16} />} onClick={reloadRules} sx={ADMIN_LIST_OUTLINE_SX}>
+                        {rulesBusy === "reload" ? "加载中..." : "重新加载"}
+                      </MuiButton>
+                      <MuiButton variant="contained" disabled={Boolean(rulesBusy)} startIcon={<RefreshCw size={16} />} onClick={refreshBGPRules} sx={ADMIN_LIST_ACTION_SX}>
+                        {rulesBusy === "refresh" ? "更新中..." : "更新 BGP"}
+                      </MuiButton>
+                    </Stack>
+                  </Stack>
+                </AdminListFiltersBar>
+                <div className="km-admin-list-empty">
                   <div className="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-4">
                     <RuleStat label="当前版本" value={ruleView.status.rule_version || "-"} />
                     <RuleStat label="规则来源" value={ruleView.status.source === "external" ? "外部规则" : "内置规则"} />
@@ -1189,26 +1396,28 @@ function ReturnRouteContent() {
                     <RuleStat label="下次自动更新" value={formatTime(ruleView.status.bgp_next_refresh_at)} />
                     <RuleStat label="本地规则文件" value={ruleView.status.external_path || "-"} mono />
                   </div>
-                </section>
-
+                </div>
                 {ruleView.status.last_error ? <Callout.Root color="red"><Callout.Icon><AlertTriangle size={16} /></Callout.Icon><Callout.Text>本地规则：{ruleView.status.last_error}</Callout.Text></Callout.Root> : null}
                 {ruleView.status.bgp_last_error ? <Callout.Root color="amber"><Callout.Icon><AlertTriangle size={16} /></Callout.Icon><Callout.Text>BGP 更新：{ruleView.status.bgp_last_error}</Callout.Text></Callout.Root> : null}
-
-                <section className="admin-responsive-table-wrap overflow-hidden rounded-md border border-[var(--gray-a5)]">
-                  <div className="admin-responsive-table-scroll overflow-x-auto">
-                    <table className="admin-responsive-table w-full min-w-[760px] text-left text-sm">
-                      <thead className="admin-table-header text-sm"><tr><th className="p-3">线路</th><th className="p-3">ASN</th><th className="p-3">人工网段特征</th></tr></thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                        {ruleGroupOrder.map((group) => <tr key={group} className="align-top">
-                          <td data-label="线路" className="p-3 font-medium">{ruleGroupNames[group] || group}</td>
-                          <td data-label="ASN" className="p-3"><div className="flex flex-wrap gap-1">{ruleView.rules.asn_groups[group]?.length ? ruleView.rules.asn_groups[group].map((asn) => <Badge key={asn} color="gray" variant="soft">AS{asn}</Badge>) : <span className="text-gray-400">-</span>}</div></td>
-                          <td data-label="人工网段特征" className="p-3"><div className="flex flex-wrap gap-1">{ruleView.rules.prefix_groups[group]?.length ? ruleView.rules.prefix_groups[group].map((prefix) => <Badge key={prefix} color="blue" variant="soft">{prefix}</Badge>) : <span className="text-gray-400">-</span>}</div></td>
-                        </tr>)}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              </div>
+                <div className="admin-responsive-table-wrap overflow-x-auto">
+                  <Table container={false} className="admin-responsive-table w-full min-w-[760px] text-left text-sm">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>线路</TableHead>
+                        <TableHead>ASN</TableHead>
+                        <TableHead>人工网段特征</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                      {ruleGroupOrder.map((group) => <tr key={group} className="align-top">
+                        <td data-label="线路" className="p-3 font-medium">{ruleGroupNames[group] || group}</td>
+                        <td data-label="ASN" className="p-3"><div className="flex flex-wrap gap-1">{ruleView.rules.asn_groups[group]?.length ? ruleView.rules.asn_groups[group].map((asn) => <Badge key={asn} color="gray" variant="soft">AS{asn}</Badge>) : <span className="text-gray-400">-</span>}</div></td>
+                        <td data-label="人工网段特征" className="p-3"><div className="flex flex-wrap gap-1">{ruleView.rules.prefix_groups[group]?.length ? ruleView.rules.prefix_groups[group].map((prefix) => <Badge key={prefix} color="blue" variant="soft">{prefix}</Badge>) : <span className="text-gray-400">-</span>}</div></td>
+                      </tr>)}
+                    </tbody>
+                  </Table>
+                </div>
+              </AdminListShell>
             ) : <Callout.Root color="gray"><Callout.Text>规则库暂不可用</Callout.Text></Callout.Root>}
           </Tabs.Content>
         </Box>

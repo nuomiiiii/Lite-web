@@ -1,6 +1,6 @@
-import AppDialogContent from "@/components/AppDialogContent";
 import React from "react";
-import { Button, Dialog, Flex, Text } from "@radix-ui/themes";
+import {
+  AppDialogContent, Button, Dialog, Flex, Text } from "@/components/admin/ui";
 import { useTranslation } from "react-i18next";
 import Selector from "@/components/Selector";
 import { usePingTask } from "@/contexts/PingTaskContext";

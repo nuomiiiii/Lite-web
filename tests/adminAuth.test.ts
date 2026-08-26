@@ -67,6 +67,7 @@ test("登录成功后刷新外层账户信息", async () => {
     fetcher: async (input, init) => {
       assert.equal(input, "/api/login");
       assert.equal(init?.method, "POST");
+      assert.equal(init?.credentials, "same-origin");
       assert.deepEqual(JSON.parse(String(init?.body)), {
         username: "admin",
         password: "secret",

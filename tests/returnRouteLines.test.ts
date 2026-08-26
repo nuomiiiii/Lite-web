@@ -29,15 +29,8 @@ test("编辑表单只在打开弹窗时读取任务数据", () => {
 test("新建任务使用原选择框外观进行节点多选", () => {
   assert.match(source, /const \[selectedClients, setSelectedClients\] = useState<string\[]>/);
   assert.match(source, /function MultiNodeSelect/);
-  assert.match(source, /rt-reset rt-SelectTrigger rt-r-size-2 rt-variant-surface w-full/);
-  assert.match(source, /padding: 4,[\s\S]*rounded-md px-2 py-2/);
-  assert.match(source, /aria-hidden="true"[\s\S]*\{checked \? <Check size=\{16\} strokeWidth=\{2\.5\} \/> : null\}/);
-  assert.match(source, /role="listbox"[\s\S]*aria-multiselectable="true"/);
-  assert.match(source, /role="option"[\s\S]*aria-selected=\{checked\}/);
-  assert.match(source, /hover:bg-\[var\(--accent-9\)\][\s\S]*focus-visible:bg-\[var\(--accent-9\)\]/);
-  assert.doesNotMatch(source, /data-\[state=checked\]:(?:bg|text)-/);
-  assert.match(source, /ref=\{listboxRef\}[\s\S]*tabIndex=\{-1\}[\s\S]*focus:outline-none/);
-  assert.match(source, /if \(event\.detail > 0\) \{\s*listboxRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(source, /<AdminMultiSelect/);
+  assert.match(source, /placeholder="选择服务器（支持多选）"/);
   assert.match(source, /<MultiNodeSelect[\s\S]*value=\{selectedClients\}[\s\S]*onChange=\{setSelectedClients\}/);
   assert.doesNotMatch(source, /<NodeSelectorDialog/);
   assert.match(source, /for \(const client of clients\) \{[\s\S]*request\([\s\S]*"\/add"/);
@@ -56,14 +49,22 @@ test("任务列表提供明确勾选和后端批量修改入口", () => {
   assert.match(source, /任务名称和各自的探测节点保持不变/);
 });
 
-test("回程任务、记录和规则表格使用圆角边框并适配手机卡片", () => {
-  assert.match(source, /admin-responsive-table-wrap overflow-hidden rounded-md border border-\[var\(--gray-a5\)\]/);
+test("刷新后仍停留在当前监测页签，告警深链未指定页签时才回到任务", () => {
+  assert.match(source, /useAdminTabParam\(\s*RETURN_ROUTE_TABS,\s*"tasks"/);
+  assert.match(source, /if \(searchParams.get\("tab"\)\) return;/);
+  assert.match(source, /setActiveTab\("tasks"\)/);
+});
+
+test("回程任务、记录和规则复用服务器列表的筛选条和表格卡片", () => {
+  assert.match(source, /<AdminListShell>/);
+  assert.match(source, /<AdminListSearch/);
+  assert.match(source, /AdminListSearch[\s\S]*取消全选[\s\S]*批量修改[\s\S]*新建任务/);
   assert.match(source, /className="admin-responsive-table w-full min-w-\[1120px\]/);
   assert.match(source, /data-label="任务 \/ 节点"/);
   assert.match(source, /data-label="线路变化"/);
   assert.match(source, /data-label="操作" className="p-3"><Flex justify="start"/);
-  assert.match(source, /<th className="py-3 pl-6 pr-3">操作<\/th>/);
-  assert.doesNotMatch(source, /<th className="p-3 text-right">操作<\/th>/);
+  assert.match(source, /<TableHead>操作<\/TableHead>/);
+  assert.doesNotMatch(source, /overflow-hidden rounded-md border border-\[var\(--gray-a5\)\]/);
 });
 
 test("手机端回程任务把同一字段的主次信息保持在同一内容列", () => {

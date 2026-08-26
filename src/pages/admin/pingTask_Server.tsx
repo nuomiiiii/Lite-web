@@ -1,4 +1,3 @@
-import AppDialogContent from "@/components/AppDialogContent";
 import {
   Table,
   TableBody,
@@ -9,8 +8,11 @@ import {
 } from "@/components/ui/table";
 import { useNodeDetails } from "@/contexts/NodeDetailsContext";
 import { usePingTask, type PingTask } from "@/contexts/PingTaskContext";
-import { Button, Dialog, Flex, IconButton } from "@radix-ui/themes";
-import { MoreHorizontal } from "lucide-react";
+import {
+  AppDialogContent, Button, Dialog, Flex, IconButton } from "@/components/admin/ui";
+import { MoreHorizontal } from "@/components/admin/muiIcons";
+import { Server } from "@/components/admin/muiIcons";
+import Flag from "@/components/Flag";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -54,12 +56,12 @@ export const ServerView = ({
   React.useEffect(() => setPage(1), [search, setPage]);
 
   return (
-    <div className="admin-responsive-table-wrap overflow-hidden rounded-md border border-[var(--gray-a5)]">
-      <div className="overflow-x-auto">
-      <Table className="admin-responsive-table min-w-[640px]">
+    <>
+      <div className="admin-responsive-table-wrap overflow-x-auto">
+      <Table container={false} className="admin-responsive-table min-w-[640px]">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-48">{t("common.server")}</TableHead>
+            <TableHead className="w-[22%]">{t("common.server")}</TableHead>
             <TableHead>{t("ping.task")}</TableHead>
           </TableRow>
         </TableHeader>
@@ -69,6 +71,7 @@ export const ServerView = ({
               key={n.uuid}
               nodeUuid={n.uuid}
               nodeName={n.name}
+              nodeRegion={n.region}
               pingTasks={pingTasks}
             />
           ))}
@@ -83,15 +86,16 @@ export const ServerView = ({
         onPageSizeChange={setPageSize}
         summary={false}
       />
-    </div>
+    </>
   );
 };
 
 const ServerRow: React.FC<{
   nodeUuid: string;
   nodeName: string;
+  nodeRegion?: string;
   pingTasks: PingTask[];
-}> = ({ nodeUuid, nodeName, pingTasks }) => {
+}> = ({ nodeUuid, nodeName, nodeRegion, pingTasks }) => {
   const { t } = useTranslation();
   const { refresh } = usePingTask();
   const [open, setOpen] = React.useState(false);
@@ -168,16 +172,30 @@ const ServerRow: React.FC<{
       .finally(() => setSaving(false));
   };
 
-  const taskNames = ownedTasks.map((t) => t.name).join(", ");
-
   return (
     <TableRow>
-      <TableCell data-label={t("common.server")}>{nodeName}</TableCell>
-      <TableCell data-label={t("ping.task")}>
-        <div className="flex min-w-0 items-start gap-2">
-          <span className="min-w-0 flex-1 whitespace-normal break-words">
-            {ownedTasks.length > 0 ? taskNames : t("common.none")}
+      <TableCell data-label={t("common.server")}>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="inline-flex size-7 shrink-0 items-center justify-center text-muted-foreground">
+            {nodeRegion ? <Flag flag={nodeRegion} compact /> : <Server size={17} />}
           </span>
+          <span className="min-w-0 truncate font-medium">{nodeName}</span>
+        </div>
+      </TableCell>
+      <TableCell data-label={t("ping.task")}>
+        <div className="flex min-w-0 items-center gap-2">
+          <div
+            className="min-w-0 flex-1 truncate whitespace-nowrap leading-5"
+            title={
+              ownedTasks.length > 0
+                ? ownedTasks.map((task) => task.name).join("、")
+                : undefined
+            }
+          >
+            {ownedTasks.length > 0
+              ? ownedTasks.map((task) => task.name).join("、")
+              : <span className="text-muted-foreground">{t("common.none")}</span>}
+          </div>
           <Dialog.Root open={open} onOpenChange={setOpen}>
             <Dialog.Trigger>
               <IconButton variant="ghost" className="shrink-0">

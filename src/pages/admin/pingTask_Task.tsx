@@ -1,4 +1,3 @@
-import AppDialogContent from "@/components/AppDialogContent";
 import NodeSelectorDialog from "@/components/NodeSelectorDialog";
 import {
   Table,
@@ -32,15 +31,16 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  AppDialogContent,
   Button,
   Dialog,
   Flex,
   IconButton,
   Select,
   TextField,
-} from "@radix-ui/themes";
+} from "@/components/admin/ui";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MenuIcon, MoreHorizontal, Pencil, Trash } from "lucide-react";
+import { MenuIcon, Pencil, Trash } from "@/components/admin/muiIcons";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -165,7 +165,7 @@ export const TaskView = ({
   };
 
   return (
-    <div className="admin-responsive-table-wrap overflow-hidden rounded-md border border-[var(--gray-a5)]">
+    <>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -173,17 +173,17 @@ export const TaskView = ({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setIsDragging(false)}
       >
-      <div className="overflow-x-auto">
-      <Table className="admin-responsive-table admin-sortable-table min-w-[840px]">
+      <div className="admin-responsive-table-wrap overflow-x-auto">
+      <Table container={false} className="admin-responsive-table admin-sortable-table table-fixed min-w-[840px]">
         <TableHeader>
           <TableRow>
             <TableHead className="w-12 px-3" aria-label={t("common.sort")}></TableHead>
-            <TableHead>{t("common.name")}</TableHead>
-            <TableHead>{t("common.server")}</TableHead>
-            <TableHead>{t("ping.target")}</TableHead>
-            <TableHead>{t("ping.type")}</TableHead>
-            <TableHead>{t("ping.interval")}</TableHead>
-            <TableHead>{t("common.action")}</TableHead>
+            <TableHead className="w-[18%]">{t("common.name")}</TableHead>
+            <TableHead className="w-[32%]">{t("common.server")}</TableHead>
+            <TableHead className="w-[20%]">{t("ping.target")}</TableHead>
+            <TableHead className="w-[8%]">{t("ping.type")}</TableHead>
+            <TableHead className="w-[8%]">{t("ping.interval")}</TableHead>
+            <TableHead className="w-[10%]">{t("common.action")}</TableHead>
           </TableRow>
         </TableHeader>
           <SortableContext
@@ -214,7 +214,7 @@ export const TaskView = ({
         summary={false}
       />
       </DndContext>
-    </div>
+    </>
   );
 };
 
@@ -248,6 +248,15 @@ const Row = ({
     default_on: task.default_on || false,
     interval: task.interval || 60,
   });
+  const serverNames =
+    task.clients && task.clients.length > 0
+      ? task.clients
+          .map(
+            (uuid) =>
+              nodeDetail.find((node) => node.uuid === uuid)?.name || uuid,
+          )
+          .join(", ")
+      : "";
 
   const submitEdit = (newForm: typeof form) => {
     if (!newForm.default_on && newForm.clients.length === 0) {
@@ -348,35 +357,19 @@ const Row = ({
         </div>
       </TableCell>
       <TableCell data-label={t("common.name")}>{task.name}</TableCell>
-      <TableCell data-label={t("common.server")}>
-        <div className="flex min-w-0 items-start gap-2">
-          <span className="min-w-0 flex-1 whitespace-normal break-words">
-            {task.clients && task.clients.length > 0
-              ? task.clients
-                  .map(
-                    (uuid) =>
-                      nodeDetail.find((node) => node.uuid === uuid)?.name || uuid,
-                  )
-                  .join(", ")
-              : t("common.none")}
-          </span>
-          {task.default_on && (
-            <span className="shrink-0 text-xs text-accent-11">
-              {t("ping.default_on_short")}
-            </span>
-          )}
-          <NodeSelectorDialog
-            value={form.clients ?? []}
-            onChange={(uuids) => {
-              const nextForm = { ...form, clients: uuids };
-              setForm(nextForm);
-              submitEdit(nextForm);
-            }}
+      <TableCell className="max-w-0" data-label={t("common.server")}>
+        <div className="min-w-0 overflow-hidden">
+          <div
+            className="truncate whitespace-nowrap leading-5"
+            title={serverNames || undefined}
           >
-            <IconButton variant="ghost" className="shrink-0">
-              <MoreHorizontal size="16" />
-            </IconButton>
-          </NodeSelectorDialog>
+            {serverNames || t("common.none")}
+          </div>
+          {task.default_on && (
+            <div className="mt-1 truncate text-xs text-accent-11">
+              {t("ping.default_on_short")}
+            </div>
+          )}
         </div>
       </TableCell>
       <TableCell data-label={t("ping.target")}>{task.target}</TableCell>

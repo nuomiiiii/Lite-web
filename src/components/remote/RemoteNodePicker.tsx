@@ -8,7 +8,7 @@ import {
   SearchX,
   SquareTerminal,
   X,
-} from "lucide-react";
+} from "@/components/admin/muiIcons";
 import { useTranslation } from "react-i18next";
 
 import Flag from "@/components/Flag";
@@ -26,6 +26,7 @@ import "./RemoteNodePicker.css";
 type RemoteNodePickerProps<T extends RemoteNodePickerItem> = {
   nodes: readonly T[];
   onlineSet: ReadonlySet<string>;
+  available?: boolean;
   selectedUUID?: string;
   pageSize?: number;
   rowsPerPage?: number;
@@ -35,6 +36,7 @@ type RemoteNodePickerProps<T extends RemoteNodePickerItem> = {
 export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
   nodes,
   onlineSet,
+  available = true,
   selectedUUID,
   pageSize = 16,
   rowsPerPage,
@@ -50,8 +52,14 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
   const searchID = useId();
   const orderedNodes = useMemo(() => orderRemoteNodes(nodes), [nodes]);
   const filteredNodes = useMemo(
-    () => filterRemoteNodes(orderedNodes, query, status, onlineSet),
-    [onlineSet, orderedNodes, query, status],
+    () =>
+      filterRemoteNodes(
+        orderedNodes,
+        query,
+        available ? status : "all",
+        onlineSet,
+      ),
+    [available, onlineSet, orderedNodes, query, status],
   );
   const onlineCount = useMemo(
     () => nodes.filter((node) => onlineSet.has(node.uuid)).length,
@@ -128,6 +136,7 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
           <AdminNodeStatusSummary
             total={nodes.length}
             online={onlineCount}
+            available={available}
             value={status}
             onValueChange={(value) => {
               setStatus(value);
@@ -142,6 +151,8 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
           <div ref={resultsGridRef} className="remote-node-picker-grid">
           {visibleNodes.map((node) => {
             const online = onlineSet.has(node.uuid);
+            const knownOnline = available && online;
+            const knownOffline = available && !online;
             const selected = selectedUUID === node.uuid;
             const flag = node.region_override?.trim() || node.region?.trim() || "UN";
             const ipv4 = displayRemoteAddress(node.ipv4);
@@ -154,16 +165,16 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
             return (
               <article
                 key={node.uuid}
-                className={`remote-node-picker-card${selected ? " is-selected" : ""}${online ? "" : " is-offline"}`}
+                className={`remote-node-picker-card${selected ? " is-selected" : ""}${knownOffline ? " is-offline" : ""}`}
                 role="button"
-                tabIndex={online ? 0 : -1}
-                aria-disabled={!online}
-                aria-label={online ? t("terminal.open_terminal") : t("nodeCard.offline")}
+                tabIndex={knownOnline ? 0 : -1}
+                aria-disabled={!knownOnline}
+                aria-label={knownOnline ? t("terminal.open_terminal") : t("nodeCard.offline")}
                 onClick={() => {
-                  if (online) onSelect(node);
+                  if (knownOnline) onSelect(node);
                 }}
                 onKeyDown={(event) => {
-                  if (!online || (event.key !== "Enter" && event.key !== " ")) return;
+                  if (!knownOnline || (event.key !== "Enter" && event.key !== " ")) return;
                   event.preventDefault();
                   onSelect(node);
                 }}
@@ -175,7 +186,11 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
                     </span>
                     <strong title={node.name}>{node.name}</strong>
                   </span>
-                  <span className={`remote-node-picker-status ${online ? "is-online" : "is-offline"}`}>
+                  <span
+                    className={`remote-node-picker-status ${online ? "is-online" : "is-offline"}`}
+                    aria-hidden={!available || undefined}
+                    style={!available ? { visibility: "hidden" } : undefined}
+                  >
                     <span aria-hidden="true" />
                     {online ? t("nodeCard.online") : t("nodeCard.offline")}
                   </span>

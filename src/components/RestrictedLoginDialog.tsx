@@ -4,6 +4,8 @@ import { Button, Dialog, Text, TextField } from "@radix-ui/themes";
 import { LoaderCircle, LogIn } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import LoginIdentityHeader from "@/components/LoginIdentityHeader";
+import { submitPasswordLogin } from "@/utils/adminAuth";
+import { sameOriginApiPath } from "@/utils/security";
 
 export type RestrictedAuthStatus = {
   oauth_enabled: boolean;
@@ -11,11 +13,6 @@ export type RestrictedAuthStatus = {
   password_login_enabled: boolean;
   logged_in: boolean;
   username?: string;
-};
-
-type APIResponse = {
-  status: "success" | "error";
-  message?: string;
 };
 
 type RestrictedLoginDialogProps = {
@@ -41,23 +38,19 @@ export default function RestrictedLoginDialog({
     setBusy(true);
     setError("");
     try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          password,
-          ...(twoFactor ? { "2fa_code": twoFactor } : {}),
-        }),
+      const result = await submitPasswordLogin({
+        username,
+        password,
+        twoFactorCode: twoFactor,
+        refreshAccount: onAuthenticated,
       });
-      const payload = (await response.json()) as APIResponse;
-      if (!response.ok) {
-        if (payload.message === "2FA code is required") {
-          setRequireTwoFactor(true);
-        }
-        throw new Error(payload.message || `HTTP ${response.status}`);
+      if (result.ok) {
+        setPassword("");
+        setTwoFactor("");
+        return;
       }
-      await onAuthenticated();
+      if (result.requiresTwoFactor) setRequireTwoFactor(true);
+      setError(result.message);
     } catch (loginError) {
       setError(
         loginError instanceof Error
@@ -155,7 +148,7 @@ export default function RestrictedLoginDialog({
             variant={auth.password_login_enabled ? "soft" : "solid"}
             className="mt-3 w-full"
             onClick={() => {
-              window.location.href = "/api/oauth";
+              window.location.assign(sameOriginApiPath("/api/oauth"));
             }}
           >
             {t("login.login_with", {

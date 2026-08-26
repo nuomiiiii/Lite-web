@@ -1,5 +1,6 @@
 import React from "react";
 import { toast } from "sonner";
+import { sameOriginApiPath, sameOriginFetchInit } from "@/utils/security";
 
 /**
  * API utility functions for settings management
@@ -25,7 +26,7 @@ export interface SettingsResponse {
 const createDefaultSettings = (): SettingsResponse => ({
   sitename: "",
   description: "",
-  admin_default_page_size: 10,
+  admin_default_page_size: 20,
   reduce_motion: false,
   cors_origin_check_enabled: true,
   auto_order_new_clients_by_region: false,
@@ -55,7 +56,10 @@ function getSettingsDeduplicated(): Promise<SettingsResponse> {
  */
 export async function getSettings(): Promise<SettingsResponse> {
   try {
-    const response = await fetch("/api/admin/settings");
+    const response = await fetch(
+      sameOriginApiPath("/api/admin/settings"),
+      sameOriginFetchInit(),
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -94,13 +98,16 @@ export async function getSettings(): Promise<SettingsResponse> {
 export async function updateSettings(
   settings: Partial<SettingsResponse>
 ): Promise<void> {
-  const response = await fetch("/api/admin/settings", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(settings),
-  });
+  const response = await fetch(
+    sameOriginApiPath("/api/admin/settings"),
+    sameOriginFetchInit({
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(settings),
+    }),
+  );
 
   if (!response.ok) {
     let message = `HTTP error! status: ${response.status}`;
@@ -240,8 +247,7 @@ type SettingsContextValue = ReturnType<typeof useSettingsController>;
 const SettingsContext = React.createContext<SettingsContextValue | null>(null);
 
 export function useReduceMotionPreference(): boolean {
-  const context = React.useContext(SettingsContext);
-  return Boolean(context?.settings.reduce_motion);
+  return false;
 }
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {

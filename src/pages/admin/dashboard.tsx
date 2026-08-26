@@ -1,14 +1,15 @@
 import React from "react";
-import { Button, Callout, Skeleton } from "@radix-ui/themes";
-import {
-  AlertCircle,
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  Database,
-  RefreshCw,
-  Server,
-  WalletCards,
-} from "lucide-react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import { Skeleton } from "@/components/admin/ui";
+import ArrowDownward from "@mui/icons-material/ArrowDownward";
+import ArrowUpward from "@mui/icons-material/ArrowUpward";
+import CreditCardOutlined from "@mui/icons-material/CreditCardOutlined";
+import DnsOutlined from "@mui/icons-material/DnsOutlined";
+import ErrorOutlined from "@mui/icons-material/ErrorOutlined";
+import Refresh from "@mui/icons-material/Refresh";
+import StorageOutlined from "@mui/icons-material/StorageOutlined";
 import { useTranslation } from "react-i18next";
 
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
@@ -279,34 +280,38 @@ export default function AdminDashboard() {
       case "server_status":
         return data ? (
           <SummaryPanel
-            icon={<Server size={18} />}
+            icon={<DnsOutlined />}
             label={t("admin_dashboard.servers")}
             value={`${data.servers.online} / ${data.servers.total}`}
             tone={data.servers.offline > 0 ? "orange" : "green"}
           >
             <div className="flex items-center justify-between gap-3">
               <span>{t("admin_dashboard.online_count", { count: data.servers.online })}</span>
-              <span className={data.servers.offline > 0 ? "text-[var(--orange-11)]" : "text-[var(--green-11)]"}>
+              <Box
+                component="span"
+                sx={{ color: data.servers.offline > 0 ? "warning.main" : "success.main" }}
+              >
                 {t("admin_dashboard.offline_count", { count: data.servers.offline })}
-              </span>
+              </Box>
             </div>
           </SummaryPanel>
         ) : <Skeleton className="h-[112px] w-full" />;
       case "traffic_summary":
         return (
           <SummaryPanel
-            icon={<WalletCards size={18} />}
+            icon={<CreditCardOutlined />}
             label={t("admin_dashboard.today_billable")}
             value={charts && !charts.traffic.error ? formatBytes(charts.traffic.today_billable) : "-"}
+            tone="accent"
           >
             {charts && !charts.traffic.error ? (
               <div className="grid grid-cols-2 gap-3">
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <ArrowUpFromLine size={14} className="shrink-0 text-[var(--accent-11)]" />
+                  <ArrowUpward sx={{ fontSize: 14, color: "text.secondary" }} className="shrink-0" />
                   <span className="truncate">{t("admin_dashboard.upload")} {formatBytes(charts.traffic.today_up)}</span>
                 </span>
                 <span className="flex min-w-0 items-center justify-end gap-1.5 text-right">
-                  <ArrowDownToLine size={14} className="shrink-0 text-[var(--orange-11)]" />
+                  <ArrowDownward sx={{ fontSize: 14, color: "text.secondary" }} className="shrink-0" />
                   <span className="truncate">{t("admin_dashboard.download")} {formatBytes(charts.traffic.today_down)}</span>
                 </span>
               </div>
@@ -316,8 +321,9 @@ export default function AdminDashboard() {
       case "storage_summary":
         return data ? (
           <SummaryPanel
-            icon={<Database size={18} />}
+            icon={<StorageOutlined />}
             label={t("admin_dashboard.database_usage")}
+            tone="muted"
             value={dashboardLocalStorageTotal(data) === null
               ? t("admin_dashboard.external_storage")
               : formatBytes(dashboardLocalStorageTotal(data) ?? 0)}
@@ -436,15 +442,19 @@ export default function AdminDashboard() {
       ref={dashboardRootRef}
       data-admin-route-pending={initialDataPending ? "true" : undefined}
       onClickCapture={rememberClickedModule}
-      className="flex flex-col gap-3 p-0 md:p-4"
+      className="flex flex-col gap-4 p-0 md:p-4"
     >
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
         <AdminPageTitle description={t("admin_dashboard.subtitle")}>
           {t("admin_dashboard.title")}
         </AdminPageTitle>
         {generatedAt ? (
-          <Button style={{ marginRight: 0 }} variant="ghost" color="gray" size="1" onClick={refreshAll}>
-            <RefreshCw size={14} />
+          <Button
+            color="inherit"
+            onClick={refreshAll}
+            startIcon={<Refresh sx={{ fontSize: 16 }} />}
+            sx={{ mr: 0, color: "text.secondary" }}
+          >
             {t("admin_dashboard.updated_at", {
               time: new Intl.DateTimeFormat(locale, {
                 hour: "2-digit",
@@ -457,19 +467,25 @@ export default function AdminDashboard() {
       </div>
 
       {settingsError || error ? (
-        <Callout.Root color="red" role="alert">
-          <Callout.Icon><AlertCircle size={16} /></Callout.Icon>
-          <Callout.Text className="flex flex-wrap items-center gap-2">
-            <span>{t("admin_dashboard.load_failed")}: {settingsError?.message || error}</span>
-            <Button size="1" variant="soft" onClick={() => {
-              if (settingsError) void refetchSettings(true);
-              refreshAll();
-            }}>
-              <RefreshCw size={14} />
+        <Alert
+          severity="error"
+          icon={<ErrorOutlined sx={{ fontSize: 18 }} />}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => {
+                if (settingsError) void refetchSettings(true);
+                refreshAll();
+              }}
+              startIcon={<Refresh sx={{ fontSize: 16 }} />}
+            >
               {t("common.retry")}
             </Button>
-          </Callout.Text>
-        </Callout.Root>
+          }
+        >
+          {t("admin_dashboard.load_failed")}: {settingsError?.message || error}
+        </Alert>
       ) : null}
 
       {loading && !data && chartSections.length === 0 ? (

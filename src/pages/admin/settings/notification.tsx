@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Text } from "@radix-ui/themes";
+import { Text } from "@/components/admin/ui";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
 import {
   SettingCardButton,
@@ -13,7 +13,7 @@ import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import React from "react";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import { renderProviderInputs } from "@/utils/renderProviders";
-import { SquareArrowOutUpRight } from "lucide-react";
+import { SquareArrowOutUpRight } from "@/components/admin/muiIcons";
 import { Link } from "react-router-dom";
 
 const NotificationSettings = () => {

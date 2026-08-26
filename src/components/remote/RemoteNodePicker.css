@@ -157,6 +157,7 @@
 
 .remote-node-picker-status {
   display: flex;
+  min-height: 20px;
   flex: 0 0 auto;
   align-items: center;
   gap: 6px;

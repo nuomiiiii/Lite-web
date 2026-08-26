@@ -1,6 +1,6 @@
-import AppDialogContent from "@/components/AppDialogContent";
 import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import { AdminSheetTabs, AdminTabLabel } from "@/components/admin/AdminSheetTabs";
 import {
   AdminPagination,
   useAdminPagination,
@@ -25,6 +25,7 @@ import type { SettingsResponse } from "@/lib/api";
 import { useRPC2Call } from "@/contexts/RPC2Context";
 import { resolveI18nText, type I18nText } from "@/utils/i18nText";
 import {
+  AppDialogContent,
   Badge,
   Button,
   Callout,
@@ -34,20 +35,22 @@ import {
   Tabs,
   Text,
   TextField,
-} from "@radix-ui/themes";
+} from "@/components/admin/ui";
 import {
   AlertTriangle,
+  ArrowRight,
+  ChartNoAxesCombined,
   Database,
-  HardDrive,
   Info,
   ListChecks,
   RefreshCw,
   Save,
   X,
-} from "lucide-react";
+} from "@/components/admin/muiIcons";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { useAdminTabParam } from "@/hooks/useAdminTabParam";
 
 // store-to-store 迁移状态。旧的 not_started/in_progress/paused 已废弃，
 // 后端语义改为：把某个 metrics 源库的数据搬运到当前运行中的 metrics 目标库。
@@ -202,13 +205,13 @@ function metricDescription(
   return system ?? resolveI18nText(custom, language) ?? "";
 }
 
+const STORAGE_TABS = ["overview", "monitoring", "migration"] as const;
+
 export default function MetricsSettings() {
   const { t } = useTranslation();
   const { settings, loading, error, updateMultipleSettings } = useSettings();
   const [saveError, setSaveError] = React.useState<string | null>(null);
-  const [activeTab, setActiveTab] = React.useState<
-    "overview" | "monitoring" | "migration"
-  >("overview");
+  const [activeTab, setActiveTab] = useAdminTabParam(STORAGE_TABS, "overview");
 
   const saveMetricSettings = React.useCallback(
     async (changes: Partial<SettingsResponse>) => {
@@ -248,41 +251,33 @@ export default function MetricsSettings() {
 
       <Tabs.Root
         value={activeTab}
-        onValueChange={(value) =>
-          setActiveTab(value as "overview" | "monitoring" | "migration")
-        }
+        onValueChange={setActiveTab}
       >
-        <div className="w-full overflow-x-auto pb-1">
-          <Tabs.List className="w-max min-w-full">
-            <Tabs.Trigger
-              value="overview"
-              className="min-w-[7.5rem] flex-1"
-            >
-              <HardDrive size={15} />
-              {t("settings.storage.overview")}
+        <AdminSheetTabs>
+          <Tabs.List>
+            <Tabs.Trigger value="overview">
+              <AdminTabLabel icon={<Database size={18} />}>
+                {t("settings.storage.overview")}
+              </AdminTabLabel>
             </Tabs.Trigger>
-            <Tabs.Trigger
-              value="monitoring"
-              className="min-w-[7.5rem] flex-1"
-            >
-              <ListChecks size={15} />
-              {t("settings.storage.monitoring_data")}
+            <Tabs.Trigger value="monitoring">
+              <AdminTabLabel icon={<ChartNoAxesCombined size={18} />}>
+                {t("settings.storage.monitoring_data")}
+              </AdminTabLabel>
             </Tabs.Trigger>
-            <Tabs.Trigger
-              value="migration"
-              className="min-w-[7.5rem] flex-1"
-            >
-              <RefreshCw size={15} />
-              {t("settings.storage.migration_maintenance")}
+            <Tabs.Trigger value="migration">
+              <AdminTabLabel icon={<ArrowRight size={18} />}>
+                {t("settings.storage.migration_maintenance")}
+              </AdminTabLabel>
             </Tabs.Trigger>
           </Tabs.List>
-        </div>
+        </AdminSheetTabs>
 
-        <Tabs.Content value="overview" className="pt-3">
+        <Tabs.Content value="overview" className="admin-tab-panel pt-3">
           {activeTab === "overview" ? <DatabaseMaintenanceCard /> : null}
         </Tabs.Content>
 
-        <Tabs.Content value="monitoring" className="pt-3">
+        <Tabs.Content value="monitoring" className="admin-tab-panel pt-3">
           <Flex direction="column" gap="3">
             {saveError && (
               <Callout.Root color="red" variant="surface">
@@ -381,7 +376,7 @@ export default function MetricsSettings() {
           </Flex>
         </Tabs.Content>
 
-        <Tabs.Content value="migration" className="pt-3">
+        <Tabs.Content value="migration" className="admin-tab-panel pt-3">
           {activeTab === "migration" ? (
             <Flex direction="column" gap="3">
               <MigrationCard />
@@ -674,7 +669,7 @@ function MetricRetentionTable({
           </Callout.Root>
         )}
 
-        <div className="overflow-hidden rounded-md border border-[var(--gray-a5)]">
+        <div className="admin-responsive-table-wrap overflow-hidden rounded-md border border-[var(--gray-a5)]">
           <div className="overflow-x-auto">
           <Table>
             <TableHeader>

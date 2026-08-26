@@ -1,7 +1,7 @@
 import AppDialogContent from "@/components/AppDialogContent";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Dialog, IconButton, TextField, Theme } from "@radix-ui/themes";
-import { Plus, Server, X } from "lucide-react";
+import { Plus, Server, X } from "@/components/admin/muiIcons";
 import { Toaster, toast } from "sonner";
 import {
   DndContext,
@@ -292,7 +292,7 @@ export default function TerminalWorkspace() {
       <Toaster theme="dark" />
       <div className="remote-workspace">
         <nav className="remote-tabbar" aria-label="远程服务器标签">
-          <div className="remote-brand"><Server size={17} /><span>Komari Lite 远程管理</span></div>
+          <div className="remote-brand"><Server size={17} /><span>Lite 远程管理</span></div>
           <DndContext sensors={tabSensors} collisionDetection={closestCenter} onDragEnd={reorderTabs}>
             <div className="remote-tabs">
               <SortableContext items={tabs.map((tab) => tab.id)} strategy={horizontalListSortingStrategy}>

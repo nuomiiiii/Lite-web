@@ -76,7 +76,7 @@ test("alert overview columns follow the configured card span", () => {
 
 test("traffic charts fill tall narrow grid cards without shrinking text", () => {
   assert.equal(
-    dashboardPanelsSource.match(/@container flex h-full min-w-0 flex-col rounded-md/g)?.length,
+    dashboardPanelsSource.match(/@container flex h-full min-w-0 flex-col km-admin-surface/g)?.length,
     2,
   );
   assert.equal(

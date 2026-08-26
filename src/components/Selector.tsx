@@ -1,5 +1,5 @@
 import React from "react";
-import { TextField } from "@radix-ui/themes";
+import { TextField } from "@/components/admin/ui";
 import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Checkbox } from "./ui/checkbox";
@@ -111,7 +111,7 @@ function SelectorInner<T>(props: SelectorProps<T>) {
   return (
     <div className={`flex flex-col ${className}`}>
       <TextField.Root
-        className="mb-2 flex items-center gap-1"
+        className="mb-3 flex items-center gap-1"
         placeholder={resolvedSearchPlaceholder}
         value={search}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -122,20 +122,22 @@ function SelectorInner<T>(props: SelectorProps<T>) {
           <Search size="16" />
         </TextField.Slot>
       </TextField.Root>
-      <div className="selector rounded-md overflow-hidden">
-        <Table>
+      <div className="selector overflow-hidden rounded-md border border-[var(--gray-a5)]">
+        <Table container={false} className="table-fixed">
           <TableHeader>
-            <TableHead>
-              {showHeaderSelectAll ? (
-                <Checkbox
-                  checked={checkAllState}
-                  onClick={(event) => event.stopPropagation()}
-                  onCheckedChange={(checked) => handleCheckAll(checked === true)}
-                  aria-label={t("common.select_all")}
-                />
-              ) : null}
-            </TableHead>
-            <TableHead>{resolvedHeaderLabel}</TableHead>
+            <TableRow>
+              <TableHead className="w-12 px-2 text-center">
+                {showHeaderSelectAll ? (
+                  <Checkbox
+                    checked={checkAllState}
+                    onClick={(event) => event.stopPropagation()}
+                    onCheckedChange={(checked) => handleCheckAll(checked === true)}
+                    aria-label={t("common.select_all")}
+                  />
+                ) : null}
+              </TableHead>
+              <TableHead>{resolvedHeaderLabel}</TableHead>
+            </TableRow>
           </TableHeader>
           <TableBody>
             {processed.map((it) => {
@@ -147,7 +149,7 @@ function SelectorInner<T>(props: SelectorProps<T>) {
                     handleCheck(id, !value.includes(id));
                   }}
                 >
-                  <TableCell>
+                  <TableCell className="w-12 px-2 text-center">
                     <Checkbox
                       checked={value.includes(id)}
                       onClick={(event) => event.stopPropagation()}
@@ -166,7 +168,7 @@ function SelectorInner<T>(props: SelectorProps<T>) {
                   handleCheck(id, !value.includes(id));
                 }}
               >
-                <TableCell>
+                <TableCell className="w-12 px-2 text-center">
                   <Checkbox
                     checked={value.includes(id)}
                     onClick={(event) => event.stopPropagation()}
