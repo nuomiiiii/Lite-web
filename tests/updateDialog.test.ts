@@ -90,7 +90,9 @@ test("desktop update dialog gives release notes enough space", () => {
   assert.match(source, /data-testid="admin-update-button"/);
   assert.match(source, /data-testid="admin-update-dialog"/);
   assert.match(source, /min\(920px, calc\(100vw - 3rem\)\)/);
-  assert.match(source, /maxHeight: "min\(62dvh, 620px\)"/);
+  assert.match(source, /maxHeight: "min\(86dvh, 760px\)"/);
+  assert.match(source, /overflow: "auto !important"/);
+  assert.match(source, /flexShrink: 0/);
 });
 
 test("account menu reserves the destructive treatment for logout", () => {
@@ -126,7 +128,7 @@ test("update chrome uses a red new-release chip instead of a download tray", () 
 
 test("update dialog keeps its title, release body, and actions separated", () => {
   assert.match(source, /<DialogTitle/);
-  assert.match(source, /<DialogContent dividers/);
+  assert.match(source, /<DialogContent[\s\S]*?dividers/);
   assert.match(source, /<DialogActions/);
   assert.match(source, /data-testid="admin-update-release"/);
   assert.match(source, /<Divider/);

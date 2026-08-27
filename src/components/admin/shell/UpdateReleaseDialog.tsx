@@ -150,6 +150,10 @@ export default function UpdateReleaseDialog({
               ? "calc(100vw - 1.5rem)"
               : "min(920px, calc(100vw - 3rem))",
             maxWidth: "none",
+            maxHeight: "min(86dvh, 760px)",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
             borderRadius: "8px",
             boxShadow:
               "0 0 2px 0 rgba(145, 158, 171, 0.24), 0 12px 24px -4px rgba(145, 158, 171, 0.16)",
@@ -157,10 +161,18 @@ export default function UpdateReleaseDialog({
         },
       }}
     >
-      <DialogTitle sx={{ fontWeight: 700 }}>
+      <DialogTitle sx={{ fontWeight: 700, flexShrink: 0 }}>
         {t("common.update_available")}
       </DialogTitle>
-      <DialogContent dividers sx={{ maxHeight: "min(62dvh, 620px)", py: 2.5 }}>
+      <DialogContent
+        dividers
+        sx={{
+          flex: "1 1 auto",
+          minHeight: 0,
+          overflow: "auto !important",
+          py: 2.5,
+        }}
+      >
         <Stack direction="row" spacing={1} sx={{ mb: 2.5, alignItems: "center", flexWrap: "wrap" }}>
           <Chip
             size="small"
@@ -206,6 +218,8 @@ export default function UpdateReleaseDialog({
           py: 2,
           flexWrap: "wrap",
           gap: 1,
+          flexShrink: 0,
+          bgcolor: "background.paper",
         }}
       >
         <Button onClick={onClose} color="inherit">
