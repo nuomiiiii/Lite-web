@@ -10,7 +10,7 @@ export const LIKELY_ADMIN_ROUTES = [
   "/admin/return-route",
 ] as const;
 
-export const ADMIN_IDLE_WARMUP_START_DELAY_MS = 1200;
+export const ADMIN_IDLE_WARMUP_START_DELAY_MS = 4000;
 export const ADMIN_IDLE_WARMUP_SLICE_TIMEOUT_MS = 4000;
 export const ADMIN_IDLE_WARMUP_FALLBACK_MS = 800;
 

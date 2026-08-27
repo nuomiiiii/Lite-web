@@ -1147,6 +1147,14 @@ html.dark .km-theme-config-tabs-viewport::after {
   --gray-a7: rgba(145, 158, 171, 0.32);
   --gray-a10: rgba(99, 115, 129, 0.64);
   --color-panel-solid: #ffffff;
+  --green-9: #30a46c;
+  --green-11: #218358;
+  --orange-9: #f76808;
+  --orange-11: #bd4b00;
+  --orange-a3: rgba(247, 104, 8, 0.12);
+  --red-9: #e5484d;
+  --red-11: #ce2c31;
+  --red-a3: rgba(229, 72, 77, 0.12);
 }
 
 html.dark [data-admin-shell] {
@@ -1164,6 +1172,14 @@ html.dark [data-admin-shell] {
   --gray-a7: rgba(145, 158, 171, 0.4);
   --gray-a10: rgba(145, 158, 171, 0.64);
   --color-panel-solid: #212b36;
+  --green-9: #3dd68c;
+  --green-11: #85e0ad;
+  --orange-9: #ff801f;
+  --orange-11: #ffa057;
+  --orange-a3: rgba(255, 128, 31, 0.16);
+  --red-9: #ec5d5e;
+  --red-11: #ff9592;
+  --red-a3: rgba(236, 93, 94, 0.16);
   color: #ffffff;
 }
 
