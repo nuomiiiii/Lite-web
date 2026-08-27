@@ -260,7 +260,7 @@ function useBillingData<T>(url: string | null) {
     url ? getBillingSnapshot<T>(url) : null,
   );
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(() => Boolean(url) && !getBillingSnapshot(url));
+  const [loading, setLoading] = useState(() => (url ? !getBillingSnapshot(url) : false));
   const [revision, setRevision] = useState(0);
   const retry = useCallback(() => setRevision((value) => value + 1), []);
 
