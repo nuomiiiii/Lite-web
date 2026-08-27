@@ -9,7 +9,6 @@ import { useReduceMotionPreference } from "@/lib/api";
 import { preloadAdminRoute } from "@/routes";
 import type { MenuItem } from "@/types/menu";
 import { buildAdminMenuItems } from "@/utils/adminMenu";
-import { resolveI18nText } from "@/utils/i18nText";
 import { isSelfUpdatePreview } from "@/utils/guidePreview";
 import { fetchThemeManifest } from "@/utils/themeManifest";
 import {
@@ -39,13 +38,9 @@ export const footerMenuItems = parsedMenuConfig.footer ?? [];
 
 export function useAdminShell() {
   const { call, callViaHTTP } = useRPC2Call();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { publicInfo } = usePublicInfo();
   const reduceMotion = useReduceMotionPreference();
-  const currentLanguage =
-    i18n.resolvedLanguage ||
-    i18n.language ||
-    (typeof navigator !== "undefined" ? navigator.language : "");
   const currentTheme = publicInfo?.theme;
 
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
@@ -192,12 +187,7 @@ export function useAdminShell() {
           return;
         }
 
-        const rawLabel =
-          resolveI18nText(configuration.name, currentLanguage) ??
-          t("theme.manage_with_name", {
-            name:
-              resolveI18nText(metadata?.name, currentLanguage) ?? currentTheme,
-          });
+        const rawLabel = t("theme.configure", "主题设置");
         setExtraMenuItems([
           {
             labelKey: rawLabel,
@@ -218,7 +208,7 @@ export function useAdminShell() {
     return () => {
       ignore = true;
     };
-  }, [currentLanguage, currentTheme, t]);
+  }, [currentTheme, t]);
 
   useEffect(() => {
     if (previewUpdate) return;

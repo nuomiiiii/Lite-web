@@ -73,7 +73,7 @@ const NodeSelectorDialog: React.FC<NodeSelectorDialogProps> = ({
       </Dialog.Trigger>
       <AppDialogContent maxWidth="480px">
         <Dialog.Title>{title || t("common.select")}</Dialog.Title>
-        <Flex direction="column" gap="3">
+        <Flex direction="column" gap="4">
           <Flex justify="between" align="center" gap="2">
             <label className="text-sm text-gray-600">
               {t("common.selected_total", {

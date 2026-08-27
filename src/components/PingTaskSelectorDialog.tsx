@@ -45,7 +45,7 @@ export default function PingTaskSelectorDialog({
       <Dialog.Trigger>{children}</Dialog.Trigger>
       <AppDialogContent maxWidth="440px">
         <Dialog.Title>{title || t("common.select")}</Dialog.Title>
-        <Flex direction="column" gap="3">
+        <Flex direction="column" gap="4">
           <Text size="2" color="gray">
             {t("common.selected_total", {
               count: temporary.length,

@@ -1853,6 +1853,7 @@
     "load_config_failed": "Failed to load theme configuration",
     "manage": "Theme Management",
     "manage_with_name": "{{name}} Settings",
+    "configure": "Theme settings",
     "name": "Name",
     "no_config": "This theme has no declared configuration items.",
     "no_themes": "No themes available",

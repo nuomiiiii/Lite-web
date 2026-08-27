@@ -1979,6 +1979,7 @@
   "theme": {
     "active": "当前使用",
     "author": "作者",
+    "configure": "主题设置",
     "confirm_delete": "确认删除主题",
     "dark": "深色",
     "default_theme": "默认主题",

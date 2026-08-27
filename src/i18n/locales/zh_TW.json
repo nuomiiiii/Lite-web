@@ -1701,6 +1701,7 @@
     "load_config_failed": "加載主題配置失敗",
     "manage": "主題管理",
     "manage_with_name": "{{name}} 設定",
+    "configure": "主題設定",
     "name": "名稱",
     "no_config": "該主題沒有聲明配置項。",
     "no_themes": "暫無主題",

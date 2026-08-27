@@ -144,7 +144,9 @@ test("loads the active theme configuration into the sidebar", () => {
   assert.match(adminPanelSource, /itemPath = "\/admin\/theme_managed"/);
   assert.match(adminPanelSource, /itemPath = "\/admin\/theme_raw"/);
   assert.match(adminPanelSource, /normalizeThemeRedirectTarget\(configuration\.data\)/);
-  assert.equal(zhCN.theme.manage_with_name, "{{name}} 设置");
+  assert.match(adminPanelSource, /theme\.configure/);
+  assert.doesNotMatch(adminPanelSource, /theme\.manage_with_name/);
+  assert.equal(zhCN.theme.configure, "主题设置");
 });
 
 test("keeps only one sidebar group expanded", () => {
@@ -361,6 +363,7 @@ test("admin checkboxes share the active accent palette", () => {
 });
 
 test("node selector dialogs keep a single select-all control", () => {
+  assert.match(selectorSource, /km-search-before-content/);
   assert.match(selectorSource, /showHeaderSelectAll = true/);
   assert.match(selectorSource, /showHeaderSelectAll \? \([\s\S]*aria-label=\{t\("common\.select_all"\)\}/);
   assert.match(nodeSelectorSource, /showHeaderSelectAll=\{false\}/);

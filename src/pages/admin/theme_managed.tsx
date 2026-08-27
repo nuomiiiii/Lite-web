@@ -43,7 +43,6 @@ const ThemeManaged: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [fields, setFields] = useState<ThemeFieldBase[]>([]);
   const [values, setValues] = useState<Record<string, any>>({});
-  const [themeDisplayName, setThemeDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [firstLoading, setFirstLoading] = useState(true);
 
@@ -63,7 +62,6 @@ const ThemeManaged: React.FC = () => {
       if (!theme) {
         setFields([]);
         setValues({});
-        setThemeDisplayName("");
         setLoading(false);
         setFirstLoading(false);
         return;
@@ -77,10 +75,6 @@ const ThemeManaged: React.FC = () => {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data: ThemeConfigResponse = await resp.json();
         const configuration = data.configuration;
-        setThemeDisplayName(
-          resolveI18nText(data.name, currentLanguage) ||
-            (theme === "default" ? "" : theme),
-        );
         if (
           getThemeConfigurationType(configuration) !==
             THEME_CONFIGURATION_MANAGED ||
@@ -171,11 +165,7 @@ const ThemeManaged: React.FC = () => {
     >
       <Flex justify="between" align="center" gap="3" wrap="wrap">
         <AdminPageTitle description={t("theme.manage_description", "调整当前主题提供的显示和功能选项。")}> 
-          {theme
-            ? t("theme.manage_with_name", {
-                name: themeDisplayName,
-              })
-            : t("theme.manage")}
+          {t("theme.configure", "主题设置")}
         </AdminPageTitle>
         {fields.length > 0 && (
           <Button onClick={saveAll} disabled={saving}>

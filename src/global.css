@@ -1190,9 +1190,14 @@ html.dark [data-admin-shell] .km-theme-config-tabs-trigger[data-state="active"] 
 }
 
 [data-admin-shell] .km-admin-node-list-filters {
-  padding: 16px;
+  padding: 16px 16px 20px;
   background: #f4f6f8;
   border-bottom: 1px solid rgba(145, 158, 171, 0.16);
+}
+
+.km-search-before-content {
+  display: block;
+  margin-bottom: 20px;
 }
 
 [data-admin-shell] .km-admin-node-list-filters .MuiOutlinedInput-root {
