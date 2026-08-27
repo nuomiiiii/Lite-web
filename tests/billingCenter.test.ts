@@ -32,6 +32,11 @@ test("registers and preloads the billing center after the server menu", () => {
 test("keeps financial query values as decimal strings and CSV filters", () => {
   assert.equal(formatBillingMoney("1234567.890000", "CNY"), "¥1,234,567.89");
   assert.equal(formatBillingMoney("-5.100000", "USD"), "-$5.10");
+  assert.equal(formatBillingMoney("23.330000", "€"), "€23.33");
+  assert.equal(formatBillingMoney("23.330000", "EUR"), "€23.33");
+  assert.equal(formatBillingMoney("1.990000", "£"), "£1.99");
+  assert.equal(formatBillingMoney("1.990000", "GBP"), "£1.99");
+  assert.equal(formatBillingMoney("4.000000", "C$"), "C$4.00");
   assert.equal(
     billingQuery("/api/admin/billing/periods/monthly", {
       currency: "CNY",
@@ -82,6 +87,14 @@ test("persists display currency without exposing manual FX controls", () => {
   assert.match(pageSource, /localStorage\.getItem\(BILLING_CURRENCY_STORAGE_KEY\)/);
   assert.match(pageSource, /localStorage\.setItem\(BILLING_CURRENCY_STORAGE_KEY, currency\)/);
   assert.doesNotMatch(pageSource, /setFX|updateFX|manualRate|汇率设置/);
+  assert.match(pageSource, /billingCurrencies\.map/);
+  assert.match(pageSource, /billingNativeCurrencies\.map/);
+  assert.equal(
+    readFileSync("src/utils/billing.ts", "utf8").includes(
+      'export const billingCurrencies: BillingCurrency[] = ["CNY", "USD"]',
+    ),
+    true,
+  );
 });
 
 test("provides stable skeletons and mobile server cards", () => {

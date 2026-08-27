@@ -65,6 +65,8 @@ import {
 import {
   BILLING_CURRENCY_STORAGE_KEY,
   billingCurrencies,
+  billingCurrencySymbol,
+  billingNativeCurrencies,
   billingDate,
   billingDateTime,
   billingQuery,
@@ -106,9 +108,9 @@ function metricGridSx(columns: 4 | 5 = 4) {
   };
 }
 
-const nativeCurrencyOptions = billingCurrencies.map((currency) => ({
+const nativeCurrencyOptions = billingNativeCurrencies.map((currency) => ({
   value: currency,
-  label: currency,
+  label: billingCurrencySymbol(currency),
 }));
 
 function billingRegionOptions(clients: BillingClientInfo[], lang: "zh" | "en") {
@@ -548,7 +550,7 @@ function ServerList({
           </TableRow></TableHeader>
           <TableBody>{data.items.map((server) => <TableRow key={server.client}>
             <TableCell><BillingServerIdentity server={server} groupFallback={t("billing.status.noGroup")} /></TableCell>
-            <TableCell><ServerStatus server={server} />{server.billing_status === "recurring" ? <><Typography sx={{ fontSize: 13.5, fontWeight: 400 }}>{formatBillingMoney(server.original_amount, server.original_currency)}</Typography><Typography color="text.secondary" sx={{ fontSize: 12 }}>{billingCycleLabel(t, server.billing_cycle_days)} · {server.original_currency}</Typography></> : null}</TableCell>
+            <TableCell><ServerStatus server={server} />{server.billing_status === "recurring" ? <><Typography sx={{ fontSize: 13.5, fontWeight: 400 }}>{formatBillingMoney(server.original_amount, server.original_currency)}</Typography><Typography color="text.secondary" sx={{ fontSize: 12 }}>{billingCycleLabel(t, server.billing_cycle_days)} · {billingCurrencySymbol(server.original_currency)}</Typography></> : null}</TableCell>
             <TableCell>
               <Box className="km-billing-averages">
                 {[[t("billing.common.dailyAverage"), server.daily_average], [t("billing.common.monthlyAverage"), server.monthly_average], [t("billing.common.yearlyAverage"), server.yearly_average]].map(([label, value]) => (

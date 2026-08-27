@@ -1,4 +1,5 @@
 export type BillingCurrency = "CNY" | "USD";
+export type BillingNativeCurrency = "CNY" | "USD" | "EUR" | "GBP" | "CAD";
 
 export type AmountBreakdown = {
   base: string;
@@ -125,6 +126,34 @@ export const BILLING_CURRENCY_STORAGE_KEY =
   "lite:admin:billing:display-currency";
 
 export const billingCurrencies: BillingCurrency[] = ["CNY", "USD"];
+export const billingNativeCurrencies: BillingNativeCurrency[] = [
+  "CNY",
+  "USD",
+  "EUR",
+  "GBP",
+  "CAD",
+];
+
+const currencySymbols: Record<string, string> = {
+  CNY: "¥",
+  USD: "$",
+  CAD: "C$",
+  EUR: "€",
+  GBP: "£",
+  "¥": "¥",
+  "￥": "¥",
+  $: "$",
+  "€": "€",
+  "£": "£",
+  "C$": "C$",
+  "CA$": "C$",
+};
+
+export function billingCurrencySymbol(currency: string): string {
+  const raw = currency.trim();
+  if (!raw) return "";
+  return currencySymbols[raw] || currencySymbols[raw.toUpperCase()] || raw;
+}
 
 export async function billingRequest<T>(
   path: string,
@@ -160,12 +189,6 @@ export function billingQuery(
   return query ? `${path}?${query}` : path;
 }
 
-const currencySymbols: Record<string, string> = {
-  CNY: "¥",
-  USD: "$",
-  CAD: "C$",
-};
-
 export function formatBillingMoney(
   amount: string | null | undefined,
   currency: string,
@@ -178,7 +201,10 @@ export function formatBillingMoney(
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   const fraction = rawFraction.padEnd(fractionDigits, "0").slice(0, fractionDigits);
   const decimal = fractionDigits > 0 ? `.${fraction}` : "";
-  return `${sign}${currencySymbols[currency] || `${currency} `}${grouped}${decimal}`;
+  const raw = currency.trim();
+  const prefix =
+    currencySymbols[raw] || currencySymbols[raw.toUpperCase()] || `${raw} `;
+  return `${sign}${prefix}${grouped}${decimal}`;
 }
 
 export function billingCycleText(days: number): string {
