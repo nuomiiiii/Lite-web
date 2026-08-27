@@ -120,4 +120,7 @@ test("keeps the terminal portal aligned with the dashboard visual language", () 
   assert.equal(pickerStyles.includes("min-height: 204px"), true);
   assert.equal(pickerStyles.includes("padding: 12px 14px 6px"), true);
   assert.equal(pickerStyles.includes("gap: 8px"), true);
+  assert.match(pickerStyles, /\.remote-node-picker-status\.is-online \{\s*color: #22c55e;/);
+  assert.match(pickerStyles, /\.remote-node-picker-status\.is-offline \{\s*color: #ff5630;/);
+  assert.doesNotMatch(pickerStyles, /--green-10|--red-10/);
 });

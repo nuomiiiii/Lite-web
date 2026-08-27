@@ -80,43 +80,29 @@ const AdminRouteViewport = ({
     const element = viewElements.current.get(pendingKey);
     if (!element) return;
 
-    let animationFrame = 0;
-    let readyFrames = 0;
     let stopped = false;
+    let promoted = false;
     const promote = () => {
+      if (stopped || promoted) return;
+      promoted = true;
       setState((current) => promoteAdminRouteView(current, pendingKey));
     };
     const check = () => {
-      if (stopped) return;
-      if (!isRouteViewReady(element)) {
-        readyFrames = 0;
-        return;
-      }
-      readyFrames += 1;
-      if (readyFrames >= 2) {
-        promote();
-        return;
-      }
-      animationFrame = window.requestAnimationFrame(check);
+      if (stopped || promoted) return;
+      if (isRouteViewReady(element)) promote();
     };
-    const observer = new MutationObserver(() => {
-      readyFrames = 0;
-      window.cancelAnimationFrame(animationFrame);
-      animationFrame = window.requestAnimationFrame(check);
-    });
+    const observer = new MutationObserver(check);
     observer.observe(element, {
       attributes: true,
       attributeFilter: ["data-admin-route-pending"],
       childList: true,
-      characterData: true,
       subtree: true,
     });
-    animationFrame = window.requestAnimationFrame(check);
+    check();
 
     return () => {
       stopped = true;
       observer.disconnect();
-      window.cancelAnimationFrame(animationFrame);
     };
   }, [state.pendingKey]);
 

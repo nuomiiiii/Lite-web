@@ -73,6 +73,11 @@ const adminRoutePreloaders: Record<string, () => Promise<unknown>> = {
 
 export const preloadAdminRoute = async (target: string): Promise<void> => {
   const pathname = normalizeAdminPathname(target);
+  if (pathname === "/admin/billing") {
+    void import("./utils/billing")
+      .then((mod) => mod.prefetchBillingCenter())
+      .catch(() => undefined);
+  }
   await Promise.all(
     expandAdminPreloadTargets(pathname).map((path) => {
       const preload = adminRoutePreloaders[path];

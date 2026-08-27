@@ -72,6 +72,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import Flag from "@/components/Flag";
+import { NODE_OFFLINE, NODE_ONLINE } from "@/theme/brand";
 import {
   Table,
   TableBody,
@@ -304,7 +305,7 @@ const Layout = () => {
             }
           />
           {alertFilterPending ? (
-            <Loading text="" />
+            <Loading inline text="" />
           ) : filteredNodes.length === 0 ? (
             <div className="px-5 py-6">
               <Alert severity="info">{t("common.no_data", "没有符合当前筛选的服务器")}</Alert>
@@ -572,7 +573,7 @@ const AutoDiscoverySection = ({
   if (loading) {
     return (
       <Flex align="center" justify="center" mt="4" py="4">
-        <Loading text="" />
+        <Loading inline text="" />
       </Flex>
     );
   }
@@ -3559,7 +3560,7 @@ function NodeNameLink({ node, online }: { node: NodeDetail; online: boolean | nu
         >
           <span
             className="size-1.5 shrink-0 rounded-full"
-            style={{ backgroundColor: online ? "var(--green-9)" : "var(--red-9)" }}
+            style={{ backgroundColor: online ? NODE_ONLINE : NODE_OFFLINE }}
           />
           {statusLabel}
         </span>

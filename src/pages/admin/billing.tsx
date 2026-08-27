@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useAdminTabParam } from "@/hooks/useAdminTabParam";
+import { useHeldTab } from "@/hooks/useHeldTab";
 import {
   Bar,
   BarChart,
@@ -71,6 +72,9 @@ import {
   billingDateTime,
   billingQuery,
   billingRequest,
+  getBillingSnapshot,
+  readStoredBillingCurrency,
+  requestBillingCached,
   formatBillingMoney,
   type BillingCurrency,
   type BillingEntry,
@@ -252,9 +256,11 @@ function detailYearOptions(from?: string, to?: string) {
 }
 
 function useBillingData<T>(url: string | null) {
-  const [data, setData] = useState<T | null>(null);
+  const [data, setData] = useState<T | null>(() =>
+    url ? getBillingSnapshot<T>(url) : null,
+  );
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(Boolean(url));
+  const [loading, setLoading] = useState(() => Boolean(url) && !getBillingSnapshot(url));
   const [revision, setRevision] = useState(0);
   const retry = useCallback(() => setRevision((value) => value + 1), []);
 
@@ -263,19 +269,31 @@ function useBillingData<T>(url: string | null) {
       setLoading(false);
       return;
     }
-    const controller = new AbortController();
-    setLoading(true);
-    setError("");
-    void billingRequest<T>(url, { signal: controller.signal })
-      .then((result) => setData(result))
+    let cancelled = false;
+    const cached = getBillingSnapshot<T>(url);
+    if (cached) {
+      setData(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+      setError("");
+    }
+    void requestBillingCached<T>(url)
+      .then((result) => {
+        if (cancelled) return;
+        setData(result);
+        setError("");
+      })
       .catch((reason: unknown) => {
-        if (controller.signal.aborted) return;
+        if (cancelled) return;
         setError(reason instanceof Error ? reason.message : String(reason));
       })
       .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!cancelled) setLoading(false);
       });
-    return () => controller.abort();
+    return () => {
+      cancelled = true;
+    };
   }, [url, revision]);
 
   return { data, error, loading, retry };
@@ -755,10 +773,7 @@ export default function BillingCenterPage() {
   const currentYear = currentBeijingYear();
   const currentMonthNumber = currentBeijingMonthNumber();
   const [tab, setTab] = useAdminTabParam(BILLING_TABS, "overview");
-  const [currency, setCurrency] = useState<BillingCurrency>(() => {
-    const stored = localStorage.getItem(BILLING_CURRENCY_STORAGE_KEY);
-    return billingCurrencies.includes(stored as BillingCurrency) ? stored as BillingCurrency : "CNY";
-  });
+  const [currency, setCurrency] = useState<BillingCurrency>(readStoredBillingCurrency);
   const [revision, setRevision] = useState(0);
   const { page: serverPage, setPage: setServerPage, pageSize: serverPageSize, setPageSize: setServerPageSize } = useFollowsAdminPageSize();
   const [search, setSearch] = useState("");
@@ -857,6 +872,19 @@ export default function BillingCenterPage() {
 
   const clearPeriods = () => { setPeriodClients([]); setPeriodTypes([]); setPeriodCurrencies([]); setMonthlyPeriod(currentYear, currentMonthNumber); setYearlyYears([currentYear]); setMonthlyPage(1); setYearlyPage(1); };
   const changed = () => setRevision((value) => value + 1);
+  const tabReady =
+    tab === "overview"
+      ? Boolean(overview.data || overview.error) && Boolean(servers.data || servers.error)
+      : tab === "monthly"
+        ? Boolean(monthly.data || monthly.error)
+        : Boolean(yearly.data || yearly.error);
+  const displayTab = useHeldTab(tab, tabReady);
+  const billingPending =
+    displayTab === "overview"
+      ? (!overview.data && !overview.error) || (!servers.data && !servers.error)
+      : displayTab === "monthly"
+        ? !monthly.data && !monthly.error
+        : !yearly.data && !yearly.error;
   const openPeriodDetails = (period: BillingPeriod, monthlyPeriod: boolean) => {
     if (monthlyPeriod) {
       const [year, month] = period.period.split("-").map(Number);
@@ -865,7 +893,7 @@ export default function BillingCenterPage() {
     } else setDetail({ title: t("billing.details.yearTitle", { year: period.period }), from: `${period.period}-01-01`, to: `${period.period}-12-31` });
   };
 
-  return <div className="flex flex-col gap-4 p-0 md:p-4" data-testid="billing-center-page">
+  return <div className="flex flex-col gap-4 p-0 md:p-4" data-testid="billing-center-page" data-admin-route-pending={billingPending ? "true" : undefined}>
     <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <AdminPageTitle description={t("billing.description", "统一查看服务器成本、到期时间、附加费用与剩余价值。")}>{t("billing.title", "账单中心")}</AdminPageTitle>
       <Stack direction="row" spacing={1.25} useFlexGap sx={{ flexWrap: "wrap", alignItems: "center", justifyContent: { xs: "flex-start", sm: "flex-end" } }}>
@@ -883,7 +911,7 @@ export default function BillingCenterPage() {
       <Tab value="yearly" label={<AdminTabLabel icon={<History size={18} />}>{t("billing.tabs.yearly")}</AdminTabLabel>} />
     </Tabs></AdminSheetTabs>
 
-    {tab === "overview" ? <Stack spacing={1.75}>
+    {displayTab === "overview" ? <Stack spacing={1.75}>
       <Box sx={metricGridSx()}>
         <MetricCard label={t("billing.metrics.today")} value={formatBillingMoney(overview.data?.summary.today.total, currency)} helper={t("billing.helpers.includesTrafficReset")} icon={<CircleDollarSign size={18} />} loading={overview.loading && !overview.data} />
         <MetricCard label={t("billing.metrics.month")} value={formatBillingMoney(overview.data?.summary.month.total, currency)} helper={t("billing.helpers.baseAndExtra")} icon={<WalletCards size={18} />} tone="orange" loading={overview.loading && !overview.data} />
@@ -906,12 +934,12 @@ export default function BillingCenterPage() {
       </AdminListShell>
     </Stack> : null}
 
-    {tab === "monthly" || tab === "yearly" ? <Stack spacing={1.75}>
-      <PeriodSummary data={tab === "monthly" ? monthly.data : yearly.data} currency={currency} monthly={tab === "monthly"} loading={tab === "monthly" ? monthly.loading : yearly.loading} />
+    {displayTab === "monthly" || displayTab === "yearly" ? <Stack spacing={1.75}>
+      <PeriodSummary data={displayTab === "monthly" ? monthly.data : yearly.data} currency={currency} monthly={displayTab === "monthly"} loading={displayTab === "monthly" ? monthly.loading : yearly.loading} />
       <AdminListShell>
         <AdminListFiltersBar>
           <Stack direction="row" spacing={1.5} useFlexGap sx={{ flexWrap: { xs: "wrap", md: "nowrap" }, alignItems: "center" }}>
-            {tab === "monthly" ? <>
+            {displayTab === "monthly" ? <>
               <AdminListSelect label={t("billing.filters.year")} value={monthlyYear} onChange={(value) => setMonthlyPeriod(value, monthlyMonth)}>{availableYears.map((item) => <MenuItem key={item.value} value={item.value}>{item.label}</MenuItem>)}</AdminListSelect>
               <AdminListSelect label={t("billing.filters.month")} value={monthlyMonth} onChange={(value) => setMonthlyPeriod(monthlyYear, value)}><MenuItem value="">{t("billing.filters.allMonths")}</MenuItem>{calendarMonths.map((item) => <MenuItem key={item.value} value={item.value}>{item.label}</MenuItem>)}</AdminListSelect>
             </> : <AdminMultiSelect label={t("billing.filters.year")} ariaLabel={t("billing.filters.year")} value={yearlyYears} onChange={(value) => { setYearlyYears(value.length ? value : [currentYear]); setYearlyPage(1); }} options={availableYears} />}
@@ -920,8 +948,8 @@ export default function BillingCenterPage() {
             <AdminMultiSelect label={t("billing.filters.nativeCurrency")} ariaLabel={t("billing.filters.nativeCurrency")} value={periodCurrencies} onChange={(value) => { setPeriodCurrencies(value); setMonthlyPage(1); setYearlyPage(1); }} options={nativeCurrencyOptions} />
           </Stack><ActiveFilters chips={periodChips} onClear={clearPeriods} />
         </AdminListFiltersBar>
-        {(tab === "monthly" ? monthly.error : yearly.error) ? <ErrorPanel message={(tab === "monthly" ? monthly.error : yearly.error) || ""} retry={tab === "monthly" ? monthly.retry : yearly.retry} /> : null}
-        {(tab === "monthly" ? monthly.loading && !monthly.data : yearly.loading && !yearly.data) ? <Box sx={{ p: 2 }}><Skeleton height={280} /></Box> : <PeriodList data={tab === "monthly" ? monthly.data : yearly.data} currency={currency} monthly={tab === "monthly"} page={tab === "monthly" ? monthlyPage : yearlyPage} pageSize={tab === "monthly" ? monthlyPageSize : yearlyPageSize} onPage={tab === "monthly" ? setMonthlyPage : setYearlyPage} onPageSize={tab === "monthly" ? setMonthlyPageSize : setYearlyPageSize} onDetails={(period) => openPeriodDetails(period, tab === "monthly")} />}
+        {(displayTab === "monthly" ? monthly.error : yearly.error) ? <ErrorPanel message={(displayTab === "monthly" ? monthly.error : yearly.error) || ""} retry={displayTab === "monthly" ? monthly.retry : yearly.retry} /> : null}
+        {(displayTab === "monthly" ? monthly.loading && !monthly.data : yearly.loading && !yearly.data) ? <Box sx={{ p: 2 }}><Skeleton height={280} /></Box> : <PeriodList data={displayTab === "monthly" ? monthly.data : yearly.data} currency={currency} monthly={displayTab === "monthly"} page={displayTab === "monthly" ? monthlyPage : yearlyPage} pageSize={displayTab === "monthly" ? monthlyPageSize : yearlyPageSize} onPage={displayTab === "monthly" ? setMonthlyPage : setYearlyPage} onPageSize={displayTab === "monthly" ? setMonthlyPageSize : setYearlyPageSize} onDetails={(period) => openPeriodDetails(period, displayTab === "monthly")} />}
       </AdminListShell>
     </Stack> : null}
 

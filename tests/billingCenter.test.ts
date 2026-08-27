@@ -26,6 +26,7 @@ test("registers and preloads the billing center after the server menu", () => {
   assert.ok(paths.indexOf("/admin/billing") > paths.indexOf("/admin/servers"));
   assert.match(routesSource, /path:\s*"billing"/);
   assert.match(routesSource, /importAdminBilling/);
+  assert.match(routesSource, /prefetchBillingCenter/);
   assert.match(preloadSource, /"\/admin\/billing"/);
 });
 
@@ -84,8 +85,12 @@ test("persists display currency without exposing manual FX controls", () => {
     BILLING_CURRENCY_STORAGE_KEY,
     "lite:admin:billing:display-currency",
   );
-  assert.match(pageSource, /localStorage\.getItem\(BILLING_CURRENCY_STORAGE_KEY\)/);
+  assert.match(pageSource, /readStoredBillingCurrency/);
   assert.match(pageSource, /localStorage\.setItem\(BILLING_CURRENCY_STORAGE_KEY, currency\)/);
+  assert.match(
+    readFileSync("src/utils/billing.ts", "utf8"),
+    /localStorage\.getItem\(BILLING_CURRENCY_STORAGE_KEY\)/,
+  );
   assert.doesNotMatch(pageSource, /setFX|updateFX|manualRate|汇率设置/);
   assert.match(pageSource, /billingCurrencies\.map/);
   assert.match(pageSource, /billingNativeCurrencies\.map/);
@@ -99,6 +104,12 @@ test("persists display currency without exposing manual FX controls", () => {
 
 test("provides stable skeletons and mobile server cards", () => {
   assert.match(pageSource, /loading && !data[\s\S]*<Skeleton/);
+  assert.match(pageSource, /data-admin-route-pending=\{billingPending \? "true" : undefined\}/);
+  assert.match(pageSource, /useHeldTab\(tab, tabReady\)/);
+  assert.match(pageSource, /displayTab === "overview"/);
+  assert.match(pageSource, /<Tabs value=\{tab\}/);
+  assert.match(pageSource, /getBillingSnapshot/);
+  assert.match(pageSource, /requestBillingCached/);
   assert.match(pageSource, /display:\s*\{ xs:\s*"none", md:\s*"block" \}/);
   assert.match(pageSource, /display:\s*\{ xs:\s*"flex", md:\s*"none" \}/);
   assert.match(pageSource, /gridTemplateColumns:\s*"1fr 1fr"/);

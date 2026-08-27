@@ -63,6 +63,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useAdminTabParam } from "@/hooks/useAdminTabParam";
+import { useHeldTab } from "@/hooks/useHeldTab";
 import Loading from "@/components/loading";
 import { useNodeDetails } from "@/contexts/NodeDetailsContext";
 import { useAccount } from "@/contexts/AccountContext";
@@ -747,6 +748,8 @@ function ReturnRouteContent() {
   const [taskLoading, setTaskLoading] = useState(() => !initialTaskSnapshot);
   const hasRenderedTaskData = useRef(Boolean(initialTaskSnapshot));
   const [recordLoading, setRecordLoading] = useState(false);
+  const [recordsReady, setRecordsReady] = useState(false);
+  const [rulesReady, setRulesReady] = useState(false);
   const [probingTasks, setProbingTasks] = useState<Set<number>>(new Set());
   const [selectedTaskIDs, setSelectedTaskIDs] = useState<Set<number>>(new Set());
   const [ruleView, setRuleView] = useState<RuleView | null>(null);
@@ -811,6 +814,7 @@ function ReturnRouteContent() {
     } catch (error) {
       if (!quiet) toast.error(error instanceof Error ? error.message : "监测记录加载失败");
     } finally {
+      setRecordsReady(true);
       if (!quiet) setRecordLoading(false);
     }
   }, [recordQuery]);
@@ -822,6 +826,7 @@ function ReturnRouteContent() {
     } catch (error) {
       if (!quiet) toast.error(error instanceof Error ? error.message : "规则库加载失败");
     } finally {
+      setRulesReady(true);
       if (!quiet) setRulesLoading(false);
     }
   }, []);
@@ -997,6 +1002,14 @@ function ReturnRouteContent() {
     URL.revokeObjectURL(url);
   };
 
+  const tabReady =
+    activeTab === "tasks"
+      ? !taskLoading
+      : activeTab === "records"
+        ? recordsReady
+        : rulesReady;
+  const displayTab = useHeldTab(activeTab, tabReady);
+
   if (nodesLoading) return <Loading text="" />;
 
   return (
@@ -1020,7 +1033,7 @@ function ReturnRouteContent() {
         <Summary label="最近事件" value={summary.recent_events} icon={<History size={20} />} />
       </div>
 
-      <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+      <Tabs.Root value={displayTab} onValueChange={setActiveTab}>
         <AdminSheetTabs>
           <Tabs.List>
             <Tabs.Trigger value="tasks">
@@ -1301,8 +1314,8 @@ function ReturnRouteContent() {
                   </Stack>
                 </Collapse>
               </AdminListFiltersBar>
-              {recordLoading ? (
-                <div className="km-admin-list-empty"><Loading text="" /></div>
+              {recordLoading && !recordsReady ? (
+                <div className="km-admin-list-empty"><Loading inline text="" /></div>
               ) : recordData.events.length === 0 ? (
                 <div className="km-admin-list-empty">暂无符合条件的监测记录</div>
               ) : (
@@ -1351,7 +1364,7 @@ function ReturnRouteContent() {
           <Tabs.Content value="rules" className="admin-tab-panel">
             {rulesLoading && !ruleView ? (
               <AdminListShell className="km-return-route-rules">
-                <div className="km-admin-list-empty"><Loading text="" /></div>
+                <div className="km-admin-list-empty"><Loading inline text="" /></div>
               </AdminListShell>
             ) : ruleView ? (
               <AdminListShell className="km-return-route-rules">

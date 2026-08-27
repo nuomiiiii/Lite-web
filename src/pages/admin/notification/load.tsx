@@ -57,6 +57,7 @@ import {
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useAdminTabParam } from "@/hooks/useAdminTabParam";
+import { useHeldTab } from "@/hooks/useHeldTab";
 import { toast } from "sonner";
 import MuiButton from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
@@ -90,6 +91,8 @@ const InnerLayout = () => {
   const [view, setView] = useAdminTabParam(LOAD_VIEWS, "configuration", {
     param: "view",
   });
+  const currentReady = view !== "current" || currentAlerts !== null || Boolean(currentError);
+  const displayView = useHeldTab(view, currentReady);
   const [search, setSearch] = React.useState("");
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const sortedAlerts = React.useMemo(
@@ -170,7 +173,7 @@ const InnerLayout = () => {
         </Callout.Root>
       ) : null}
 
-      <Tabs.Root value={view} onValueChange={setView}>
+      <Tabs.Root value={displayView} onValueChange={setView}>
         <AdminSheetTabs>
           <Tabs.List>
             <Tabs.Trigger value="configuration">
@@ -329,7 +332,7 @@ const CurrentLoadAlertsTable = ({
   if (loading) {
     return (
       <div className="km-admin-list-empty">
-        <Loading />
+        <Loading inline />
       </div>
     );
   }

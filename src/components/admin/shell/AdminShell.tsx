@@ -213,8 +213,11 @@ export default function AdminShell({ content }: AdminShellProps) {
         open={isMobile ? sidebarOpen : true}
         onClose={() => setSidebarOpen(false)}
         ModalProps={{
-          keepMounted: true,
+          keepMounted: false,
           disableScrollLock: true,
+          sx: {
+            pointerEvents: isMobile && sidebarOpen ? "auto" : "none",
+          },
         }}
         sx={{
           width: navWidth,

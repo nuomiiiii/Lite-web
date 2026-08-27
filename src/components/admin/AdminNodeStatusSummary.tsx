@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import { useReduceMotionPreference } from "@/lib/api";
-import { LITE_BLUE } from "@/theme/brand";
+import { LITE_BLUE, NODE_OFFLINE, NODE_ONLINE } from "@/theme/brand";
 
 export type AdminNodeStatusFilter = "all" | "online" | "offline";
 
@@ -33,13 +33,13 @@ export default function AdminNodeStatusSummary({
     {
       label: t("nodeCard.online", "在线"),
       count: available ? online : "--",
-      color: "var(--green-9)",
+      color: NODE_ONLINE,
       filter: "online" as const,
     },
     {
       label: t("nodeCard.offline", "离线"),
       count: available ? offline : "--",
-      color: "var(--red-9)",
+      color: NODE_OFFLINE,
       filter: "offline" as const,
     },
   ];

@@ -14,6 +14,7 @@ import AdminMultiSelect from "@/components/admin/AdminMultiSelect";
 import { Filter, FilterOff, Search, X } from "@/components/admin/muiIcons";
 import { ADMIN_LIST_FILTERS_BAR_SX, ADMIN_LIST_SEARCH_SX } from "@/components/admin/adminListLayout";
 import type { NodeDetail } from "@/contexts/NodeDetailsContext";
+import { NODE_OFFLINE, NODE_ONLINE } from "@/theme/brand";
 import { getRegionCode, getRegionDisplayName } from "@/utils/regionHelper";
 
 type RegionOption = {
@@ -170,7 +171,7 @@ export default function AdminNodeListFilters({
             {
               value: "online",
               label: t("nodeCard.online", "在线"),
-              dot: "#22C55E",
+              dot: NODE_ONLINE,
               secondary: available
                 ? t("admin.nodeTable.filterCount", {
                     count: online,
@@ -182,7 +183,7 @@ export default function AdminNodeListFilters({
             {
               value: "offline",
               label: t("nodeCard.offline", "离线"),
-              dot: "#FF5630",
+              dot: NODE_OFFLINE,
               secondary: available
                 ? t("admin.nodeTable.filterCount", {
                     count: offline,
@@ -321,7 +322,7 @@ export default function AdminNodeListFilters({
                         width: 8,
                         height: 8,
                         borderRadius: "50%",
-                        bgcolor: status === "online" ? "#22C55E" : "#FF5630",
+                        bgcolor: status === "online" ? NODE_ONLINE : NODE_OFFLINE,
                       }}
                     />
                     <span>

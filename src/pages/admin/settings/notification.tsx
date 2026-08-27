@@ -23,7 +23,7 @@ const NotificationSettings = () => {
   const [messageList, setMessageList] = React.useState<string[]>([]);
   const [currentMessageSender, setCurrentMessageSender] = React.useState<string>("");
   const [messageValues, setMessageValues] = React.useState<any>({});
-  const [messageLoading, setMessageLoading] = React.useState(false);
+  const [messageLoading, setMessageLoading] = React.useState(true);
   const [messageError, setMessageError] = React.useState("");
 
   // 拉取所有 message sender 及字段定义
@@ -97,7 +97,7 @@ const NotificationSettings = () => {
     }
     setMessageLoading(false);
   };
-  if (loading || (!messageLoading && messageList.length === 0 && !messageError)) {
+  if (loading) {
     return <SettingsPageSkeleton />;
   }
   if (error) {
@@ -145,7 +145,7 @@ const NotificationSettings = () => {
           setCurrentMessageSender(val);
         }}
       />
-      {messageLoading ? <Loading /> : renderProviderInputs({
+      {messageLoading ? <Loading inline /> : renderProviderInputs({
         currentProvider: currentMessageSender,
         providerDefs: messageDefs,
         providerValues: messageValues,

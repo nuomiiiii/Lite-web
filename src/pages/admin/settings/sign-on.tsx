@@ -138,7 +138,7 @@ export default function SignOnSettings() {
           setCurrentProvider(val);
         }}
       />
-      {providerLoading ? <Loading /> : renderProviderInputs({
+      {providerLoading ? <Loading inline /> : renderProviderInputs({
         currentProvider,
         providerDefs,
         providerValues,

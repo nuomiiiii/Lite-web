@@ -68,8 +68,10 @@ test("current load alerts show the preferred node IP instead of the UUID", () =>
   );
 });
 
-test("load notification tabs animate normally and stop only for reduced motion", () => {
+test("load notification tabs keep the previous sheet until current alerts are ready", () => {
   assert.match(pageSource, /className="admin-tab-panel pt-3"/);
-  assert.match(globalStyles, /\.admin-tab-panel\[data-state="active"\][^{]*\{[^}]*animation: admin-tab-panel-enter 180ms/);
+  assert.match(pageSource, /useHeldTab\(view, currentReady\)/);
+  assert.match(pageSource, /value=\{displayView\}/);
+  assert.match(globalStyles, /\.admin-tab-panel\[data-state="active"\][^{]*\{[^}]*animation: none/);
   assert.match(globalStyles, /html\[data-reduce-motion="true"\][^,]*\.admin-tab-panel/);
 });

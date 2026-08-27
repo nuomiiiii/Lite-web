@@ -209,3 +209,22 @@ test("visible route progress stays long enough to avoid a flash", () => {
     0,
   );
 });
+
+test("a pending marker is the only reason to keep the previous admin page", () => {
+  assert.equal(
+    isAdminRouteViewReady({
+      hasPendingMarker: false,
+      childElementCount: 1,
+      textContent: "通知渠道",
+    }),
+    true,
+  );
+  assert.equal(
+    isAdminRouteViewReady({
+      hasPendingMarker: true,
+      childElementCount: 4,
+      textContent: "加载中",
+    }),
+    false,
+  );
+});
