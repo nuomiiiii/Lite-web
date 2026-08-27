@@ -62,11 +62,11 @@
 }
 
 .remote-exec-node-status.is-online {
-  color: var(--green-10);
+  color: #22c55e;
 }
 
 .remote-exec-node-status.is-offline {
-  color: var(--red-10);
+  color: #ff5630;
 }
 
 .remote-exec-node-addresses {
@@ -93,7 +93,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--gray-11);
-  font-family: var(--code-font-family);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.8125rem;
   text-overflow: ellipsis;
   white-space: nowrap;

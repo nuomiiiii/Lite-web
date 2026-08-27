@@ -53,6 +53,8 @@ test("刷新后仍停留在当前监测页签，告警深链未指定页签时�
   assert.match(source, /useAdminTabParam\(\s*RETURN_ROUTE_TABS,\s*"tasks"/);
   assert.match(source, /if \(searchParams.get\("tab"\)\) return;/);
   assert.match(source, /setActiveTab\("tasks"\)/);
+  assert.match(source, /useHeldTab\(activeTab, tabReady\)/);
+  assert.match(source, /value=\{displayTab\}/);
 });
 
 test("回程任务、记录和规则复用服务器列表的筛选条和表格卡片", () => {

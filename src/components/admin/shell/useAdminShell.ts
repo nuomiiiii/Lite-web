@@ -19,6 +19,13 @@ import {
   THEME_CONFIGURATION_REDIRECT,
 } from "@/utils/themeConfiguration";
 import {
+  browserSessionStorage,
+  fetchGithubReleases,
+  readGithubReleasesCache,
+  scheduleIdleGithubReleasesLoad,
+  writeGithubReleasesCache,
+} from "@/utils/githubReleases";
+import {
   formatReleaseVersion,
   isReleaseNewer,
   parseReleaseVersionHash,
@@ -257,38 +264,48 @@ export function useAdminShell() {
       versionInfo?.version;
     const currentHash = versionInfo?.hash;
     if (!current) return;
+    const storage = browserSessionStorage();
 
-    async function loadReleases() {
-      try {
-        const resp = await fetch(
-          "https://api.github.com/repos/nuomiiiii/Lite/releases?per_page=100",
-          {
-            headers: { Accept: "application/vnd.github+json" },
-            cache: "no-cache",
-          },
-        );
-        if (!resp.ok) throw new Error(`GitHub HTTP ${resp.status}`);
-        const data: GithubReleaseInfo[] = await resp.json();
-        if (ignore) return;
-        const valid = (data || [])
-          .filter((release) => !release.draft && !release.prerelease)
-          .filter((release) => isReleaseNewer(release, current, currentHash));
-        setReleasesSince(valid);
-        setLatestRelease(valid.length ? valid[0] : null);
-        setUpdateAvailable(valid.length > 0);
-      } catch (error) {
-        console.warn("加载 GitHub 最新发布失败:", error);
-        if (!ignore) {
-          setLatestRelease(null);
-          setReleasesSince([]);
-          setUpdateAvailable(false);
+    const applyReleases = (data: GithubReleaseInfo[]) => {
+      const valid = data
+        .filter((release) => !release.draft && !release.prerelease)
+        .filter((release) => isReleaseNewer(release, current, currentHash));
+      setReleasesSince(valid);
+      setLatestRelease(valid.length ? valid[0] : null);
+      setUpdateAvailable(valid.length > 0);
+    };
+
+    const cached = readGithubReleasesCache(storage);
+    if (cached) applyReleases(cached);
+
+    const stop = scheduleIdleGithubReleasesLoad({
+      load: async () => {
+        try {
+          const data = await fetchGithubReleases();
+          if (ignore) return;
+          writeGithubReleasesCache(storage, data);
+          applyReleases(data);
+        } catch (error) {
+          console.warn("加载 GitHub 最新发布失败:", error);
+          if (!ignore && !cached) {
+            setLatestRelease(null);
+            setReleasesSince([]);
+            setUpdateAvailable(false);
+          }
         }
-      }
-    }
+      },
+      timers: {
+        requestIdleCallback: window.requestIdleCallback?.bind(window),
+        cancelIdleCallback: window.cancelIdleCallback?.bind(window),
+        setTimeout: (callback, delay) =>
+          Number(globalThis.setTimeout(callback, delay)),
+        clearTimeout: (handle) => globalThis.clearTimeout(handle),
+      },
+    });
 
-    void loadReleases();
     return () => {
       ignore = true;
+      stop();
     };
   }, [publicInfo, versionInfo]);
 

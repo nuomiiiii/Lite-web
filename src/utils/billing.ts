@@ -155,6 +155,31 @@ export function billingCurrencySymbol(currency: string): string {
   return currencySymbols[raw] || currencySymbols[raw.toUpperCase()] || raw;
 }
 
+const billingSnapshots = new Map<string, unknown>();
+const billingPending = new Map<string, Promise<unknown>>();
+
+export function getBillingSnapshot<T>(url: string): T | null {
+  if (!url) return null;
+  return (billingSnapshots.get(url) as T | undefined) ?? null;
+}
+
+export function resetBillingCache() {
+  billingSnapshots.clear();
+  billingPending.clear();
+}
+
+export function readStoredBillingCurrency(): BillingCurrency {
+  try {
+    if (typeof localStorage === "undefined") return "CNY";
+    const stored = localStorage.getItem(BILLING_CURRENCY_STORAGE_KEY);
+    return billingCurrencies.includes(stored as BillingCurrency)
+      ? (stored as BillingCurrency)
+      : "CNY";
+  } catch {
+    return "CNY";
+  }
+}
+
 export async function billingRequest<T>(
   path: string,
   init?: RequestInit,
@@ -169,7 +194,45 @@ export async function billingRequest<T>(
   if (!response.ok || payload.status !== "success" || payload.data === undefined) {
     throw new Error(payload.message || `HTTP ${response.status}`);
   }
+  const method = String(init?.method || "GET").toUpperCase();
+  if (method === "GET") billingSnapshots.set(path, payload.data);
   return payload.data;
+}
+
+export async function requestBillingCached<T>(url: string): Promise<T> {
+  const existing = billingPending.get(url);
+  if (existing) return existing as Promise<T>;
+  const request = billingRequest<T>(url).finally(() => {
+    if (billingPending.get(url) === request) billingPending.delete(url);
+  });
+  billingPending.set(url, request);
+  return request;
+}
+
+export async function prefetchBillingCenter(): Promise<void> {
+  const currency = readStoredBillingCurrency();
+  let pageSize = 20;
+  try {
+    const { getSettings } = await import("@/lib/api");
+    const { normalizeAdminPageSize } = await import("@/utils/adminPagination");
+    const settings = await getSettings();
+    pageSize = normalizeAdminPageSize(settings.admin_default_page_size);
+  } catch {
+    // Keep the shared list default when settings are not ready yet.
+  }
+  await Promise.all([
+    requestBillingCached(
+      billingQuery("/api/admin/billing/overview", { currency, revision: 0 }),
+    ),
+    requestBillingCached(
+      billingQuery("/api/admin/billing/servers", {
+        currency,
+        page: 1,
+        page_size: pageSize,
+        revision: 0,
+      }),
+    ),
+  ]);
 }
 
 export function billingQuery(

@@ -9,6 +9,7 @@ type LoadingProps = {
   children?: React.ReactNode;
   size?: number;
   fullscreen?: boolean;
+  inline?: boolean;
 };
 
 const Loading = ({
@@ -16,6 +17,7 @@ const Loading = ({
   children,
   size = 28,
   fullscreen = false,
+  inline = false,
 }: LoadingProps) => {
   const { t } = useTranslation();
 
@@ -23,7 +25,7 @@ const Loading = ({
     <Stack
       role="status"
       aria-live="polite"
-      data-admin-route-pending="true"
+      data-admin-route-pending={inline ? undefined : "true"}
       spacing={1.5}
       sx={{
         width: "100%",

@@ -60,7 +60,10 @@ test("error screens use MUI Alert and keep icon text aligned", () => {
   assert.match(errorBoundary, /from "@mui\/material\/Button"/);
   assert.doesNotMatch(errorBoundary, /from-rose-50/);
   assert.doesNotMatch(layout, /icon=\{<CircleAlert/);
-  assert.match(main, /MuiAppProvider[\s\S]*<ErrorBoundary>[\s\S]*<Theme/);
+  assert.match(main, /MuiAppProvider[\s\S]*<ErrorBoundary>/);
+  assert.doesNotMatch(main, /from "@radix-ui\/themes"/);
+  assert.match(main, /lazy\(\(\) => import\("\.\/theme\/RadixThemeRoot"\)\)/);
+  assert.match(main, /isAdminRoute \? \(/);
   assert.match(theme, /MuiAlert:[\s\S]*alignItems: "flex-start"/);
   assert.match(theme, /MuiAlertTitle:[\s\S]*marginTop: 0/);
 });

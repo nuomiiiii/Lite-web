@@ -121,6 +121,14 @@ test("dashboard first paint does not wait for charts or settings", () => {
     adminDashboardSource,
     /chartSections\.length > 0 && !charts && !chartsError/,
   );
+  assert.match(
+    adminDashboardSource,
+    /settings\.refresh_seconds \* 1000/,
+  );
+  assert.match(
+    adminDashboardSource,
+    /settings\.chart_refresh_seconds \* 1000/,
+  );
 });
 
 test("low resource preset avoids historical chart requests", () => {

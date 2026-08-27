@@ -53,9 +53,22 @@ test("admin warmup respects reduced-data connections", () => {
     /<React\.Suspense fallback=\{fallback\}>\{view\.outlet\}<\/React\.Suspense>/,
   );
   assert.match(viewport, /isRouteViewReady\(element\)/);
-  assert.match(viewport, /readyFrames >= 2/);
-  assert.match(loading, /data-admin-route-pending="true"/);
+  assert.match(viewport, /if \(isRouteViewReady\(element\)\) promote\(\)/);
+  assert.doesNotMatch(viewport, /readyFrames/);
+  assert.doesNotMatch(viewport, /characterData: true/);
+  assert.match(loading, /data-admin-route-pending=\{inline \? undefined : "true"\}/);
   assert.match(settingsSkeleton, /data-admin-route-pending="true"/);
+
+  const notification = readFileSync(
+    "src/pages/admin/settings/notification.tsx",
+    "utf8",
+  );
+  assert.match(notification, /const \[messageLoading, setMessageLoading\] = React\.useState\(true\)/);
+  assert.match(notification, /\{messageLoading \? <Loading inline \/>/);
+  assert.doesNotMatch(
+    notification,
+    /messageList\.length === 0 && !messageError/,
+  );
 
   const managedTheme = readFileSync(
     "src/pages/admin/theme_managed.tsx",

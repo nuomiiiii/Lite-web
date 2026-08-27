@@ -75,6 +75,9 @@ test("hides an unreported IPv6 row and vertically centers IPv4", () => {
     "utf8",
   );
   assert.match(selectorCss, /\.remote-exec-node-addresses \{[\s\S]*height: 100%[\s\S]*justify-content: center/);
+  assert.match(selectorCss, /\.remote-exec-node-status\.is-online \{\s*color: #22c55e;/);
+  assert.match(selectorCss, /\.remote-exec-node-status\.is-offline \{\s*color: #ff5630;/);
+  assert.doesNotMatch(selectorCss, /--green-10|--red-10/);
 });
 
 test("keeps node-list filters and a palette-aware select-all action", () => {

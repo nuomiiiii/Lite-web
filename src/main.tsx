@@ -1,8 +1,6 @@
-import React, { StrictMode, useMemo } from "react";
+import React, { lazy, StrictMode, Suspense, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import "./global.css";
-import { Theme } from "@radix-ui/themes";
-import "@radix-ui/themes/styles.css";
 import {
   ThemeContext,
   THEME_DEFAULTS,
@@ -10,12 +8,10 @@ import {
 } from "./contexts/ThemeContext";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { useSystemTheme } from "./hooks/useSystemTheme";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, useRoutes } from "react-router-dom";
 // Ensure i18n is initialized before any component renders
 import "./i18n/config";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { Suspense } from "react";
-import { useRoutes } from "react-router-dom";
 import { preloadAdminEntry, preloadAdminRoute, routes } from "./routes";
 import Loading from "./components/loading";
 import { PublicInfoProvider } from "./contexts/PublicInfoContext";
@@ -35,6 +31,13 @@ import {
 import { prefetchAdminDashboard } from "./utils/dashboardPrefetch";
 import MuiAppProvider from "./theme/MuiAppProvider";
 import { clientCookieSuffix, isSafeTempKey } from "./utils/security";
+
+const RadixThemeRoot = lazy(() => import("./theme/RadixThemeRoot"));
+
+const appShellStyle = {
+  backgroundColor: "transparent",
+  minHeight: "var(--app-viewport-height, 100vh)",
+} as const;
 
 const AdminRoutePreloader = () => {
   const { account } = useAccount();
@@ -141,51 +144,55 @@ const App = () => {
     [appearance, setAppearance],
   );
   const routing = useRoutes(routes);
+  const appTree = isRestrictedGuideRoute ? (
+    <PublicInfoProvider>
+      <DocumentTitle />
+      <Toaster />
+      <Suspense fallback={<Loading fullscreen />}>
+        {routing}
+      </Suspense>
+    </PublicInfoProvider>
+  ) : (
+    <AccountProvider>
+      <AccountPreferenceSync />
+      <AdminRoutePreloader />
+      <RPC2Provider>
+        <PublicInfoProvider>
+          <DocumentTitle />
+          <NodeListProvider>
+            <Toaster />
+            <OfflineIndicator />
+            <Suspense
+              fallback={isAdminRoute ? <FullPageLoading /> : <Loading fullscreen />}
+            >
+              {routing}
+            </Suspense>
+          </NodeListProvider>
+        </PublicInfoProvider>
+      </RPC2Provider>
+    </AccountProvider>
+  );
   return (
     <ThemeContext.Provider value={themeContextValue}>
       <MuiAppProvider appearance={resolvedAppearance}>
       <ErrorBoundary>
-      <Theme
-          appearance={resolvedAppearance}
-          accentColor="blue"
-          grayColor="slate"
-          radius="large"
-          scaling={isAdminRoute ? "100%" : "110%"}
-          className="theme-root"
-          style={{
-            backgroundColor: "transparent",
-            minHeight: "var(--app-viewport-height, 100vh)",
-          }}
+      {isAdminRoute ? (
+        <div className="theme-root" style={appShellStyle}>
+          {appTree}
+        </div>
+      ) : (
+        <Suspense
+          fallback={
+            <div className="theme-root" style={appShellStyle}>
+              <Loading fullscreen />
+            </div>
+          }
         >
-		{isRestrictedGuideRoute ? (
-		  <PublicInfoProvider>
-			<DocumentTitle />
-			<Toaster />
-			<Suspense fallback={<Loading fullscreen />}>
-			  {routing}
-			</Suspense>
-		  </PublicInfoProvider>
-		) : (
-		  <AccountProvider>
-			<AccountPreferenceSync />
-			<AdminRoutePreloader />
-			<RPC2Provider>
-			  <PublicInfoProvider>
-				<DocumentTitle />
-				<NodeListProvider>
-				  <Toaster />
-				  <OfflineIndicator />
-				  <Suspense
-					fallback={isAdminRoute ? <FullPageLoading /> : <Loading fullscreen />}
-				  >
-					{routing}
-				  </Suspense>
-				</NodeListProvider>
-			  </PublicInfoProvider>
-			</RPC2Provider>
-		  </AccountProvider>
-		)}
-      </Theme>
+          <RadixThemeRoot appearance={resolvedAppearance} scaling="110%">
+            {appTree}
+          </RadixThemeRoot>
+        </Suspense>
+      )}
       </ErrorBoundary>
       </MuiAppProvider>
     </ThemeContext.Provider>
