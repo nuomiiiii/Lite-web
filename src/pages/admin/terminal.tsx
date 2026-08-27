@@ -8,10 +8,18 @@ import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import Loading from "@/components/loading";
 import RemoteNodePicker from "@/components/remote/RemoteNodePicker";
 import { useNodeList } from "@/contexts/NodeListContext";
-import { useAdminNodeLiveData } from "@/hooks/use-admin-node-live-data";
+import { AdminNodeLiveDataProvider, useAdminNodeLiveData } from "@/hooks/use-admin-node-live-data";
 import { openRemoteTerminal } from "@/utils/remoteLaunch";
 
 export default function AdminRemoteTerminal() {
+  return (
+    <AdminNodeLiveDataProvider>
+      <AdminRemoteTerminalBody />
+    </AdminNodeLiveDataProvider>
+  );
+}
+
+function AdminRemoteTerminalBody() {
   const { t } = useTranslation();
   const { nodeList, isLoading, error } = useNodeList();
   const { liveData, available } = useAdminNodeLiveData();

@@ -29,11 +29,7 @@ const AdminNodeLiveDataContext = createContext<AdminNodeLiveDataValue | null>(
 let cachedLiveData: LiveDataResponse | null = null;
 let cachedAvailable = false;
 
-export function AdminNodeLiveDataProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+function AdminNodeLiveDataPoller({ children }: { children: ReactNode }) {
   const { call } = useRPC2Call();
   const [liveData, setLiveData] = useState<LiveDataResponse | null>(
     () => cachedLiveData,
@@ -113,6 +109,16 @@ export function AdminNodeLiveDataProvider({
     { value },
     children,
   );
+}
+
+export function AdminNodeLiveDataProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const existing = useContext(AdminNodeLiveDataContext);
+  if (existing) return children;
+  return createElement(AdminNodeLiveDataPoller, null, children);
 }
 
 export function useAdminNodeLiveData() {

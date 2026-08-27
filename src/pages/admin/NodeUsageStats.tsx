@@ -26,6 +26,7 @@ import { Cpu, HardDrive, MemoryStick } from "@/components/admin/muiIcons";
 import { ChartContainer } from "@/components/ui/chart";
 import type { NodeDetail } from "@/contexts/NodeDetailsContext";
 import type { Record as LiveRecord } from "@/types/LiveData";
+import { formatTrafficResetRangeLabel } from "@/utils/trafficCycle";
 import { formatBytes } from "@/utils/unitHelper";
 import { LITE_BLUE } from "@/theme/brand";
 import {
@@ -325,16 +326,8 @@ export default function NodeUsageStats({
     });
   }, [points]);
 
-  const usageRangeLabel = useMemo(() => {
-    if (!points.length) return EMPTY_DISPLAY;
-    const formatDate = (value: string) => {
-      const date = new Date(value);
-      return Number.isNaN(date.getTime())
-        ? value
-        : `${date.getMonth() + 1}月${date.getDate()}日`;
-    };
-    return `${formatDate(points[0].time)} - ${formatDate(points[points.length - 1].time)}`;
-  }, [points]);
+  const usageRangeLabel =
+    formatTrafficResetRangeLabel(node.traffic_reset_day) ?? EMPTY_DISPLAY;
 
   const remainingTraffic =
     usedTraffic != null && trafficLimit > 0

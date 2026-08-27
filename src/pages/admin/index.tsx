@@ -109,6 +109,7 @@ import {
 } from "@/components/admin/AdminPagination";
 import { useAdminDefaultPageSize } from "@/hooks/useAdminDefaultPageSize";
 import {
+  AdminNodeLiveDataProvider,
   nodeOnlineState,
   useAdminNodeLiveData,
 } from "@/hooks/use-admin-node-live-data";
@@ -128,7 +129,9 @@ import {
 const NodeDetailsPage = () => {
   return (
     <NodeDetailsProvider>
-      <Layout />
+      <AdminNodeLiveDataProvider>
+        <Layout />
+      </AdminNodeLiveDataProvider>
     </NodeDetailsProvider>
   );
 };

@@ -46,6 +46,8 @@ test("admin node status uses one guarded compact poll", () => {
   assert.match(hookSource, /cachedLiveData/);
   assert.doesNotMatch(hookSource, /lastUpdatedAt/);
   assert.match(layoutSource, /<AdminNodeLiveDataProvider>/);
+  assert.match(pageSource, /<AdminNodeLiveDataProvider>/);
+  assert.match(hookSource, /if \(existing\) return children/);
   assert.match(pageSource, /nodeOnlineState\(available, onlineSet, node\.uuid\)/);
   assert.match(pageSource, /online === null \? "pending"/);
   assert.match(pageSource, /visibility: "hidden"/);
@@ -187,8 +189,12 @@ test("server details open an overview billing metrics page", () => {
   assert.doesNotMatch(detailSource, /actionSx\("rgba\(145, 158, 171, 0\.08\)", "#1C252E"\)/);
   assert.match(detailSource, /<Flag /);
   assert.match(detailSource, /\$\{locationName\} \(\$\{locationCode\}\)/);
+  assert.match(detailSource, /<AdminNodeLiveDataProvider>/);
   const usageSource = readFileSync("src/pages/admin/NodeUsageStats.tsx", "utf8");
   assert.match(usageSource, /data-testid="admin-node-usage-stats"/);
+  assert.match(usageSource, /formatTrafficResetRangeLabel\(node\.traffic_reset_day\)/);
+  assert.match(usageSource, /data-testid="admin-node-network-range"/);
+  assert.doesNotMatch(usageSource, /points\[0\]\.time/);
   assert.match(usageSource, /\/api\/records\/load/);
   assert.doesNotMatch(usageSource, /mockLoadRecords/);
   assert.doesNotMatch(usageSource, /isHkPreviewNode/);
@@ -197,6 +203,7 @@ test("server details open an overview billing metrics page", () => {
   assert.match(usageSource, /formatSpeed\(inboundSpeed\)/);
   assert.match(usageSource, /formatSpeed\(outboundSpeed\)/);
   assert.match(detailSource, /CustomTags/);
+  assert.match(detailSource, /gap: "4px"/);
   assert.doesNotMatch(detailSource, /isHkPreviewNode/);
   assert.doesNotMatch(detailSource, /previewLive/);
   assert.doesNotMatch(detailSource, /PREVIEW\.bandwidth/);

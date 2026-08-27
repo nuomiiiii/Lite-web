@@ -46,6 +46,7 @@ import {
 } from "@/components/admin/muiIcons";
 import { useNodeDetails, type NodeDetail } from "@/contexts/NodeDetailsContext";
 import {
+  AdminNodeLiveDataProvider,
   nodeOnlineState,
   useAdminNodeLiveData,
 } from "@/hooks/use-admin-node-live-data";
@@ -501,6 +502,14 @@ function CopyRow({
 }
 
 export default function NodeDetailPage() {
+  return (
+    <AdminNodeLiveDataProvider>
+      <NodeDetailPageBody />
+    </AdminNodeLiveDataProvider>
+  );
+}
+
+function NodeDetailPageBody() {
   const { uuid = "" } = useParams();
   const { t } = useTranslation();
   const { nodeDetail, isLoading, refresh } = useNodeDetails();
@@ -634,7 +643,15 @@ export default function NodeDetailPage() {
               <MetaItem icon={countryFlag} text={location} />
             </Stack>
             {node.tags?.trim() ? (
-              <Box sx={{ mt: 1 }}>
+              <Box
+                sx={{
+                  mt: 1,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
                 <CustomTags tags={node.tags} />
               </Box>
             ) : null}
