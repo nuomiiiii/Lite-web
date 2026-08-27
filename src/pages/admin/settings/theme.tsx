@@ -462,13 +462,7 @@ const ThemePage = () => {
 
   return (
     <Box className="space-y-6">
-      <Flex
-        justify="between"
-        align={{ initial: "stretch", sm: "center" }}
-        gap="3"
-        wrap="wrap"
-        direction={{ initial: "column", sm: "row" }}
-      >
+      <Flex justify="between" align="center" gap="3" wrap="wrap">
         <AdminPageTitle
           description={t(
             "theme.page_description",
