@@ -471,10 +471,10 @@ const ThemePage = () => {
         >
           {t("theme.title")}
         </AdminPageTitle>
-        <Flex gap="2" wrap="wrap" className="w-full sm:w-auto [&>button]:min-w-[8rem] [&>button]:flex-1 sm:[&>button]:min-w-0 sm:[&>button]:flex-none">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
           <Button
             variant="soft"
-            className="gap-2"
+            className="w-full justify-center gap-2 whitespace-nowrap sm:w-auto"
             onClick={() => navigate("/admin/market/themes")}
           >
             <Store size={16} />
@@ -483,31 +483,34 @@ const ThemePage = () => {
           {activeThemeHasConfig && (
             <Button
               variant="soft"
-              className="gap-2"
+              className="w-full justify-center gap-2 whitespace-nowrap sm:w-auto"
               onClick={() => navigate("/admin/theme_managed")}
             >
               <Settings size={16} />
-              {`${currentTheme}设置`}
+              {t("theme.configure", "主题设置")}
             </Button>
           )}
-          <Button onClick={() => setUploadDialogOpen(true)} className="gap-2">
+          <Button
+            onClick={() => setUploadDialogOpen(true)}
+            className="w-full justify-center gap-2 whitespace-nowrap sm:w-auto"
+          >
             <Upload size={16} />
             {t("theme.upload")}
           </Button>
           <Button
             variant="soft"
+            className="w-full justify-center gap-2 whitespace-nowrap sm:w-auto"
             onClick={() => {
               setImportDialogOpen(true);
               setImportUrl("");
               setImportPreview(null);
               setImportError(null);
             }}
-            className="gap-2"
           >
             <Download size={16} />
             {t("theme.import")}
           </Button>
-        </Flex>
+        </div>
       </Flex>
 
       {/* 主题卡片网格 */}

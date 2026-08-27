@@ -205,6 +205,21 @@ function currentBeijingDate() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function currentBeijingMonthNumber() {
+  return currentBeijingDate().slice(5, 7);
+}
+
+function calendarMonthOptions(t: TFunction) {
+  return Array.from({ length: 12 }, (_, index) => {
+    const month = String(index + 1).padStart(2, "0");
+    return { value: month, label: t("billing.common.monthOnly", { month }) };
+  });
+}
+
+function yearMonthKeys(year: string): string[] {
+  return Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}`);
+}
+
 function yearFromRange(from?: string, to?: string) {
   if (from && /^\d{4}/.test(from)) return from.slice(0, 4);
   if (to && /^\d{4}/.test(to)) return to.slice(0, 4);
@@ -736,6 +751,7 @@ export default function BillingCenterPage() {
   const regionLang = i18n.language.startsWith("zh") ? "zh" : "en";
   const [searchParams, setSearchParams] = useSearchParams();
   const currentYear = currentBeijingYear();
+  const currentMonthNumber = currentBeijingMonthNumber();
   const [tab, setTab] = useAdminTabParam(BILLING_TABS, "overview");
   const [currency, setCurrency] = useState<BillingCurrency>(() => {
     const stored = localStorage.getItem(BILLING_CURRENCY_STORAGE_KEY);
@@ -756,19 +772,39 @@ export default function BillingCenterPage() {
   const [clients, setClients] = useState<BillingClientInfo[]>([]);
   const [detail, setDetail] = useState<{ title: string; client?: string; from?: string; to?: string } | null>(null);
 
-  const monthlyYears = useMemo(() => {
-    const raw = searchParams.get("years")?.split(",").filter((value) => /^\d{4}$/.test(value)) || [];
-    return raw.length ? [...new Set(raw)] : [currentYear];
+  const monthlyYear = useMemo(() => {
+    const combined = searchParams.get("months")?.split(",").find((value) => /^\d{4}-\d{2}$/.test(value));
+    if (combined) return combined.slice(0, 4);
+    const year = searchParams.get("year");
+    return year && /^\d{4}$/.test(year) ? year : currentYear;
   }, [currentYear, searchParams]);
+  const monthlyMonth = useMemo(() => {
+    const combined = searchParams.get("months")?.split(",").find((value) => /^\d{4}-\d{2}$/.test(value));
+    if (combined) return combined.slice(5, 7);
+    if (!searchParams.has("month")) return currentMonthNumber;
+    const month = searchParams.get("month");
+    return month && /^\d{2}$/.test(month) ? month : "";
+  }, [currentMonthNumber, searchParams]);
+  const monthlyMonths = monthlyMonth ? [`${monthlyYear}-${monthlyMonth}`] : yearMonthKeys(monthlyYear);
 
-  const setMonthlyYears = (next: string[]) => {
-    const normalized = next.length ? next : [currentYear];
-    setSearchParams((current) => { const params = new URLSearchParams(current); params.set("years", normalized.join(",")); return params; }, { replace: true });
+  const setMonthlyPeriod = (year: string, month: string) => {
+    const nextYear = year && /^\d{4}$/.test(year) ? year : currentYear;
+    const nextMonth = month === "" ? "" : month && /^\d{2}$/.test(month) ? month : currentMonthNumber;
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+      params.set("year", nextYear);
+      params.set("month", nextMonth);
+      params.delete("years");
+      params.delete("months");
+      return params;
+    }, { replace: true });
     setMonthlyPage(1);
   };
 
   useEffect(() => {
-    if (!searchParams.get("years")) setMonthlyYears([currentYear]);
+    if (!searchParams.get("year") || !searchParams.has("month")) {
+      setMonthlyPeriod(searchParams.get("year") || monthlyYear, searchParams.has("month") ? monthlyMonth : currentMonthNumber);
+    }
     // The URL is the source of truth after initialization.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -796,7 +832,7 @@ export default function BillingCenterPage() {
 
   const overviewURL = billingQuery("/api/admin/billing/overview", { currency, revision });
   const serversURL = billingQuery("/api/admin/billing/servers", { currency, q: search.trim(), regions, groups, expiry, page: serverPage, page_size: serverPageSize, revision });
-  const monthlyURL = tab === "monthly" ? billingQuery("/api/admin/billing/periods/monthly", { currency, years: monthlyYears, clients: periodClients, types: periodTypes, native_currencies: periodCurrencies, page: monthlyPage, page_size: monthlyPageSize, revision }) : null;
+  const monthlyURL = tab === "monthly" ? billingQuery("/api/admin/billing/periods/monthly", { currency, months: monthlyMonths, clients: periodClients, types: periodTypes, native_currencies: periodCurrencies, page: monthlyPage, page_size: monthlyPageSize, revision }) : null;
   const yearlyURL = tab === "yearly" ? billingQuery("/api/admin/billing/periods/yearly", { currency, years: yearlyYears, clients: periodClients, types: periodTypes, native_currencies: periodCurrencies, page: yearlyPage, page_size: yearlyPageSize, revision }) : null;
   const overview = useBillingData<BillingOverview>(overviewURL);
   const servers = useBillingData<BillingServerPage>(serversURL);
@@ -807,15 +843,17 @@ export default function BillingCenterPage() {
   const regionOptions = useMemo(() => billingRegionOptions(clients, regionLang), [clients, regionLang]);
   const groupOptions = useMemo(() => billingGroupOptions(clients, t), [clients, t]);
   const availableYears = [...new Set([currentYear, ...(monthly.data?.available_years || []).map(String), ...(yearly.data?.available_years || []).map(String)])].sort((a, b) => b.localeCompare(a)).map((year) => ({ value: year, label: t("billing.common.yearLabel", { year }) }));
+  const calendarMonths = calendarMonthOptions(t);
   const periodChips = [
     ...periodClients.map((value) => ({ key: `client-${value}`, label: t("billing.chips.server", { value: clientOptions.find((item) => item.value === value)?.label || value }), remove: () => { setPeriodClients((items) => items.filter((item) => item !== value)); setMonthlyPage(1); setYearlyPage(1); } })),
     ...periodTypes.map((value) => ({ key: `type-${value}`, label: t("billing.chips.feeType", { value: billingTypeLabel(t, value) }), remove: () => { setPeriodTypes((items) => items.filter((item) => item !== value)); setMonthlyPage(1); setYearlyPage(1); } })),
     ...periodCurrencies.map((value) => ({ key: `currency-${value}`, label: t("billing.chips.nativeCurrency", { value }), remove: () => { setPeriodCurrencies((items) => items.filter((item) => item !== value)); setMonthlyPage(1); setYearlyPage(1); } })),
   ];
-  if (tab === "monthly") monthlyYears.filter((year) => year !== currentYear || monthlyYears.length > 1).forEach((year) => periodChips.unshift({ key: `year-${year}`, label: t("billing.chips.year", { value: year }), remove: () => setMonthlyYears(monthlyYears.filter((item) => item !== year)) }));
+  if (tab === "monthly" && monthlyYear !== currentYear) periodChips.unshift({ key: "monthly-year", label: t("billing.chips.year", { value: monthlyYear }), remove: () => setMonthlyPeriod(currentYear, monthlyMonth) });
+  if (tab === "monthly" && monthlyMonth && monthlyMonth !== currentMonthNumber) periodChips.unshift({ key: "monthly-month", label: t("billing.chips.month", { value: calendarMonths.find((item) => item.value === monthlyMonth)?.label || monthlyMonth }), remove: () => setMonthlyPeriod(monthlyYear, currentMonthNumber) });
   if (tab === "yearly") yearlyYears.filter((year) => year !== currentYear || yearlyYears.length > 1).forEach((year) => periodChips.unshift({ key: `year-${year}`, label: t("billing.chips.year", { value: year }), remove: () => { setYearlyYears((items) => { const next = items.filter((item) => item !== year); return next.length ? next : [currentYear]; }); setYearlyPage(1); } }));
 
-  const clearPeriods = () => { setPeriodClients([]); setPeriodTypes([]); setPeriodCurrencies([]); setMonthlyYears([currentYear]); setYearlyYears([currentYear]); setMonthlyPage(1); setYearlyPage(1); };
+  const clearPeriods = () => { setPeriodClients([]); setPeriodTypes([]); setPeriodCurrencies([]); setMonthlyPeriod(currentYear, currentMonthNumber); setYearlyYears([currentYear]); setMonthlyPage(1); setYearlyPage(1); };
   const changed = () => setRevision((value) => value + 1);
   const openPeriodDetails = (period: BillingPeriod, monthlyPeriod: boolean) => {
     if (monthlyPeriod) {
@@ -871,7 +909,10 @@ export default function BillingCenterPage() {
       <AdminListShell>
         <AdminListFiltersBar>
           <Stack direction="row" spacing={1.5} useFlexGap sx={{ flexWrap: { xs: "wrap", md: "nowrap" }, alignItems: "center" }}>
-            <AdminMultiSelect label={t("billing.filters.year")} ariaLabel={t("billing.filters.year")} value={tab === "monthly" ? monthlyYears : yearlyYears} onChange={tab === "monthly" ? setMonthlyYears : (value) => { setYearlyYears(value.length ? value : [currentYear]); setYearlyPage(1); }} options={availableYears} />
+            {tab === "monthly" ? <>
+              <AdminListSelect label={t("billing.filters.year")} value={monthlyYear} onChange={(value) => setMonthlyPeriod(value, monthlyMonth)}>{availableYears.map((item) => <MenuItem key={item.value} value={item.value}>{item.label}</MenuItem>)}</AdminListSelect>
+              <AdminListSelect label={t("billing.filters.month")} value={monthlyMonth} onChange={(value) => setMonthlyPeriod(monthlyYear, value)}><MenuItem value="">{t("billing.filters.allMonths")}</MenuItem>{calendarMonths.map((item) => <MenuItem key={item.value} value={item.value}>{item.label}</MenuItem>)}</AdminListSelect>
+            </> : <AdminMultiSelect label={t("billing.filters.year")} ariaLabel={t("billing.filters.year")} value={yearlyYears} onChange={(value) => { setYearlyYears(value.length ? value : [currentYear]); setYearlyPage(1); }} options={availableYears} />}
             <AdminMultiSelect label={t("billing.filters.server")} ariaLabel={t("billing.filters.server")} value={periodClients} onChange={(value) => { setPeriodClients(value); setMonthlyPage(1); setYearlyPage(1); }} options={clientOptions} />
             <AdminMultiSelect label={t("billing.filters.feeType")} ariaLabel={t("billing.filters.feeType")} value={periodTypes} onChange={(value) => { setPeriodTypes(value); setMonthlyPage(1); setYearlyPage(1); }} options={entryTypes} />
             <AdminMultiSelect label={t("billing.filters.nativeCurrency")} ariaLabel={t("billing.filters.nativeCurrency")} value={periodCurrencies} onChange={(value) => { setPeriodCurrencies(value); setMonthlyPage(1); setYearlyPage(1); }} options={nativeCurrencyOptions} />

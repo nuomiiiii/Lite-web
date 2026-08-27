@@ -35,20 +35,27 @@ test("keeps financial query values as decimal strings and CSV filters", () => {
   assert.equal(
     billingQuery("/api/admin/billing/periods/monthly", {
       currency: "CNY",
-      years: ["2026", "2025"],
+      months: ["2026-08", "2026-07"],
       clients: ["node-a", "node-b"],
       page: 2,
     }),
-    "/api/admin/billing/periods/monthly?currency=CNY&years=2026%2C2025&clients=node-a%2Cnode-b&page=2",
+    "/api/admin/billing/periods/monthly?currency=CNY&months=2026-08%2C2026-07&clients=node-a%2Cnode-b&page=2",
   );
 });
 
-test("defaults monthly billing to the Beijing year and restores an empty selection", () => {
+test("defaults monthly billing to separate Beijing year and month filters", () => {
   assert.match(pageSource, /timeZone:\s*"Asia\/Shanghai"/);
-  assert.match(pageSource, /raw\.length\s*\?\s*\[\.\.\.new Set\(raw\)\]\s*:\s*\[currentYear\]/);
-  assert.match(pageSource, /const normalized = next\.length \? next : \[currentYear\]/);
-  assert.match(pageSource, /params\.set\("years", normalized\.join\(","\)\)/);
-  assert.match(pageSource, /periods\/monthly[\s\S]*years:\s*monthlyYears/);
+  assert.match(pageSource, /params\.set\("year", nextYear\)/);
+  assert.match(pageSource, /params\.set\("month", nextMonth\)/);
+  assert.match(pageSource, /params\.delete\("months"\)/);
+  assert.match(pageSource, /periods\/monthly[\s\S]*months:\s*monthlyMonths/);
+  assert.match(pageSource, /billing\.filters\.year/);
+  assert.match(pageSource, /billing\.filters\.month/);
+  assert.match(pageSource, /billing\.filters\.allMonths/);
+  assert.match(pageSource, /yearMonthKeys/);
+  assert.match(pageSource, /calendarMonthOptions/);
+  assert.doesNotMatch(pageSource, /tab === "monthly" \? monthlyYears/);
+  assert.doesNotMatch(pageSource, /billingMonthOptions/);
 });
 
 test("keeps the active billing sheet in the URL across refresh", () => {

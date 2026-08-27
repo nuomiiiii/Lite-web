@@ -23,6 +23,7 @@
       "expiry": "{{count}}日以内に期限切れ",
       "feeType": "費用種別: {{value}}",
       "group": "グループ: {{value}}",
+      "month": "月: {{value}}",
       "nativeCurrency": "元通貨: {{value}}",
       "region": "国/地域: {{value}}",
       "search": "検索: {{value}}",
@@ -32,6 +33,7 @@
     "common": {
       "dailyAverage": "日平均",
       "monthlyAverage": "月平均",
+      "monthOnly": "{{month}}月",
       "serverCount": "{{count}}台",
       "yearLabel": "{{year}}年",
       "yearlyAverage": "年平均"
@@ -62,10 +64,12 @@
     },
     "filters": {
       "allExpiry": "すべての有効期限",
+      "allMonths": "すべての月",
       "currency": "表示通貨",
       "expiry": "有効期限",
       "feeType": "費用種別",
       "group": "グループ",
+      "month": "月",
       "nativeCurrency": "元通貨",
       "region": "国/地域",
       "searchPlaceholder": "国/地域、サーバー、グループ、タグを検索",
@@ -1701,6 +1705,7 @@
     "load_config_failed": "テーマ設定の読み込みに失敗しました",
     "manage": "テーマ管理",
     "manage_with_name": "{{name}} 設定",
+    "configure": "テーマ設定",
     "name": "名前",
     "no_config": "このテーマには設定項目が宣言されていません。",
     "no_themes": "テーマはありません",

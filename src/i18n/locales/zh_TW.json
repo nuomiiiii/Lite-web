@@ -23,6 +23,7 @@
       "expiry": "{{count}} 天內到期",
       "feeType": "費用類型: {{value}}",
       "group": "分組: {{value}}",
+      "month": "月份: {{value}}",
       "nativeCurrency": "原始幣別: {{value}}",
       "region": "國家/地區: {{value}}",
       "search": "搜尋: {{value}}",
@@ -32,6 +33,7 @@
     "common": {
       "dailyAverage": "日均",
       "monthlyAverage": "月均",
+      "monthOnly": "{{month}} 月",
       "serverCount": "{{count}} 台",
       "yearLabel": "{{year}} 年",
       "yearlyAverage": "年均"
@@ -62,10 +64,12 @@
     },
     "filters": {
       "allExpiry": "全部到期時間",
+      "allMonths": "全部月份",
       "currency": "彙總幣別",
       "expiry": "到期時間",
       "feeType": "費用類型",
       "group": "分組",
+      "month": "月份",
       "nativeCurrency": "原始幣別",
       "region": "國家\\地區",
       "searchPlaceholder": "搜尋國家/地區、伺服器、分組、標籤",
@@ -1701,6 +1705,7 @@
     "load_config_failed": "加載主題配置失敗",
     "manage": "主題管理",
     "manage_with_name": "{{name}} 設定",
+    "configure": "主題設定",
     "name": "名稱",
     "no_config": "該主題沒有聲明配置項。",
     "no_themes": "暫無主題",

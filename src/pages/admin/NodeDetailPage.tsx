@@ -446,7 +446,7 @@ function CopyRow({
     <Stack
       data-testid="admin-node-network-row"
       direction="row"
-      spacing={1.25}
+      spacing={2}
       sx={{
         py: 1,
         px: 1.5,
@@ -475,7 +475,12 @@ function CopyRow({
       <Typography
         variant="body2"
         color="text.secondary"
-        sx={{ width: 56, flexShrink: 0, fontWeight: 500 }}
+        sx={{
+          width: 104,
+          flexShrink: 0,
+          fontWeight: 500,
+          whiteSpace: "nowrap",
+        }}
       >
           {label}
       </Typography>

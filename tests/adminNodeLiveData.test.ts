@@ -167,6 +167,10 @@ test("server details open an overview billing metrics page", () => {
   assert.match(detailSource, /km-admin-detail-card/);
   assert.doesNotMatch(detailSource, /traffic-calibration/);
   assert.match(detailSource, /admin-node-detail-country-flag/);
+  assert.match(detailSource, /admin-node-network-row/);
+  assert.match(detailSource, /width: 104/);
+  assert.match(detailSource, /whiteSpace: "nowrap"/);
+  assert.doesNotMatch(detailSource, /width: 56, flexShrink: 0/);
   assert.match(detailSource, /admin\.nodeDetail\.transfer/);
   assert.match(detailSource, /admin\.nodeDetail\.recordTrafficReset/);
   assert.match(detailSource, /billing\/ip-change/);

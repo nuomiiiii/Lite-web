@@ -110,18 +110,20 @@ function SelectorInner<T>(props: SelectorProps<T>) {
 
   return (
     <div className={`flex flex-col ${className}`}>
-      <TextField.Root
-        className="mb-3 flex items-center gap-1"
-        placeholder={resolvedSearchPlaceholder}
-        value={search}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-          setSearch(e.target.value)
-        }
-      >
-        <TextField.Slot>
-          <Search size="16" />
-        </TextField.Slot>
-      </TextField.Root>
+      <div className="km-search-before-content">
+        <TextField.Root
+          className="flex items-center gap-1"
+          placeholder={resolvedSearchPlaceholder}
+          value={search}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setSearch(e.target.value)
+          }
+        >
+          <TextField.Slot>
+            <Search size="16" />
+          </TextField.Slot>
+        </TextField.Root>
+      </div>
       <div className="selector overflow-hidden rounded-md border border-[var(--gray-a5)]">
         <Table container={false} className="table-fixed">
           <TableHeader>

@@ -305,7 +305,7 @@ export default function ThemeMarketPage() {
   if (loading) return <Loading />;
 
   return (
-    <Box className="space-y-5 p-0 md:p-4">
+    <Flex direction="column" gap="5" className="p-0 md:p-4">
       <Flex justify="between" align="center" gap="3" wrap="wrap">
         <AdminPageTitle
           description={t(
@@ -609,6 +609,6 @@ export default function ThemeMarketPage() {
           </Flex>
         </AppDialogContent>
       </Dialog.Root>
-    </Box>
+    </Flex>
   );
 }

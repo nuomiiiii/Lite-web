@@ -23,6 +23,7 @@
       "expiry": "Expires within {{count}} days",
       "feeType": "Cost type: {{value}}",
       "group": "Group: {{value}}",
+      "month": "Month: {{value}}",
       "nativeCurrency": "Original currency: {{value}}",
       "region": "Country/region: {{value}}",
       "search": "Search: {{value}}",
@@ -32,6 +33,7 @@
     "common": {
       "dailyAverage": "Daily avg.",
       "monthlyAverage": "Monthly avg.",
+      "monthOnly": "{{month}}",
       "serverCount": "{{count}} servers",
       "yearLabel": "{{year}}",
       "yearlyAverage": "Yearly avg."
@@ -62,10 +64,12 @@
     },
     "filters": {
       "allExpiry": "All expiry dates",
+      "allMonths": "All months",
       "currency": "Display currency",
       "expiry": "Expiry",
       "feeType": "Cost type",
       "group": "Group",
+      "month": "Month",
       "nativeCurrency": "Original currency",
       "region": "Country/Region",
       "searchPlaceholder": "Search country/region, server, group, or tags",
@@ -1853,6 +1857,7 @@
     "load_config_failed": "Failed to load theme configuration",
     "manage": "Theme Management",
     "manage_with_name": "{{name}} Settings",
+    "configure": "Theme settings",
     "name": "Name",
     "no_config": "This theme has no declared configuration items.",
     "no_themes": "No themes available",

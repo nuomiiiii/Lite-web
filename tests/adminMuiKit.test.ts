@@ -41,7 +41,7 @@ test("radix space tokens stay in CSS pixels for MUI sx", () => {
 test("node list filters use a gray toolbar and white search field", () => {
   const css = readFileSync("src/global.css", "utf8");
   const layout = readFileSync("src/components/admin/adminListLayout.ts", "utf8");
-  assert.match(css, /\.km-admin-node-list-filters \{\s*padding: 16px;\s*background: #f4f6f8;/);
+  assert.match(css, /\.km-admin-node-list-filters \{\s*padding: 16px 16px 20px;\s*background: #f4f6f8;/);
   assert.match(css, /\.km-admin-node-list-filters \.MuiOutlinedInput-root \{\s*background-color: #fff;/);
   assert.match(layout, /const FILTER_BAR = NEBURST_NEUTRAL/);
   assert.match(layout, /const FILTER_FIELD = "#FFFFFF"/);

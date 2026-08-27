@@ -464,6 +464,7 @@
       "expiry": "{{count}} 天内到期",
       "feeType": "费用类型: {{value}}",
       "group": "分组: {{value}}",
+      "month": "月份: {{value}}",
       "nativeCurrency": "原始币种: {{value}}",
       "region": "国家/地区: {{value}}",
       "search": "搜索: {{value}}",
@@ -473,6 +474,7 @@
     "common": {
       "dailyAverage": "日均",
       "monthlyAverage": "月均",
+      "monthOnly": "{{month}} 月",
       "serverCount": "{{count}} 台",
       "yearLabel": "{{year}} 年",
       "yearlyAverage": "年均"
@@ -503,11 +505,13 @@
     },
     "filters": {
       "allExpiry": "全部到期时间",
+      "allMonths": "全部月份",
       "currency": "汇总币种",
       "detailsSearchPlaceholder": "搜索服务器名称",
       "expiry": "到期时间",
       "feeType": "费用类型",
       "group": "分组",
+      "month": "月份",
       "nativeCurrency": "原始币种",
       "region": "国家\\地区",
       "searchPlaceholder": "搜索国家/地区、服务器、分组、标签",
@@ -1979,6 +1983,7 @@
   "theme": {
     "active": "当前使用",
     "author": "作者",
+    "configure": "主题设置",
     "confirm_delete": "确认删除主题",
     "dark": "深色",
     "default_theme": "默认主题",

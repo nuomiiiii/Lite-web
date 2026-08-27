@@ -109,6 +109,7 @@ export function AdminListSelect({
           label={label}
           notched={notched}
           value={value}
+          displayEmpty
           open={open}
           onOpen={onOpen}
           onClose={onClose}
