@@ -1118,7 +1118,8 @@ html.dark .km-theme-config-tabs-viewport::after {
 }
 
 /* Keep the admin visual baseline scoped away from dashboard themes. */
-[data-admin-shell] {
+[data-admin-shell],
+html[data-admin-shell-active="true"] {
   -webkit-font-smoothing: auto;
   -moz-osx-font-smoothing: auto;
   text-rendering: optimizeLegibility;
@@ -1157,7 +1158,8 @@ html.dark .km-theme-config-tabs-viewport::after {
   --red-a3: rgba(229, 72, 77, 0.12);
 }
 
-html.dark [data-admin-shell] {
+html.dark [data-admin-shell],
+html.dark[data-admin-shell-active="true"] {
   --gray-2: #212b36;
   --gray-8: #637381;
   --gray-9: #919eab;
@@ -1184,6 +1186,7 @@ html.dark [data-admin-shell] {
 }
 
 html.dark [data-admin-shell] .km-table td,
+html.dark[data-admin-shell-active="true"] .km-table td,
 html.dark [data-admin-shell] .km-theme-config-tabs-trigger[data-state="active"] {
   color: #ffffff;
 }
@@ -1238,11 +1241,13 @@ html.dark [data-admin-shell] .km-theme-config-tabs-trigger[data-state="active"] 
   font-size: 14.5px;
 }
 
-[data-admin-shell] .admin-table-header {
+[data-admin-shell] .admin-table-header,
+html[data-admin-shell-active="true"] .admin-table-header {
   background: #f4f6f8;
 }
 
-[data-admin-shell] .admin-table-header th {
+[data-admin-shell] .admin-table-header th,
+html[data-admin-shell-active="true"] .admin-table-header th {
   height: 52px;
   padding-left: 8px;
   padding-right: 8px;
@@ -1252,7 +1257,8 @@ html.dark [data-admin-shell] .km-theme-config-tabs-trigger[data-state="active"] 
   vertical-align: middle;
 }
 
-[data-admin-shell] .km-table td {
+[data-admin-shell] .km-table td,
+html[data-admin-shell-active="true"] .km-table td {
   height: 56px;
   color: #1c252e;
   font-size: 14.5px;
