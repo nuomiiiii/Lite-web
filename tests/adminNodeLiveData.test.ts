@@ -28,6 +28,8 @@ const logSource = readFileSync("src/pages/admin/log.tsx", "utf8");
 const execSource = readFileSync("src/pages/admin/exec.tsx", "utf8");
 const marketSource = readFileSync("src/pages/admin/market/themes.tsx", "utf8");
 const settingCardSource = readFileSync("src/components/admin/SettingCard.tsx", "utf8");
+const mobileCardSource = readFileSync("src/components/admin/AdminMobileListCard.tsx", "utf8");
+const remoteExecSource = readFileSync("src/components/remote/RemoteExecNodeSelector.tsx", "utf8");
 
 test("unknown live status is not treated as offline", () => {
   const onlineSet = new Set(["node-a"]);
@@ -196,6 +198,10 @@ test("server details open an overview billing metrics page", () => {
   assert.match(usageSource, /data-testid="admin-node-network-range"/);
   assert.doesNotMatch(usageSource, /points\[0\]\.time/);
   assert.match(usageSource, /\/api\/records\/load/);
+  assert.match(usageSource, /\/api\/admin\/client\/\$\{encodeURIComponent\(node\.uuid\)\}\/traffic-daily/);
+  assert.match(usageSource, /nodeTrafficType\(node\)/);
+  assert.match(usageSource, /trafficUsed\(trafficType/);
+  assert.doesNotMatch(usageSource, /Math\.max\(inbound/);
   assert.doesNotMatch(usageSource, /mockLoadRecords/);
   assert.doesNotMatch(usageSource, /isHkPreviewNode/);
   assert.match(usageSource, /live\?\.network\.down/);
@@ -243,22 +249,40 @@ test("admin tables share one header color and mobile actions stay compact", () =
   assert.match(globalCssSource, /\.admin-card-actions[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(2\.25rem, 2\.75rem\)\)/);
   assert.match(globalCssSource, /\.admin-responsive-table tbody td:last-child > \.admin-card-actions[\s\S]*justify-content: start/);
   assert.match(globalCssSource, /\.admin-card-actions\.admin-single-text-action[\s\S]*display: flex/);
-  assert.match(globalCssSource, /\.admin-card-actions\.admin-single-text-action \{[\s\S]*justify-content: center/);
+  assert.match(globalCssSource, /\.admin-card-actions\.admin-single-icon-action[\s\S]*justify-content: center/);
   assert.match(globalCssSource, /\.admin-single-action-label \{[\s\S]*display: none/);
+  assert.match(globalCssSource, /\.admin-card-actions svg[\s\S]*display: block !important/);
+  const mobileCardStackCss = globalCssSource.match(/\.admin-mobile-card-stack \{[^}]+\}/)?.[0] ?? "";
+  assert.match(mobileCardStackCss, /gap: 10px;/);
+  assert.match(mobileCardStackCss, /padding: 10px;/);
+  assert.match(mobileCardStackCss, /background: #fff;/);
+  assert.doesNotMatch(mobileCardStackCss, /#f4f6f8/);
   assert.match(globalCssSource, /@media \(max-width: 1023px\)[\s\S]*\.admin-single-action-button \{[\s\S]*width: 2\.25rem !important/);
   assert.match(globalCssSource, /\.admin-card-actions\.admin-dual-actions \{[\s\S]*margin-left: -0\.625rem/);
 });
 
 test("wide admin tables turn into labelled row cards on mobile", () => {
   assert.match(pageSource, /admin-responsive-table admin-node-table/);
+  assert.match(pageSource, /SortableMobileCard/);
+  assert.match(pageSource, /AdminMobileListCard/);
+  assert.match(mobileCardSource, /gridTemplateColumns: "1fr 1fr"/);
+  assert.doesNotMatch(pageSource, /join\(" \/ "\)/);
+  assert.match(pageSource, /<Flex gap="1" wrap="wrap">\s*<CustomTags tags=\{node\.tags \|\| ""\} \/>/);
   assert.match(pingTaskSource, /admin-responsive-table/);
   assert.match(pingServerSource, /admin-responsive-table/);
   assert.match(offlineSource, /admin-responsive-table admin-selection-table/);
   assert.match(offlineSource, /common\.deselect_all[\s\S]*common\.select_all/);
   assert.doesNotMatch(offlineSource, /variant="soft"\s+color="gray"\s+className="md:hidden"/);
   assert.doesNotMatch(trafficReportSource, /variant="soft"\s+color="gray"\s+className="md:hidden"/);
-  assert.match(offlineSource, /admin-single-text-action/);
+  assert.match(offlineSource, /<IconButton[\s\S]*<Pencil size=\{16\} \/>/);
+  assert.equal((offlineSource.match(/import \{ Pencil/g) || []).length, 1);
+  assert.doesNotMatch(offlineSource, /admin-single-action-label/);
+  assert.match(trafficReportSource, /<IconButton[\s\S]*<Pencil size=\{16\} \/>/);
+  assert.doesNotMatch(trafficReportSource, /admin-single-action-label/);
+  assert.match(mobileCardSource, /return <div className="admin-mobile-card-stack">/);
   assert.match(loadSource, /admin-responsive-table admin-primary-first-table/);
+  assert.match(offlineSource, /admin-card-actions admin-single-icon-action/);
+  assert.match(trafficReportSource, /admin-card-actions admin-single-icon-action/);
   assert.match(pingLossSource, /admin-responsive-table admin-selection-table/);
   assert.match(pingLossSource, /TableHead className="text-center">\{t\("common\.action"\)\}/);
   assert.match(pingLossSource, /admin-card-actions admin-ping-loss-actions/);
@@ -269,6 +293,23 @@ test("wide admin tables turn into labelled row cards on mobile", () => {
   assert.match(globalCssSource, /\.admin-responsive-table tbody tr \{[\s\S]*border-radius: calc\(var\(--radius\) - 2px\)/);
   assert.doesNotMatch(globalCssSource, /\.admin-selection-table tbody tr:first-child[\s\S]*border-top-left-radius: 0/);
   assert.match(globalCssSource, /content: attr\(data-label\)/);
+});
+
+test("mobile lists reuse the server-list card instead of CSS table cards", () => {
+  for (const source of [
+    pingTaskSource,
+    pingServerSource,
+    offlineSource,
+    trafficReportSource,
+    loadSource,
+    pingLossSource,
+    returnRouteSource,
+    remoteExecSource,
+  ]) {
+    assert.match(source, /AdminMobileListCard/);
+    assert.match(source, /AdminMobileCardStack/);
+    assert.match(source, /useIsMobile/);
+  }
 });
 
 test("desktop node table keeps readable name and network columns while resizing", () => {
@@ -361,7 +402,7 @@ test("batch selection uses one responsive toolbar instead of header checkboxes",
 test("mobile card action rows share the compact node-list layout", () => {
   assert.match(
     globalCssSource,
-    /\.admin-responsive-table tbody td:last-child \{[\s\S]*grid-template-columns: minmax\(0, 1fr\)[\s\S]*padding-top: 0\.125rem !important/,
+    /\.admin-responsive-table tbody td:last-child \{[\s\S]*grid-column: 1 \/ -1/,
   );
   assert.match(
     globalCssSource,

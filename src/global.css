@@ -236,10 +236,8 @@ body, * {
   height: 1.125rem;
 }
 
-.admin-card-actions.admin-single-text-action {
-  justify-content: center !important;
-}
-
+.admin-card-actions.admin-single-text-action,
+.admin-card-actions.admin-single-icon-action,
 .admin-card-actions.admin-ping-loss-actions {
   justify-content: center !important;
 }
@@ -695,29 +693,32 @@ body, * {
 
   .admin-responsive-table tbody {
     display: grid;
-    gap: 0.625rem;
+    gap: 0.75rem;
   }
 
   .admin-responsive-table tbody tr {
     position: relative;
     display: grid;
+    grid-template-columns: 1fr 1fr;
     width: 100%;
     overflow: hidden;
-    padding: 0.5rem 0.625rem;
+    padding: 0;
     border: 1px solid var(--gray-a5) !important;
     border-radius: calc(var(--radius) - 2px);
     background: var(--color-panel-solid);
   }
 
   .admin-responsive-table tbody td {
-    display: grid !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
     min-width: 0;
-    grid-template-columns: 6.5rem minmax(0, 1fr);
-    align-items: start;
-    gap: 0.5rem;
-    overflow: visible;
-    padding: 0.2rem 0 !important;
+    max-width: none !important;
+    gap: 0.25rem;
+    overflow: hidden;
+    padding: 0.7rem 0.85rem !important;
     border: 0 !important;
+    border-top: 1px solid var(--gray-a5) !important;
     white-space: normal !important;
   }
 
@@ -725,9 +726,9 @@ body, * {
     content: attr(data-label);
     min-width: 0;
     color: var(--gray-10);
-    font-size: 0.75rem;
+    font-size: 11.5px;
     font-weight: 500;
-    line-height: 1.25rem;
+    line-height: 1.25;
   }
 
   .admin-responsive-table tbody td > * {
@@ -735,12 +736,11 @@ body, * {
   }
 
   .admin-responsive-table tbody td:last-child {
-    align-items: center;
-    grid-template-columns: minmax(0, 1fr);
+    grid-column: 1 / -1;
+    align-items: flex-start;
     gap: 0.125rem;
     margin-top: 0;
-    padding-top: 0.125rem !important;
-    border-top: 1px solid var(--gray-a4) !important;
+    border-right: 0 !important;
     text-align: left !important;
   }
 
@@ -748,17 +748,21 @@ body, * {
     text-align: left;
   }
 
+  .admin-responsive-table tbody td:last-child:has(.admin-card-actions)::before {
+    display: none;
+  }
+
   .admin-responsive-table tbody td:last-child > div {
     justify-content: flex-start !important;
   }
 
   .admin-node-table tbody td:nth-child(2) {
+    grid-column: 1 / -1;
     order: -1;
-    grid-template-columns: minmax(0, 1fr);
     min-height: 2.25rem;
     padding-right: 3rem !important;
-    padding-bottom: 0.5rem !important;
-    border-bottom: 1px solid var(--gray-a4) !important;
+    border-top: 0 !important;
+    background: #f4f6f8;
   }
 
   .admin-node-table tbody td:nth-child(2)::before {
@@ -789,12 +793,12 @@ body, * {
   }
 
   .admin-sortable-table tbody td:nth-child(2) {
+    grid-column: 1 / -1;
     order: -1;
-    grid-template-columns: minmax(0, 1fr);
     min-height: 2.25rem;
     padding-right: 3rem !important;
-    padding-bottom: 0.5rem !important;
-    border-bottom: 1px solid var(--gray-a4) !important;
+    border-top: 0 !important;
+    background: #f4f6f8;
     font-weight: 600;
   }
 
@@ -832,11 +836,11 @@ body, * {
 
   .admin-selection-table tbody td:nth-child(2),
   .admin-primary-first-table tbody td:first-child {
+    grid-column: 1 / -1;
     order: -1;
-    grid-template-columns: minmax(0, 1fr);
     min-height: 2.25rem;
-    padding-bottom: 0.5rem !important;
-    border-bottom: 1px solid var(--gray-a4) !important;
+    border-top: 0 !important;
+    background: #f4f6f8;
     font-weight: 600;
   }
 
@@ -847,6 +851,13 @@ body, * {
   .admin-selection-table tbody td:nth-child(2)::before,
   .admin-primary-first-table tbody td:first-child::before {
     display: none;
+  }
+
+  html.dark .admin-node-table tbody td:nth-child(2),
+  html.dark .admin-sortable-table tbody td:nth-child(2),
+  html.dark .admin-selection-table tbody td:nth-child(2),
+  html.dark .admin-primary-first-table tbody td:first-child {
+    background: rgba(255, 255, 255, 0.04);
   }
 
   .admin-card-actions {
@@ -880,7 +891,8 @@ body, * {
     justify-content: start !important;
   }
 
-  .admin-card-actions.admin-single-text-action {
+  .admin-card-actions.admin-single-text-action,
+  .admin-card-actions.admin-single-icon-action {
     display: flex !important;
     justify-content: flex-start !important;
   }
@@ -1208,6 +1220,23 @@ html.dark [data-admin-shell] .km-theme-config-tabs-trigger[data-state="active"] 
   box-shadow: none;
 }
 
+.admin-mobile-card-stack {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  gap: 10px;
+  padding: 10px;
+  background: #fff;
+}
+
+.admin-mobile-card-stack > * {
+  margin: 0;
+}
+
+html.dark .admin-mobile-card-stack {
+  background: #212b36;
+}
+
 [data-admin-shell] .km-admin-node-list-filters {
   padding: 16px 16px 20px;
   background: #f4f6f8;
@@ -1266,10 +1295,51 @@ html[data-admin-shell-active="true"] .km-table td {
   vertical-align: middle;
 }
 
+table.return-route-task-table thead th,
+table.return-route-task-table tbody td {
+  text-align: left !important;
+}
+
+table.return-route-task-table .return-route-cell-pair,
+table.return-route-task-table .return-route-cell-content {
+  display: block;
+  width: 100%;
+  text-align: left !important;
+}
+
+table.return-route-task-table .MuiChip-root {
+  display: inline-flex !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+table.return-route-task-table td[data-label="操作"] > .admin-card-actions,
+table.return-route-task-table .return-route-actions {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  width: auto !important;
+  margin: 0 !important;
+  gap: 0.25rem;
+}
+
 .MuiButton-root[data-text-action="true"] svg,
 .MuiButton-root .MuiButton-startIcon,
 .MuiButton-root .MuiButton-endIcon {
   display: none;
+}
+
+.admin-card-actions svg,
+.admin-card-actions .MuiSvgIcon-root,
+.admin-card-actions .MuiButton-root svg,
+.admin-card-actions .MuiButton-root[data-text-action="true"] svg,
+.admin-card-actions .MuiIconButton-root svg {
+  display: block !important;
+  width: 1.125rem !important;
+  height: 1.125rem !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .MuiButton-root.km-admin-back-button .MuiButton-startIcon {

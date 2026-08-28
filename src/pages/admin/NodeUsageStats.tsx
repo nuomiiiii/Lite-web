@@ -26,6 +26,7 @@ import { Cpu, HardDrive, MemoryStick } from "@/components/admin/muiIcons";
 import { ChartContainer } from "@/components/ui/chart";
 import type { NodeDetail } from "@/contexts/NodeDetailsContext";
 import type { Record as LiveRecord } from "@/types/LiveData";
+import { nodeTrafficType, trafficUsed } from "@/utils/trafficAccounting";
 import { formatTrafficResetRangeLabel } from "@/utils/trafficCycle";
 import { formatBytes } from "@/utils/unitHelper";
 import { LITE_BLUE } from "@/theme/brand";
@@ -57,6 +58,62 @@ function formatTimeLabel(value: string, hours: HoursRange) {
   }
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
+
+function shortDayLabel(day: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!match) return day;
+  return `${Number(match[2])}/${Number(match[3])}`;
+}
+
+function beijingDayKey(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function dailyFromNetworkRecords(rows: LoadRecord[]): DailyTrafficPoint[] {
+  const lastByDay = new Map<string, { up: number; down: number }>();
+  for (const row of rows) {
+    const day = beijingDayKey(row.time);
+    if (!day) continue;
+    lastByDay.set(day, {
+      up: Number(row.net_total_up) || 0,
+      down: Number(row.net_total_down) || 0,
+    });
+  }
+  const days = [...lastByDay.entries()].sort(([left], [right]) => left.localeCompare(right));
+  return days.map(([day, point], index) => {
+    const previous = days[index - 1]?.[1];
+    return {
+      day,
+      label: shortDayLabel(day),
+      up: previous ? Math.max(0, point.up - previous.up) : 0,
+      down: previous ? Math.max(0, point.down - previous.down) : 0,
+      billable: 0,
+    };
+  });
+}
+
+function trafficAxisWidth(values: number[]) {
+  const longest = values.reduce((width, value) => {
+    const label = formatBytes(Number(value) || 0).replace(" ", "");
+    return Math.max(width, label.length);
+  }, 4);
+  return Math.min(72, Math.max(40, longest * 7));
+}
+
+type DailyTrafficPoint = {
+  day: string;
+  label: string;
+  up: number;
+  down: number;
+  billable: number;
+};
 
 function UsageCard({
   icon,
@@ -234,6 +291,8 @@ export default function NodeUsageStats({
   const { t } = useTranslation();
   const [hours, setHours] = useState<HoursRange>(1);
   const [records, setRecords] = useState<LoadRecord[]>([]);
+  const [daily, setDaily] = useState<DailyTrafficPoint[]>([]);
+  const [dailyReady, setDailyReady] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -253,7 +312,56 @@ export default function NodeUsageStats({
         }
       });
     return () => controller.abort();
-  }, [hours, node]);
+  }, [hours, node.uuid]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const loadLedger = async () => {
+      const response = await fetch(
+        `/api/admin/client/${encodeURIComponent(node.uuid)}/traffic-daily`,
+        { cache: "no-store", signal: controller.signal },
+      );
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.message || `HTTP ${response.status}`);
+      const data = payload?.data ?? payload;
+      const rows = Array.isArray(data?.daily) ? data.daily : [];
+      if (rows.length === 0) throw new Error("empty daily ledger");
+      setDailyReady(data?.history_ready !== false);
+      setDaily(
+        rows.map((row: { day?: string; up?: number; down?: number; billable?: number }) => {
+          const day = String(row.day || "");
+          return {
+            day,
+            label: shortDayLabel(day),
+            up: Number(row.up) || 0,
+            down: Number(row.down) || 0,
+            billable: Number(row.billable) || 0,
+          };
+        }),
+      );
+    };
+    const loadRecordsFallback = async () => {
+      const response = await fetch(
+        `/api/records/load?uuid=${encodeURIComponent(node.uuid)}&hours=720&load_type=network`,
+        { cache: "no-store", signal: controller.signal },
+      );
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.message || `HTTP ${response.status}`);
+      const rows = payload?.data?.records ?? payload?.records ?? [];
+      setDailyReady(true);
+      setDaily(Array.isArray(rows) ? dailyFromNetworkRecords(rows) : []);
+    };
+    void loadLedger().catch(() => {
+      if (controller.signal.aborted) return;
+      void loadRecordsFallback().catch(() => {
+        if (!controller.signal.aborted) {
+          setDaily([]);
+          setDailyReady(true);
+        }
+      });
+    });
+    return () => controller.abort();
+  }, [node.uuid]);
 
   const latestRecord = records.at(-1);
   const memTotal =
@@ -279,8 +387,11 @@ export default function NodeUsageStats({
   const outbound = live?.network.totalUp ?? latestRecord?.net_total_up;
   const inboundSpeed = live?.network.down ?? latestRecord?.net_in;
   const outboundSpeed = live?.network.up ?? latestRecord?.net_out;
+  const trafficType = nodeTrafficType(node);
   const usedTraffic =
-    inbound == null && outbound == null ? null : Math.max(inbound ?? 0, outbound ?? 0);
+    inbound == null && outbound == null
+      ? null
+      : trafficUsed(trafficType, outbound ?? 0, inbound ?? 0);
   const trafficLimit = Number(node.effective_traffic_limit) || 0;
   const trafficPct = pct(usedTraffic, trafficLimit);
   const hasTrafficSplit = (inbound ?? 0) + (outbound ?? 0) > 0;
@@ -308,23 +419,10 @@ export default function NodeUsageStats({
     [diskTotal, hours, memTotal, records],
   );
 
-  const daily = useMemo(() => {
-    if (points.length < 2) return [];
-    const buckets = new Map<string, (typeof points)[number]>();
-    for (const point of points) {
-      const key = new Date(point.time).toISOString().slice(0, 10);
-      buckets.set(key, point);
-    }
-    const days = [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b));
-    return days.map(([day, point], index) => {
-      const previous = days[index - 1]?.[1];
-      return {
-        label: `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`,
-        down: previous ? Math.max(0, point.totalDown - previous.totalDown) : 0,
-        up: previous ? Math.max(0, point.totalUp - previous.totalUp) : 0,
-      };
-    });
-  }, [points]);
+  const dailyAxisWidth = useMemo(
+    () => trafficAxisWidth(daily.flatMap((point) => [point.up, point.down])),
+    [daily],
+  );
 
   const usageRangeLabel =
     formatTrafficResetRangeLabel(node.traffic_reset_day) ?? EMPTY_DISPLAY;
@@ -504,7 +602,11 @@ export default function NodeUsageStats({
               <LegendItem color="#FF5630" label={t("admin.nodeDetail.speedOut", "出站速度")} value={formatSpeed(outboundSpeed)} />
               <LegendItem
                 color="#637381"
-                label={t("admin.nodeDetail.total", "总计")}
+                label={`${t("admin.nodeDetail.total", "总计")}${
+                  trafficType
+                    ? ` · ${t(`admin.nodeEdit.trafficLimitType_${trafficType}`)}`
+                    : ""
+                }`}
                 value={displayOrEmpty(usedTraffic, formatBytes)}
               />
               <LegendItem
@@ -725,7 +827,19 @@ export default function NodeUsageStats({
         </HistoryCard>
       </Box>
 
-      <HistoryCard title={t("admin.nodeDetail.dailyTraffic", "每日网络流量")}>
+      <HistoryCard
+        title={t("admin.nodeDetail.dailyTraffic", "每日网络流量")}
+        extra={
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>
+            {t("admin_dashboard.recent_month", "最近 30 天")}
+          </Typography>
+        }
+      >
+        {!dailyReady ? (
+          <Typography variant="caption" sx={{ mb: 1, display: "block", color: "text.secondary" }}>
+            {t("admin_dashboard.history_preparing", "历史流量正在准备中")}
+          </Typography>
+        ) : null}
         {daily.length ? (
         <ChartContainer
           config={{ down: { label: "In", color: "#FF5630" }, up: { label: "Out", color: LITE_BLUE } }}
@@ -733,8 +847,8 @@ export default function NodeUsageStats({
         >
           <BarChart data={daily} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
-            <XAxis dataKey="label" tickLine={false} axisLine={false} />
-            <YAxis hide />
+            <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} />
+            <YAxis tickLine={false} axisLine={false} width={dailyAxisWidth} tickFormatter={(value) => formatBytes(Number(value)).replace(" ", "")} />
             <Tooltip
               content={({ active, payload, label }) =>
                 active && payload?.length ? (
@@ -748,6 +862,10 @@ export default function NodeUsageStats({
                         {formatBytes(Number(item.value) || 0)}
                       </div>
                     ))}
+                    <div className="mt-1 font-medium">
+                      {t("admin_dashboard.billable", "计费")}{" "}
+                      {formatBytes(Number(payload[0]?.payload?.billable) || 0)}
+                    </div>
                   </div>
                 ) : null
               }

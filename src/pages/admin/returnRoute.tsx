@@ -12,10 +12,12 @@ import {
   ADMIN_LIST_OUTLINE_SX,
 } from "@/components/admin/adminListLayout";
 import AdminMultiSelect from "@/components/admin/AdminMultiSelect";
+import { AdminMobileCardStack, AdminMobileListCard } from "@/components/admin/AdminMobileListCard";
 import {
   AdminPagination,
 } from "@/components/admin/AdminPagination";
 import { useAdminDefaultPageSize } from "@/hooks/useAdminDefaultPageSize";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   AppDialogContent,
   Badge,
@@ -345,14 +347,14 @@ async function request(path: string, body?: unknown) {
 function stateBadge(status?: Status) {
   if (!status) return <Badge color="gray">等待首次探测</Badge>;
   const states = {
-    pending: { color: "gray" as const, text: "等待首次探测", icon: null },
-    observing: { color: "amber" as const, text: "确认中", icon: <RefreshCw size={12} /> },
-    healthy: { color: "green" as const, text: "线路正常", icon: <CheckCircle2 size={12} /> },
-    switched: { color: "red" as const, text: "已切线", icon: <AlertTriangle size={12} /> },
-    unknown: { color: "gray" as const, text: "暂时无法识别", icon: <AlertTriangle size={12} /> },
+    pending: { color: "gray" as const, text: "等待首次探测" },
+    observing: { color: "amber" as const, text: "确认中" },
+    healthy: { color: "green" as const, text: "线路正常" },
+    switched: { color: "red" as const, text: "已切线" },
+    unknown: { color: "gray" as const, text: "暂时无法识别" },
   };
   const item = states[status.state] || states.unknown;
-  return <Badge color={item.color}>{item.icon}{item.text}</Badge>;
+  return <Badge color={item.color}>{item.text}</Badge>;
 }
 
 function formatTime(value?: string) {
@@ -705,6 +707,7 @@ function FormSection({ title, children }: { title: string; children: React.React
 
 function ReturnRouteContent() {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const { account } = useAccount();
   const accountKey = account?.uuid || account?.username || "authenticated";
   const [searchParams] = useSearchParams();
@@ -1161,40 +1164,68 @@ function ReturnRouteContent() {
                 </div>
               ) : (
                 <>
+                  {isMobile ? (
+                    <AdminMobileCardStack>
+                      {taskData.tasks.map((task) => {
+                        const status = statuses.get(task.id || 0);
+                        const probing = probingTasks.has(task.id || 0);
+                        const selected = Boolean(task.id && selectedTaskIDs.has(task.id));
+                        return (
+                          <ReturnRouteTaskRow
+                            key={task.id}
+                            task={task}
+                            status={status}
+                            probing={probing}
+                            selected={selected}
+                            asCard
+                            nodes={nodes}
+                            onToggle={() => task.id && toggleTaskSelection(task.id)}
+                            onRunNow={() => runNow(task.id)}
+                            onRemove={() => remove(task)}
+                            onSaved={refreshTasksAfterChange}
+                          />
+                        );
+                      })}
+                    </AdminMobileCardStack>
+                  ) : (
                   <div className="admin-responsive-table-wrap overflow-x-auto">
-                    <Table container={false} className="admin-responsive-table w-full min-w-[1120px] text-left text-sm">
+                    <Table container={false} className="admin-responsive-table admin-selection-table return-route-task-table w-full min-w-[1120px] text-left text-sm">
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-11"><span className="sr-only">选择</span></TableHead>
-                          <TableHead>任务 / 节点</TableHead>
-                          <TableHead>运营商 / 地区</TableHead>
-                          <TableHead>线路</TableHead>
-                          <TableHead>状态</TableHead>
-                          <TableHead>关键 ASN</TableHead>
-                          <TableHead>最后探测</TableHead>
-                          <TableHead>操作</TableHead>
+                          <TableHead className="text-left">任务 / 节点</TableHead>
+                          <TableHead className="text-left">运营商 / 地区</TableHead>
+                          <TableHead className="text-left">线路</TableHead>
+                          <TableHead className="text-left">状态</TableHead>
+                          <TableHead className="text-left">关键 ASN</TableHead>
+                          <TableHead className="text-left">最后探测</TableHead>
+                          <TableHead className="text-left">操作</TableHead>
                         </TableRow>
                       </TableHeader>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                         {taskData.tasks.map((task) => {
                           const status = statuses.get(task.id || 0);
-                          const needed = status?.candidate_line === task.expected_line ? task.recovery_confirm : task.switch_confirm;
                           const probing = probingTasks.has(task.id || 0);
                           const selected = Boolean(task.id && selectedTaskIDs.has(task.id));
-                          return <tr key={task.id} className={`align-top hover:bg-gray-50/60 dark:hover:bg-gray-900/50 ${selected ? "bg-[var(--accent-a2)]" : ""}`}>
-                            <td data-label="选择" className="p-3 align-middle"><Checkbox aria-label={`选择任务 ${task.name}`} checked={selected} onCheckedChange={() => task.id && toggleTaskSelection(task.id)} /></td>
-                            <td data-label="任务 / 节点" className="p-3"><div className="return-route-cell-pair"><div className="font-medium">{task.name}</div><div className="mt-1 text-xs text-gray-500">{task.client_info?.name || task.client}</div></div></td>
-                            <td data-label="运营商 / 地区" className="p-3"><div className="return-route-cell-pair"><div>{carrierNames[task.carrier]}</div><div className="mt-1 text-xs text-gray-500">{task.region || "未标记"} · IPv{task.ip_version}</div></div></td>
-                            <td data-label="线路" className="p-3"><div className="return-route-cell-pair"><div><span className="text-gray-500">当前 </span><strong>{status?.current_line || "-"}</strong></div><div className="mt-1 text-xs text-gray-500">预期 {task.expected_line}</div></div></td>
-                            <td data-label="状态" className="p-3"><div className="return-route-cell-content">{!task.enabled ? <Badge color="gray">已暂停</Badge> : probing ? <Badge color="blue"><RefreshCw size={12} className="mr-1 animate-spin" />探测中</Badge> : stateBadge(status)}{status?.candidate_line && <div className="mt-1 text-xs text-amber-600">{status.candidate_line}{pendingLineOptions.has(status.candidate_line) ? null : <> {status.candidate_count}/{needed}</>}</div>}{(status?.confidence ?? 0) > 0 && <div className="mt-1 text-xs text-gray-500">置信度 {((status?.confidence ?? 0) * 100).toFixed(0)}%</div>}</div></td>
-                            <td data-label="关键 ASN" className="max-w-[320px] p-3"><div className="return-route-cell-content"><div className="flex flex-wrap gap-1">{status?.asn_path?.length ? status.asn_path.map((asn) => <Badge key={asn} color="gray" variant="soft">{asn}</Badge>) : <span className="text-gray-400">-</span>}</div>{status?.route_path?.length ? <details className="mt-2 text-xs text-gray-500"><summary className="cursor-pointer">查看完整路径</summary><div className="mt-2 max-h-48 overflow-auto whitespace-pre font-mono leading-5">{status.route_path.join("\n")}</div></details> : null}{status?.last_error && <div className="mt-2 max-w-xs text-xs text-red-600">{status.last_error}</div>}</div></td>
-                            <td data-label="最后探测" className="p-3 text-gray-600"><div className="return-route-cell-pair"><span>{formatTime(status?.last_checked_at)}</span><div className="mt-1 text-xs text-gray-400">每 {Math.round(task.interval / 60)} 分钟</div></div></td>
-                            <td data-label="操作" className="p-3"><Flex justify="start" gap="1" className="admin-card-actions"><IconButton variant="ghost" title={probing ? "探测中" : "立即探测"} disabled={probing || !task.enabled} onClick={() => runNow(task.id)}>{probing ? <RefreshCw size={16} className="animate-spin" /> : <Play size={16} />}</IconButton><RouteTaskDialog task={task} nodes={nodes} onSaved={refreshTasksAfterChange}><IconButton variant="ghost" title="编辑"><Pencil size={16} /></IconButton></RouteTaskDialog><IconButton variant="ghost" color="red" title="删除" onClick={() => remove(task)}><Trash2 size={16} /></IconButton></Flex></td>
-                          </tr>;
+                          return (
+                            <ReturnRouteTaskRow
+                              key={task.id}
+                              task={task}
+                              status={status}
+                              probing={probing}
+                              selected={selected}
+                              nodes={nodes}
+                              onToggle={() => task.id && toggleTaskSelection(task.id)}
+                              onRunNow={() => runNow(task.id)}
+                              onRemove={() => remove(task)}
+                              onSaved={refreshTasksAfterChange}
+                            />
+                          );
                         })}
                       </tbody>
                     </Table>
                   </div>
+                  )}
                   <AdminPagination
                     page={taskQuery.page}
                     pageSize={taskQuery.page_size}
@@ -1320,8 +1351,15 @@ function ReturnRouteContent() {
                 <div className="km-admin-list-empty">暂无符合条件的监测记录</div>
               ) : (
                 <>
+                  {isMobile ? (
+                    <AdminMobileCardStack>
+                      {recordData.events.map((event) => (
+                        <ReturnRouteRecordRow key={event.id} event={event} asCard />
+                      ))}
+                    </AdminMobileCardStack>
+                  ) : (
                   <div className="admin-responsive-table-wrap overflow-x-auto">
-                    <Table container={false} className="admin-responsive-table w-full min-w-[1120px] text-left text-sm">
+                    <Table container={false} className="admin-responsive-table admin-primary-first-table w-full min-w-[1120px] text-left text-sm">
                       <TableHeader>
                         <TableRow>
                           <TableHead>发生时间</TableHead>
@@ -1335,19 +1373,13 @@ function ReturnRouteContent() {
                         </TableRow>
                       </TableHeader>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                        {recordData.events.map((event) => <tr key={event.id} className="align-top hover:bg-gray-50/60 dark:hover:bg-gray-900/50">
-                          <td data-label="发生时间" className="p-3 whitespace-nowrap">{formatTime(event.occurred_at)}</td>
-                          <td data-label="类型" className="p-3"><Badge color={event.kind === "recovery" ? "green" : "red"}>{event.kind === "recovery" ? "恢复" : "切线"}</Badge></td>
-                          <td data-label="任务 / 节点" className="p-3"><div className="font-medium">{event.task_name || `#${event.task_id}`}</div><div className="mt-1 text-xs text-gray-500">{event.node_name || event.client}</div></td>
-                          <td data-label="目标" className="p-3"><div>{event.target || "-"}</div><div className="mt-1 text-xs text-gray-500">{event.carrier ? carrierNames[event.carrier] : "-"} · {event.region || "未标记"} · IPv{event.ip_version || 4}</div></td>
-                          <td data-label="预期线路" className="p-3 font-medium">{event.expected_line || "-"}</td>
-                          <td data-label="线路变化" className="p-3 whitespace-nowrap"><span>{event.from_line || "-"}</span><span className="px-2 text-gray-400">→</span><strong>{event.to_line}</strong></td>
-                          <td data-label="关键 ASN" className="max-w-[260px] p-3"><div className="flex flex-wrap gap-1">{event.asn_path?.length ? event.asn_path.map((asn) => <Badge key={asn} color="gray" variant="soft">{asn}</Badge>) : <span className="text-gray-400">-</span>}</div></td>
-                          <td data-label="路径" className="p-3">{event.route_path?.length ? <details className="text-xs text-gray-500"><summary className="cursor-pointer">查看完整路径</summary><div className="mt-2 max-h-48 overflow-auto whitespace-pre font-mono leading-5">{event.route_path.join("\n")}</div></details> : <span className="text-gray-400">-</span>}</td>
-                        </tr>)}
+                        {recordData.events.map((event) => (
+                          <ReturnRouteRecordRow key={event.id} event={event} />
+                        ))}
                       </tbody>
                     </Table>
                   </div>
+                  )}
                   <AdminPagination
                     page={recordQuery.page}
                     pageSize={recordQuery.page_size}
@@ -1412,8 +1444,21 @@ function ReturnRouteContent() {
                 </div>
                 {ruleView.status.last_error ? <Callout.Root color="red"><Callout.Icon><AlertTriangle size={16} /></Callout.Icon><Callout.Text>本地规则：{ruleView.status.last_error}</Callout.Text></Callout.Root> : null}
                 {ruleView.status.bgp_last_error ? <Callout.Root color="amber"><Callout.Icon><AlertTriangle size={16} /></Callout.Icon><Callout.Text>BGP 更新：{ruleView.status.bgp_last_error}</Callout.Text></Callout.Root> : null}
+                {isMobile ? (
+                  <AdminMobileCardStack>
+                    {ruleGroupOrder.map((group) => (
+                      <ReturnRouteRuleRow
+                        key={group}
+                        group={group}
+                        asns={ruleView.rules.asn_groups[group]}
+                        prefixes={ruleView.rules.prefix_groups[group]}
+                        asCard
+                      />
+                    ))}
+                  </AdminMobileCardStack>
+                ) : (
                 <div className="admin-responsive-table-wrap overflow-x-auto">
-                  <Table container={false} className="admin-responsive-table w-full min-w-[760px] text-left text-sm">
+                  <Table container={false} className="admin-responsive-table admin-primary-first-table w-full min-w-[760px] text-left text-sm">
                     <TableHeader>
                       <TableRow>
                         <TableHead>线路</TableHead>
@@ -1422,14 +1467,18 @@ function ReturnRouteContent() {
                       </TableRow>
                     </TableHeader>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                      {ruleGroupOrder.map((group) => <tr key={group} className="align-top">
-                        <td data-label="线路" className="p-3 font-medium">{ruleGroupNames[group] || group}</td>
-                        <td data-label="ASN" className="p-3"><div className="flex flex-wrap gap-1">{ruleView.rules.asn_groups[group]?.length ? ruleView.rules.asn_groups[group].map((asn) => <Badge key={asn} color="gray" variant="soft">AS{asn}</Badge>) : <span className="text-gray-400">-</span>}</div></td>
-                        <td data-label="人工网段特征" className="p-3"><div className="flex flex-wrap gap-1">{ruleView.rules.prefix_groups[group]?.length ? ruleView.rules.prefix_groups[group].map((prefix) => <Badge key={prefix} color="blue" variant="soft">{prefix}</Badge>) : <span className="text-gray-400">-</span>}</div></td>
-                      </tr>)}
+                      {ruleGroupOrder.map((group) => (
+                        <ReturnRouteRuleRow
+                          key={group}
+                          group={group}
+                          asns={ruleView.rules.asn_groups[group]}
+                          prefixes={ruleView.rules.prefix_groups[group]}
+                        />
+                      ))}
                     </tbody>
                   </Table>
                 </div>
+                )}
               </AdminListShell>
             ) : <Callout.Root color="gray"><Callout.Text>规则库暂不可用</Callout.Text></Callout.Root>}
           </Tabs.Content>
@@ -1451,6 +1500,266 @@ function Summary({ label, value, icon, tone = "gray" }: { label: string; value: 
 
 function RuleStat({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return <div className="min-w-0"><div className="text-xs text-gray-500">{label}</div><div className={`mt-1 break-words text-sm ${mono ? "font-mono" : "font-medium"}`}>{value}</div></div>;
+}
+
+function ReturnRouteTaskRow({
+  task,
+  status,
+  probing,
+  selected,
+  asCard = false,
+  nodes,
+  onToggle,
+  onRunNow,
+  onRemove,
+  onSaved,
+}: {
+  task: Task;
+  status?: Status;
+  probing: boolean;
+  selected: boolean;
+  asCard?: boolean;
+  nodes: Array<{ uuid: string; name: string }>;
+  onToggle: () => void;
+  onRunNow: () => void;
+  onRemove: () => void;
+  onSaved: () => void;
+}) {
+  const needed = status?.candidate_line === task.expected_line ? task.recovery_confirm : task.switch_confirm;
+  const checkbox = (
+    <Checkbox
+      aria-label={`选择任务 ${task.name}`}
+      checked={selected}
+      onCheckedChange={onToggle}
+    />
+  );
+  const carrierValue = (
+    <div className="return-route-cell-pair">
+      <div>{carrierNames[task.carrier]}</div>
+      <div className="mt-1 text-xs text-gray-500">{task.region || "未标记"} · IPv{task.ip_version}</div>
+    </div>
+  );
+  const lineValue = (
+    <div className="return-route-cell-pair">
+      <div><span className="text-gray-500">当前 </span><strong>{status?.current_line || "-"}</strong></div>
+      <div className="mt-1 text-xs text-gray-500">预期 {task.expected_line}</div>
+    </div>
+  );
+  const statusValue = (
+    <div className="return-route-cell-content">
+      {!task.enabled ? <Badge color="gray">已暂停</Badge> : probing ? <Badge color="blue">探测中</Badge> : stateBadge(status)}
+      {status?.candidate_line && (
+        <div className="mt-1 text-xs text-amber-600">
+          {status.candidate_line}
+          {pendingLineOptions.has(status.candidate_line) ? null : <> {status.candidate_count}/{needed}</>}
+        </div>
+      )}
+      {(status?.confidence ?? 0) > 0 && (
+        <div className="mt-1 text-xs text-gray-500">置信度 {((status?.confidence ?? 0) * 100).toFixed(0)}%</div>
+      )}
+    </div>
+  );
+  const asnValue = (
+    <div className="return-route-cell-content">
+      <div className="flex flex-wrap gap-1">
+        {status?.asn_path?.length ? status.asn_path.map((asn) => (
+          <Badge key={asn} color="gray" variant="soft">{asn}</Badge>
+        )) : <span className="text-gray-400">-</span>}
+      </div>
+      {status?.route_path?.length ? (
+        <details className="mt-2 text-xs text-gray-500">
+          <summary className="cursor-pointer">查看完整路径</summary>
+          <div className="mt-2 max-h-48 overflow-auto whitespace-pre font-mono leading-5">{status.route_path.join("\n")}</div>
+        </details>
+      ) : null}
+      {status?.last_error && <div className="mt-2 max-w-xs text-xs text-red-600">{status.last_error}</div>}
+    </div>
+  );
+  const lastProbeValue = (
+    <div className="return-route-cell-pair">
+      <span>{formatTime(status?.last_checked_at)}</span>
+      <div className="mt-1 text-xs text-gray-400">每 {Math.round(task.interval / 60)} 分钟</div>
+    </div>
+  );
+  const actionButtons = (
+    <div className="admin-card-actions return-route-actions">
+      <IconButton variant="ghost" title={probing ? "探测中" : "立即探测"} disabled={probing || !task.enabled} onClick={onRunNow}>
+        {probing ? <RefreshCw size={16} className="animate-spin" /> : <Play size={16} />}
+      </IconButton>
+      <RouteTaskDialog task={task} nodes={nodes} onSaved={onSaved}>
+        <IconButton variant="ghost" title="编辑"><Pencil size={16} /></IconButton>
+      </RouteTaskDialog>
+      <IconButton variant="ghost" color="red" title="删除" onClick={onRemove}><Trash2 size={16} /></IconButton>
+    </div>
+  );
+
+  if (asCard) {
+    return (
+      <AdminMobileListCard
+        title={
+          <div className="min-w-0">
+            <div className="truncate text-[15px] font-semibold leading-6">{task.name}</div>
+            <div className="truncate text-[13.5px] text-muted-foreground">{task.client_info?.name || task.client}</div>
+          </div>
+        }
+        headerExtra={checkbox}
+        cells={[
+          ["运营商 / 地区", carrierValue],
+          ["线路", lineValue],
+          ["状态", statusValue],
+          ["关键 ASN", asnValue],
+          ["最后探测", lastProbeValue],
+        ]}
+        actions={actionButtons}
+      />
+    );
+  }
+
+  return (
+    <tr className={`align-middle hover:bg-gray-50/60 dark:hover:bg-gray-900/50 ${selected ? "bg-[var(--accent-a2)]" : ""}`}>
+      <td data-label="选择" className="p-3 align-middle">{checkbox}</td>
+      <td data-label="任务 / 节点" className="p-3 align-middle"><div className="return-route-cell-pair"><div className="font-medium">{task.name}</div><div className="mt-1 text-xs text-gray-500">{task.client_info?.name || task.client}</div></div></td>
+      <td data-label="运营商 / 地区" className="p-3 align-middle"><div className="return-route-cell-pair"><div>{carrierNames[task.carrier]}</div><div className="mt-1 text-xs text-gray-500">{task.region || "未标记"} · IPv{task.ip_version}</div></div></td>
+      <td data-label="线路" className="p-3 text-left align-middle"><div className="return-route-cell-pair"><div><span className="text-gray-500">当前 </span><strong>{status?.current_line || "-"}</strong></div><div className="mt-1 text-xs text-gray-500">预期 {task.expected_line}</div></div></td>
+      <td data-label="状态" className="p-3 text-left align-middle"><div className="return-route-cell-content">{!task.enabled ? <Badge color="gray">已暂停</Badge> : probing ? <Badge color="blue">探测中</Badge> : stateBadge(status)}{status?.candidate_line && <div className="mt-1 text-xs text-amber-600">{status.candidate_line}{pendingLineOptions.has(status.candidate_line) ? null : <> {status.candidate_count}/{needed}</>}</div>}{(status?.confidence ?? 0) > 0 && <div className="mt-1 text-xs text-gray-500">置信度 {((status?.confidence ?? 0) * 100).toFixed(0)}%</div>}</div></td>
+      <td data-label="关键 ASN" className="max-w-[320px] p-3 text-left align-middle">{asnValue}</td>
+      <td data-label="最后探测" className="p-3 text-left align-middle text-gray-600"><div className="return-route-cell-pair"><span>{formatTime(status?.last_checked_at)}</span><div className="mt-1 text-xs text-gray-400">每 {Math.round(task.interval / 60)} 分钟</div></div></td>
+      <td data-label="操作" className="p-3 text-left align-middle">{actionButtons}</td>
+    </tr>
+  );
+}
+
+function ReturnRouteRecordRow({
+  event,
+  asCard = false,
+}: {
+  event: RouteEvent;
+  asCard?: boolean;
+}) {
+  const kindBadge = (
+    <Badge color={event.kind === "recovery" ? "green" : "red"}>
+      {event.kind === "recovery" ? "恢复" : "切线"}
+    </Badge>
+  );
+  const taskValue = (
+    <>
+      <div className="font-medium">{event.task_name || `#${event.task_id}`}</div>
+      <div className="mt-1 text-xs text-gray-500">{event.node_name || event.client}</div>
+    </>
+  );
+  const targetValue = (
+    <>
+      <div>{event.target || "-"}</div>
+      <div className="mt-1 text-xs text-gray-500">
+        {event.carrier ? carrierNames[event.carrier] : "-"} · {event.region || "未标记"} · IPv{event.ip_version || 4}
+      </div>
+    </>
+  );
+  const changeValue = (
+    <>
+      <span>{event.from_line || "-"}</span>
+      <span className="px-2 text-gray-400">→</span>
+      <strong>{event.to_line}</strong>
+    </>
+  );
+  const asnValue = (
+    <div className="flex flex-wrap gap-1">
+      {event.asn_path?.length ? event.asn_path.map((asn) => (
+        <Badge key={asn} color="gray" variant="soft">{asn}</Badge>
+      )) : <span className="text-gray-400">-</span>}
+    </div>
+  );
+  const pathValue = event.route_path?.length ? (
+    <details className="text-xs text-gray-500">
+      <summary className="cursor-pointer">查看完整路径</summary>
+      <div className="mt-2 max-h-48 overflow-auto whitespace-pre font-mono leading-5">{event.route_path.join("\n")}</div>
+    </details>
+  ) : (
+    <span className="text-gray-400">-</span>
+  );
+
+  if (asCard) {
+    return (
+      <AdminMobileListCard
+        title={
+          <div className="min-w-0">
+            <div className="truncate text-[15px] font-semibold leading-6">{formatTime(event.occurred_at)}</div>
+            <div className="truncate text-[13.5px] text-muted-foreground">{event.task_name || `#${event.task_id}`}</div>
+          </div>
+        }
+        cells={[
+          ["类型", kindBadge],
+          ["任务 / 节点", taskValue],
+          ["目标", targetValue],
+          ["预期线路", event.expected_line || "-"],
+          ["线路变化", changeValue],
+          ["关键 ASN", asnValue],
+          ["路径", pathValue],
+        ]}
+      />
+    );
+  }
+
+  return (
+    <tr className="align-middle hover:bg-gray-50/60 dark:hover:bg-gray-900/50">
+      <td data-label="发生时间" className="p-3 whitespace-nowrap">{formatTime(event.occurred_at)}</td>
+      <td data-label="类型" className="p-3">{kindBadge}</td>
+      <td data-label="任务 / 节点" className="p-3">{taskValue}</td>
+      <td data-label="目标" className="p-3">{targetValue}</td>
+      <td data-label="预期线路" className="p-3 font-medium">{event.expected_line || "-"}</td>
+      <td data-label="线路变化" className="p-3 whitespace-nowrap">{changeValue}</td>
+      <td data-label="关键 ASN" className="max-w-[260px] p-3">{asnValue}</td>
+      <td data-label="路径" className="p-3">{pathValue}</td>
+    </tr>
+  );
+}
+
+function ReturnRouteRuleRow({
+  group,
+  asns,
+  prefixes,
+  asCard = false,
+}: {
+  group: string;
+  asns?: number[];
+  prefixes?: string[];
+  asCard?: boolean;
+}) {
+  const lineName = ruleGroupNames[group] || group;
+  const asnValue = (
+    <div className="flex flex-wrap gap-1">
+      {asns?.length ? asns.map((asn) => (
+        <Badge key={asn} color="gray" variant="soft">AS{asn}</Badge>
+      )) : <span className="text-gray-400">-</span>}
+    </div>
+  );
+  const prefixValue = (
+    <div className="flex flex-wrap gap-1">
+      {prefixes?.length ? prefixes.map((prefix) => (
+        <Badge key={prefix} color="blue" variant="soft">{prefix}</Badge>
+      )) : <span className="text-gray-400">-</span>}
+    </div>
+  );
+
+  if (asCard) {
+    return (
+      <AdminMobileListCard
+        title={lineName}
+        cells={[
+          ["ASN", asnValue],
+          ["人工网段特征", prefixValue],
+        ]}
+      />
+    );
+  }
+
+  return (
+    <tr className="align-middle">
+      <td data-label="线路" className="p-3 font-medium">{lineName}</td>
+      <td data-label="ASN" className="p-3">{asnValue}</td>
+      <td data-label="人工网段特征" className="p-3">{prefixValue}</td>
+    </tr>
+  );
 }
 
 export default function ReturnRoutePage() {

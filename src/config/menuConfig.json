@@ -43,11 +43,6 @@
           "icon": "Code"
         },
         {
-          "labelKey": "terminal.remote_title",
-          "path": "/admin/terminal",
-          "icon": "Terminal"
-        },
-        {
           "labelKey": "navigation.terminal_settings",
           "path": "/admin/settings/xtermjs",
           "icon": "Terminal"

@@ -96,6 +96,18 @@ test("server Agent column shows the matching delivery state below the version", 
   assert.match(nodeContextSource, /Object\.hasOwn\(node, "deployment_status"\)/);
 });
 
+test("mobile node cards show the delivery state under the Agent version", () => {
+  assert.match(source, /function SortableMobileCard/);
+  assert.match(
+    source,
+    /function SortableMobileCard[\s\S]*deploymentStatusPresentation \?/,
+  );
+  assert.match(
+    source,
+    /t\("admin.nodeTable.agent", "Agent"\)[\s\S]*deploymentStatusPresentation\.label/,
+  );
+});
+
 test("mobile Agent version and delivery state align left without changing desktop alignment", () => {
   assert.match(source, /className="admin-node-agent-cell[^"]*items-center[^"]*text-center/);
   assert.match(

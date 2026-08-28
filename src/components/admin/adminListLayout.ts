@@ -21,7 +21,8 @@ export const ADMIN_FILTER_MENU_ITEM_SX = {
 };
 
 export const ADMIN_LIST_FIELD_SX = {
-  minWidth: 132,
+  flex: { xs: "1 1 calc(50% - 12px)", md: "0 1 auto" },
+  minWidth: { xs: 0, md: 132 },
   bgcolor: "transparent",
   "& .MuiInputLabel-root": {
     color: "text.secondary",
@@ -93,8 +94,8 @@ export const ADMIN_LIST_FIELD_SX = {
 };
 
 export const ADMIN_LIST_SEARCH_SX = {
-  flex: "1 1 160px",
-  minWidth: 160,
+  flex: { xs: "1 1 100%", md: "1 1 160px" },
+  minWidth: { xs: "100%", md: 160 },
   bgcolor: "transparent",
   "& .MuiOutlinedInput-root": {
     borderRadius: "8px",

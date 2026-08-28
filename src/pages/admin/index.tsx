@@ -16,10 +16,13 @@ import {
   useNodeDetails,
   type NodeDetail,
 } from "@/contexts/NodeDetailsContext";
+import { AdminMobileCardStack, AdminMobileListCard } from "@/components/admin/AdminMobileListCard";
 import Alert from "@mui/material/Alert";
 import MuiButton from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import Typography from "@mui/material/Typography";
 import {
   AppDialogContent,
   Flex,
@@ -55,6 +58,7 @@ import {
 } from "@/components/admin/muiIcons";
 import { Link, useSearchParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   DndContext,
   closestCenter,
@@ -1218,6 +1222,47 @@ const compactIPv6 = (value: string) => {
     : value;
 };
 
+function nodeNetworkAddresses(node: NodeDetail) {
+  return (
+    [
+      ["IPv4", node.ipv4?.trim()],
+      ["IPv6", node.ipv6?.trim()],
+    ] as const
+  ).filter(
+    (entry): entry is readonly ["IPv4" | "IPv6", string] => Boolean(entry[1]),
+  );
+}
+
+function nodeDeploymentStatusPresentation(
+  status: string | undefined | null,
+  t: TFunction,
+) {
+  switch (status) {
+    case "saved":
+      return {
+        label: t("admin.nodeTable.deliverySaved", "已保存"),
+        color: "blue" as const,
+      };
+    case "sent":
+      return {
+        label: t("admin.nodeTable.deliverySent", "已发送"),
+        color: "orange" as const,
+      };
+    case "applied":
+      return {
+        label: t("admin.nodeTable.deliveryApplied", "已生效"),
+        color: "green" as const,
+      };
+    case "failed":
+      return {
+        label: t("admin.nodeTable.deliveryFailed", "应用失败"),
+        color: "red" as const,
+      };
+    default:
+      return null;
+  }
+}
+
 const SortableRow = React.memo(({
   node,
   settings,
@@ -1246,38 +1291,11 @@ const SortableRow = React.memo(({
       console.error("Failed to copy text:", err);
     }
   }
-  const networkAddresses = ([
-    ["IPv4", node.ipv4?.trim()],
-    ["IPv6", node.ipv6?.trim()],
-  ] as const).filter(
-    (entry): entry is readonly ["IPv4" | "IPv6", string] => Boolean(entry[1]),
+  const networkAddresses = nodeNetworkAddresses(node);
+  const deploymentStatusPresentation = nodeDeploymentStatusPresentation(
+    node.deployment_status,
+    t,
   );
-  const deploymentStatusPresentation = (() => {
-    switch (node.deployment_status) {
-      case "saved":
-        return {
-          label: t("admin.nodeTable.deliverySaved", "已保存"),
-          color: "blue",
-        };
-      case "sent":
-        return {
-          label: t("admin.nodeTable.deliverySent", "已发送"),
-          color: "orange",
-        };
-      case "applied":
-        return {
-          label: t("admin.nodeTable.deliveryApplied", "已生效"),
-          color: "green",
-        };
-      case "failed":
-        return {
-          label: t("admin.nodeTable.deliveryFailed", "应用失败"),
-          color: "red",
-        };
-      default:
-        return null;
-    }
-  })();
   return (
     <TableRow
       ref={setNodeRef}
@@ -1395,6 +1413,142 @@ const SortableRow = React.memo(({
 });
 SortableRow.displayName = "SortableRow";
 
+const SortableMobileCard = React.memo(function SortableMobileCard({
+  node,
+  settings,
+  online,
+  reorderEnabled,
+}: {
+  node: NodeDetail;
+  settings: any;
+  online: boolean | null;
+  reorderEnabled: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: node.uuid, disabled: !reorderEnabled });
+  const { t } = useTranslation();
+  const networkAddresses = nodeNetworkAddresses(node);
+  const deploymentStatusPresentation = nodeDeploymentStatusPresentation(
+    node.deployment_status,
+    t,
+  );
+  const networkValue =
+    networkAddresses.length > 0 ? (
+      <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+        {networkAddresses.map(([type, address]) => (
+          <Typography
+            key={type}
+            sx={{
+              fontSize: 13.5,
+              fontWeight: 400,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            title={address}
+          >
+            {type} {type === "IPv6" ? compactIPv6(address) : address}
+          </Typography>
+        ))}
+      </Stack>
+    ) : (
+      "--"
+    );
+  const billingValue =
+    Number(node.price) === 0 ? (
+      "--"
+    ) : (
+      <PriceTags
+        className="[&_label]:!text-xs"
+        price={node.price}
+        billing_cycle={node.billing_cycle}
+        expired_at={node.expired_at}
+        currency={node.currency}
+      />
+    );
+  const cells: Array<[string, React.ReactNode]> = [
+    [t("admin.nodeTable.network", "网络"), networkValue],
+    [
+      t("admin.nodeTable.agent", "Agent"),
+      <Stack key="agent" spacing={0.4} sx={{ minWidth: 0, alignItems: "flex-start" }}>
+        <Typography
+          sx={{
+            fontSize: 13.5,
+            fontWeight: 400,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            width: "100%",
+          }}
+          title={publicVersion(node.version) || "--"}
+        >
+          {publicVersion(node.version) || "--"}
+        </Typography>
+        {deploymentStatusPresentation ? (
+          <Badge
+            color={deploymentStatusPresentation.color}
+            size="1"
+            variant="soft"
+            className="text-sm"
+          >
+            <label className="text-xs" title={deploymentStatusPresentation.label}>
+              {deploymentStatusPresentation.label}
+            </label>
+          </Badge>
+        ) : null}
+      </Stack>,
+    ],
+    [t("common.group", "分组"), node.group || "--"],
+    [t("common.remark", "备注"), node.remark || "--"],
+    [t("admin.nodeTable.billing"), billingValue],
+    [
+      t("admin.nodeTable.tags", "标签"),
+      (node.tags || "").trim() ? (
+        <Flex gap="1" wrap="wrap">
+          <CustomTags tags={node.tags || ""} />
+        </Flex>
+      ) : (
+        "--"
+      ),
+    ],
+  ];
+
+  return (
+    <AdminMobileListCard
+      ref={setNodeRef}
+      sx={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      title={<NodeNameLink node={node} online={online} />}
+      headerExtra={
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          disabled={!reorderEnabled}
+          className={`inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--gray-9)] ${
+            reorderEnabled
+              ? "cursor-grab hover:bg-[var(--accent-a3)] hover:text-[var(--accent-11)] active:cursor-grabbing"
+              : "cursor-not-allowed opacity-40"
+          } touch-manipulation select-none`}
+          style={{ touchAction: "none" }}
+          title={
+            reorderEnabled
+              ? t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")
+              : t("admin.nodeTable.clearFilterToReorder", "清除搜索和筛选后可调整顺序")
+          }
+          aria-label={t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")}
+        >
+          <GripVertical size={18} />
+        </button>
+      }
+      cells={cells}
+      actions={<ActionButtons node={node} settings={settings} />}
+    />
+  );
+});
+
 const NodeTable = ({
   nodes,
   settings,
@@ -1409,6 +1563,7 @@ const NodeTable = ({
   reorderEnabled: boolean;
 }) => {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const sensors = useSensors(
     useSensor(MouseSensor, {
       // 需要按住 10px 距离才开始拖拽，避免与点击冲突
@@ -1524,6 +1679,24 @@ const NodeTable = ({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setIsDragging(false)}
       >
+        {isMobile ? (
+          <SortableContext
+            items={visibleNodes.map((node) => node.uuid)}
+            strategy={verticalListSortingStrategy}
+          >
+            <AdminMobileCardStack>
+              {visibleNodes.map((node) => (
+                <SortableMobileCard
+                  key={node.uuid}
+                  node={node}
+                  settings={settings}
+                  online={nodeOnlineState(available, onlineSet, node.uuid)}
+                  reorderEnabled={reorderEnabled}
+                />
+              ))}
+            </AdminMobileCardStack>
+          </SortableContext>
+        ) : (
         <Table className="admin-responsive-table admin-node-table min-w-[1136px] table-fixed text-sm">
           <TableHeader>
             <TableRow>
@@ -1567,6 +1740,7 @@ const NodeTable = ({
             </SortableContext>
           </TableBody>
         </Table>
+        )}
       <AdminPagination
         page={visiblePage}
         total={localNodes.length}

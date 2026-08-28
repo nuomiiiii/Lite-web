@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AdminMobileCardStack, AdminMobileListCard } from "@/components/admin/AdminMobileListCard";
 import {
   AdminPagination,
   useAdminPagination,
@@ -40,7 +41,7 @@ import {
   TextField,
 } from "@/components/admin/ui";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MenuIcon, Pencil, Trash } from "@/components/admin/muiIcons";
+import { GripVertical, MenuIcon, Pencil, Trash } from "@/components/admin/muiIcons";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -60,6 +61,7 @@ export const TaskView = ({
   reorderEnabled?: boolean;
 }) => {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const { refresh } = usePingTask();
   const { nodeDetail } = useNodeDetails();
   const sensors = useSensors(
@@ -173,6 +175,23 @@ export const TaskView = ({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setIsDragging(false)}
       >
+      {isMobile ? (
+        <SortableContext
+          items={pageItems.map((task) => getTaskSortableId(task))}
+          strategy={verticalListSortingStrategy}
+        >
+          <AdminMobileCardStack>
+            {pageItems.map((task) => (
+              <Row
+                key={getTaskSortableId(task)}
+                task={task}
+                reorderEnabled={reorderEnabled}
+                asCard
+              />
+            ))}
+          </AdminMobileCardStack>
+        </SortableContext>
+      ) : (
       <div className="admin-responsive-table-wrap overflow-x-auto">
       <Table container={false} className="admin-responsive-table admin-sortable-table table-fixed min-w-[840px]">
         <TableHeader>
@@ -202,6 +221,7 @@ export const TaskView = ({
           </SortableContext>
       </Table>
       </div>
+      )}
       <AdminPagination
         page={page}
         total={localTasks.length}
@@ -221,9 +241,11 @@ export const TaskView = ({
 const Row = ({
   task,
   reorderEnabled,
+  asCard = false,
 }: {
   task: PingTask & { __allClientsDeleted?: boolean; __originalCount?: number };
   reorderEnabled: boolean;
+  asCard?: boolean;
 }) => {
   const { t } = useTranslation();
   const { refresh } = usePingTask();
@@ -333,49 +355,22 @@ const Row = ({
       .finally(() => setDeleteLoading(false));
   };
 
-  return (
-    <TableRow ref={setNodeRef} style={style}>
-      <TableCell className="w-12 px-3" data-label={t("common.sort", "排序")}>
-        <div
-          {...attributes}
-          {...listeners}
-          className={`cursor-move p-2 rounded hover:bg-accent-a3 transition-colors ${
-            isMobile ? "touch-manipulation select-none" : ""
-          }`}
-          style={{
-            touchAction: "none",
-            WebkitUserSelect: "none",
-            userSelect: "none",
-          }}
-          title={
-            isMobile
-              ? t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")
-              : undefined
-          }
-        >
-          <MenuIcon size={isMobile ? 18 : 16} color={"var(--gray-8)"} />
+  const serverValue = (
+    <div className="min-w-0 overflow-hidden">
+      <div
+        className="truncate whitespace-nowrap leading-5"
+        title={serverNames || undefined}
+      >
+        {serverNames || t("common.none")}
+      </div>
+      {task.default_on && (
+        <div className="mt-1 truncate text-xs text-accent-11">
+          {t("ping.default_on_short")}
         </div>
-      </TableCell>
-      <TableCell data-label={t("common.name")}>{task.name}</TableCell>
-      <TableCell className="max-w-0" data-label={t("common.server")}>
-        <div className="min-w-0 overflow-hidden">
-          <div
-            className="truncate whitespace-nowrap leading-5"
-            title={serverNames || undefined}
-          >
-            {serverNames || t("common.none")}
-          </div>
-          {task.default_on && (
-            <div className="mt-1 truncate text-xs text-accent-11">
-              {t("ping.default_on_short")}
-            </div>
-          )}
-        </div>
-      </TableCell>
-      <TableCell data-label={t("ping.target")}>{task.target}</TableCell>
-      <TableCell data-label={t("ping.type")}>{task.type}</TableCell>
-      <TableCell data-label={t("ping.interval")}>{task.interval}</TableCell>
-      <TableCell data-label={t("common.action")}>
+      )}
+    </div>
+  );
+  const actionButtons = (
         <div className="admin-card-actions admin-dual-actions flex items-center gap-3">
         {/* 编辑按钮 */}
         <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
@@ -500,7 +495,74 @@ const Row = ({
           </AppDialogContent>
         </Dialog.Root>
         </div>
+  );
+
+  if (asCard) {
+    return (
+      <AdminMobileListCard
+        ref={setNodeRef}
+        sx={{ transform: style.transform, transition: style.transition }}
+        title={task.name || "--"}
+        headerExtra={
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            disabled={!reorderEnabled}
+            className={`inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--gray-9)] ${
+              reorderEnabled
+                ? "cursor-grab hover:bg-[var(--accent-a3)] hover:text-[var(--accent-11)] active:cursor-grabbing"
+                : "cursor-not-allowed opacity-40"
+            } touch-manipulation select-none`}
+            style={{ touchAction: "none" }}
+            title={t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")}
+            aria-label={t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")}
+          >
+            <GripVertical size={18} />
+          </button>
+        }
+        cells={[
+          [t("common.server"), serverValue],
+          [t("ping.target"), task.target || "--"],
+          [t("ping.type"), task.type],
+          [t("ping.interval"), String(task.interval ?? "--")],
+        ]}
+        actions={actionButtons}
+      />
+    );
+  }
+
+  return (
+    <TableRow ref={setNodeRef} style={style}>
+      <TableCell className="w-12 px-3" data-label={t("common.sort", "排序")}>
+        <div
+          {...attributes}
+          {...listeners}
+          className={`cursor-move p-2 rounded hover:bg-accent-a3 transition-colors ${
+            isMobile ? "touch-manipulation select-none" : ""
+          }`}
+          style={{
+            touchAction: "none",
+            WebkitUserSelect: "none",
+            userSelect: "none",
+          }}
+          title={
+            isMobile
+              ? t("admin.nodeTable.dragToReorder", "长按拖拽重新排序")
+              : undefined
+          }
+        >
+          <MenuIcon size={isMobile ? 18 : 16} color={"var(--gray-8)"} />
+        </div>
       </TableCell>
+      <TableCell data-label={t("common.name")}>{task.name}</TableCell>
+      <TableCell className="max-w-0" data-label={t("common.server")}>
+        {serverValue}
+      </TableCell>
+      <TableCell data-label={t("ping.target")}>{task.target}</TableCell>
+      <TableCell data-label={t("ping.type")}>{task.type}</TableCell>
+      <TableCell data-label={t("ping.interval")}>{task.interval}</TableCell>
+      <TableCell data-label={t("common.action")}>{actionButtons}</TableCell>
     </TableRow>
   );
 };

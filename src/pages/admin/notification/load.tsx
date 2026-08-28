@@ -12,6 +12,8 @@ import {
   useAdminPagination,
 } from "@/components/admin/AdminPagination";
 import NodeSelectorDialog from "@/components/NodeSelectorDialog";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { AdminMobileCardStack, AdminMobileListCard } from "@/components/admin/AdminMobileListCard";
 import {
   Table,
   TableBody,
@@ -278,11 +280,19 @@ const LoadConfigurationTable = ({
   pagination: PaginationState<LoadAlert>;
 }) => {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   if (total === 0) {
     return <EmptyState>{t("notification.load.empty_configuration")}</EmptyState>;
   }
   return (
     <>
+      {isMobile ? (
+        <AdminMobileCardStack>
+          {alerts.map((alert) => (
+            <Row key={alert.id} alert={alert} asCard />
+          ))}
+        </AdminMobileCardStack>
+      ) : (
       <div className="admin-responsive-table-wrap overflow-x-auto">
         <Table container={false} className="admin-responsive-table admin-primary-first-table table-fixed min-w-[840px]">
           <TableHeader>
@@ -301,6 +311,7 @@ const LoadConfigurationTable = ({
           </TableBody>
         </Table>
       </div>
+      )}
       <AdminPagination
         page={pagination.page}
         total={total}
@@ -329,6 +340,7 @@ const CurrentLoadAlertsTable = ({
   loading: boolean;
 }) => {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   if (loading) {
     return (
       <div className="km-admin-list-empty">
@@ -341,6 +353,17 @@ const CurrentLoadAlertsTable = ({
   }
   return (
     <>
+      {isMobile ? (
+        <AdminMobileCardStack>
+          {alerts.map((alert) => (
+            <CurrentLoadAlertRow
+              key={`${alert.notification_id}:${alert.client}`}
+              alert={alert}
+              asCard
+            />
+          ))}
+        </AdminMobileCardStack>
+      ) : (
       <div className="admin-responsive-table-wrap overflow-x-auto">
         <Table container={false} className="admin-responsive-table admin-primary-first-table min-w-[940px]">
           <TableHeader>
@@ -365,6 +388,7 @@ const CurrentLoadAlertsTable = ({
           </TableBody>
         </Table>
       </div>
+      )}
       <AdminPagination
         page={pagination.page}
         total={total}
@@ -382,7 +406,13 @@ const formatLoadValue = (metric: string, value: number) => {
   return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value)}${unit}`;
 };
 
-const CurrentLoadAlertRow = ({ alert }: { alert: CurrentLoadAlert }) => {
+const CurrentLoadAlertRow = ({
+  alert,
+  asCard = false,
+}: {
+  alert: CurrentLoadAlert;
+  asCard?: boolean;
+}) => {
   const { t } = useTranslation();
   const { refreshCurrent } = useLoadAlert();
   const { nodeDetail } = useNodeDetails();
@@ -423,36 +453,20 @@ const CurrentLoadAlertRow = ({ alert }: { alert: CurrentLoadAlert }) => {
           time: new Date(alert.silenced_until).toLocaleString(),
         })
       : t("notification.load.not_silenced");
-
-  return (
-    <TableRow>
-      <TableCell data-label={t("common.name")}>
-        <span className="font-medium">{alert.notification_name}</span>
-      </TableCell>
-      <TableCell data-label={t("common.server")}>
-        <div className="min-w-0">
-          <div className="truncate">{clientName}</div>
-          {clientAddress ? (
-            <div className="truncate text-xs text-muted-foreground">{clientAddress}</div>
-          ) : null}
-        </div>
-      </TableCell>
-      <TableCell data-label={t("loadAlert.metric")}>{alert.metric.toUpperCase()}</TableCell>
-      <TableCell data-label={t("notification.load.current_value")} className="tabular-nums">
-        {formatLoadValue(alert.metric, alert.latest_value)}
-      </TableCell>
-      <TableCell data-label={t("common.threshold")} className="tabular-nums">
-        {formatLoadValue(alert.metric, alert.threshold)}
-      </TableCell>
-      <TableCell data-label={t("notification.load.triggered_at")} className="whitespace-nowrap text-sm">
-        {alert.active_since ? new Date(alert.active_since).toLocaleString() : "-"}
-      </TableCell>
-      <TableCell data-label={t("notification.load.silence_status")}>
-        <Badge color={alert.silenced ? "orange" : "red"} variant="soft">
-          {silenceLabel}
-        </Badge>
-      </TableCell>
-      <TableCell data-label={t("common.action")}>
+  const serverValue = (
+    <div className="min-w-0">
+      <div className="truncate">{clientName}</div>
+      {clientAddress ? (
+        <div className="truncate text-xs text-muted-foreground">{clientAddress}</div>
+      ) : null}
+    </div>
+  );
+  const silenceBadge = (
+    <Badge color={alert.silenced ? "orange" : "red"} variant="soft">
+      {silenceLabel}
+    </Badge>
+  );
+  const actionButtons = (
         <div className="admin-card-actions flex items-center gap-2">
           <DropdownMenu.Root>
             <DropdownMenu.Trigger>
@@ -490,12 +504,60 @@ const CurrentLoadAlertRow = ({ alert }: { alert: CurrentLoadAlert }) => {
             </DropdownMenu.Content>
           </DropdownMenu.Root>
         </div>
+  );
+
+  if (asCard) {
+    return (
+      <AdminMobileListCard
+        title={alert.notification_name}
+        cells={[
+          [t("common.server"), serverValue],
+          [t("loadAlert.metric"), alert.metric.toUpperCase()],
+          [t("notification.load.current_value"), formatLoadValue(alert.metric, alert.latest_value)],
+          [t("common.threshold"), formatLoadValue(alert.metric, alert.threshold)],
+          [t("notification.load.triggered_at"), alert.active_since ? new Date(alert.active_since).toLocaleString() : "-"],
+          [t("notification.load.silence_status"), silenceBadge],
+        ]}
+        actions={actionButtons}
+      />
+    );
+  }
+
+  return (
+    <TableRow>
+      <TableCell data-label={t("common.name")}>
+        <span className="font-medium">{alert.notification_name}</span>
+      </TableCell>
+      <TableCell data-label={t("common.server")}>
+        {serverValue}
+      </TableCell>
+      <TableCell data-label={t("loadAlert.metric")}>{alert.metric.toUpperCase()}</TableCell>
+      <TableCell data-label={t("notification.load.current_value")} className="tabular-nums">
+        {formatLoadValue(alert.metric, alert.latest_value)}
+      </TableCell>
+      <TableCell data-label={t("common.threshold")} className="tabular-nums">
+        {formatLoadValue(alert.metric, alert.threshold)}
+      </TableCell>
+      <TableCell data-label={t("notification.load.triggered_at")} className="whitespace-nowrap text-sm">
+        {alert.active_since ? new Date(alert.active_since).toLocaleString() : "-"}
+      </TableCell>
+      <TableCell data-label={t("notification.load.silence_status")}>
+        {silenceBadge}
+      </TableCell>
+      <TableCell data-label={t("common.action")}>
+        {actionButtons}
       </TableCell>
     </TableRow>
   );
 };
 
-const Row = ({ alert }: { alert: LoadAlert }) => {
+const Row = ({
+  alert,
+  asCard = false,
+}: {
+  alert: LoadAlert;
+  asCard?: boolean;
+}) => {
   const { t } = useTranslation();
   const { refresh } = useLoadAlert();
   const { nodeDetail } = useNodeDetails();
@@ -598,11 +660,7 @@ const Row = ({ alert }: { alert: LoadAlert }) => {
           )
           .join(", ")
       : "";
-
-  return (
-    <TableRow key={alert.id}>
-      <TableCell data-label={t("common.name")}>{alert.name}</TableCell>
-      <TableCell className="max-w-0" data-label={t("common.server")}>
+  const serverValue = (
         <div className="flex min-w-0 items-center gap-2">
           <div className="min-w-0 flex-1 overflow-hidden">
             <div
@@ -631,14 +689,8 @@ const Row = ({ alert }: { alert: LoadAlert }) => {
             </IconButton>
           </NodeSelectorDialog>
         </div>
-      </TableCell>
-      <TableCell data-label={t("loadAlert.metric")}>{alert.metric?.toUpperCase()}</TableCell>
-      <TableCell data-label={t("common.threshold")}>{alert.threshold}%</TableCell>
-      <TableCell data-label={t("loadAlert.ratio")}>{alert.ratio}</TableCell>
-      <TableCell data-label={t("ping.interval")}>
-        {alert.interval} {t("time.minute")}
-      </TableCell>
-      <TableCell data-label={t("common.action")}>
+  );
+  const actionButtons = (
         <div className="admin-card-actions admin-dual-actions flex items-center gap-3">
         {/* 编辑按钮 */}
         <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
@@ -776,6 +828,38 @@ const Row = ({ alert }: { alert: LoadAlert }) => {
           </AppDialogContent>
         </Dialog.Root>
         </div>
+  );
+
+  if (asCard) {
+    return (
+      <AdminMobileListCard
+        title={alert.name}
+        cells={[
+          [t("common.server"), serverValue],
+          [t("loadAlert.metric"), alert.metric?.toUpperCase()],
+          [t("common.threshold"), `${alert.threshold}%`],
+          [t("loadAlert.ratio"), String(alert.ratio)],
+          [t("ping.interval"), `${alert.interval} ${t("time.minute")}`],
+        ]}
+        actions={actionButtons}
+      />
+    );
+  }
+
+  return (
+    <TableRow key={alert.id}>
+      <TableCell data-label={t("common.name")}>{alert.name}</TableCell>
+      <TableCell className="max-w-0" data-label={t("common.server")}>
+        {serverValue}
+      </TableCell>
+      <TableCell data-label={t("loadAlert.metric")}>{alert.metric?.toUpperCase()}</TableCell>
+      <TableCell data-label={t("common.threshold")}>{alert.threshold}%</TableCell>
+      <TableCell data-label={t("loadAlert.ratio")}>{alert.ratio}</TableCell>
+      <TableCell data-label={t("ping.interval")}>
+        {alert.interval} {t("time.minute")}
+      </TableCell>
+      <TableCell data-label={t("common.action")}>
+        {actionButtons}
       </TableCell>
     </TableRow>
   );

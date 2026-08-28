@@ -16,6 +16,8 @@ import {
   AdminPagination,
   useAdminPagination,
 } from "@/components/admin/AdminPagination";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { AdminMobileCardStack, AdminMobileListCard } from "@/components/admin/AdminMobileListCard";
 import {
   Table,
   TableBody,
@@ -482,11 +484,38 @@ const AlertTable = ({
   paginationSummary?: React.ReactNode;
 }) => {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const selectedSet = new Set(selected);
   const { page, setPage, pageItems, pageSize, setPageSize } =
     useAdminPagination(targets);
+  const rows = pageItems.map((target) => (
+    <AlertRow
+      key={target.key}
+      view={view}
+      target={target}
+      selected={selectedSet.has(target.key)}
+      onSelectedChange={(checked) =>
+        onSelectionChange(
+          checked
+            ? Array.from(new Set([...selected, target.key]))
+            : selected.filter((key) => key !== target.key),
+        )
+      }
+      onSaved={onSaved}
+      asCard={isMobile}
+    />
+  ));
   return (
     <>
+      {isMobile ? (
+        targets.length === 0 ? (
+          <div className="py-8 text-center text-gray-500">
+            {t("notification.ping_loss.empty")}
+          </div>
+        ) : (
+          <AdminMobileCardStack>{rows}</AdminMobileCardStack>
+        )
+      ) : (
       <div className="admin-responsive-table-wrap overflow-x-auto">
       <Table container={false} className="admin-responsive-table admin-selection-table min-w-[1120px]">
         <TableHeader>
@@ -518,26 +547,12 @@ const AlertTable = ({
               </TableCell>
             </TableRow>
           ) : (
-            pageItems.map((target) => (
-              <AlertRow
-                key={target.key}
-                view={view}
-                target={target}
-                selected={selectedSet.has(target.key)}
-                onSelectedChange={(checked) =>
-                  onSelectionChange(
-                    checked
-                      ? Array.from(new Set([...selected, target.key]))
-                      : selected.filter((key) => key !== target.key),
-                  )
-                }
-                onSaved={onSaved}
-              />
-            ))
+            rows
           )}
         </TableBody>
       </Table>
       </div>
+      )}
       <AdminPagination
         page={page}
         total={targets.length}
@@ -556,64 +571,50 @@ const AlertRow = ({
   selected,
   onSelectedChange,
   onSaved,
+  asCard = false,
 }: {
   view: ViewMode;
   target: AlertTarget;
   selected: boolean;
   onSelectedChange: (checked: boolean) => void;
   onSaved: () => Promise<void>;
+  asCard?: boolean;
 }) => {
   const { t } = useTranslation();
   const rule = target.rule;
   const taskName = target.task.name || `#${target.taskId}`;
   const primary = view === "task" ? taskName : target.clientName;
   const secondary = view === "task" ? target.clientName : taskName;
-
-  return (
-    <TableRow data-state={selected ? "selected" : undefined}>
-      <TableCell className="w-12 px-3" data-label={t("common.select")}>
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={selected}
-            aria-label={`${primary} - ${secondary}`}
-            onCheckedChange={(checked) => onSelectedChange(checked === true)}
-          />
-        </div>
-      </TableCell>
-      <TableCell data-label={view === "task" ? t("ping.task") : t("common.server")}>{primary}</TableCell>
-      <TableCell data-label={view === "task" ? t("common.server") : t("ping.task")}>{secondary}</TableCell>
-      <TableCell data-label={t("ping.target")}>{target.task.target || "-"}</TableCell>
-      <TableCell data-label={t("common.status")}>
-        {rule ? (
-          <Badge color={rule.enable ? "green" : "gray"}>
-            {rule.enable ? t("common.enabled") : t("common.disabled")}
-          </Badge>
-        ) : (
-          <Badge color="orange">{t("notification.ping_loss.not_configured")}</Badge>
-        )}
-      </TableCell>
-      <TableCell data-label={t("notification.ping_loss.window")}>
-        {rule
-          ? t("notification.ping_loss.minutes", {
-              count: rule.window_seconds / 60,
-            })
-          : "-"}
-      </TableCell>
-      <TableCell data-label={t("notification.ping_loss.threshold")}>{rule ? `${rule.loss_threshold.toFixed(1)}%` : "-"}</TableCell>
-      <TableCell data-label={t("notification.ping_loss.minimum_samples")}>{rule?.minimum_samples ?? "-"}</TableCell>
-      <TableCell data-label={t("notification.ping_loss.cooldown")}>
-        {rule
-          ? t("notification.ping_loss.minutes", {
-              count: rule.cooldown_seconds / 60,
-            })
-          : "-"}
-      </TableCell>
-      <TableCell data-label={t("notification.ping_loss.last_notified")}>
-        {rule?.last_notified
-          ? new Date(rule.last_notified).toLocaleString()
-          : t("notification.ping_loss.never")}
-      </TableCell>
-      <TableCell className="text-center" data-label={t("common.action")}>
+  const primaryLabel = view === "task" ? t("ping.task") : t("common.server");
+  const secondaryLabel = view === "task" ? t("common.server") : t("ping.task");
+  const checkbox = (
+    <Checkbox
+      checked={selected}
+      aria-label={`${primary} - ${secondary}`}
+      onCheckedChange={(checked) => onSelectedChange(checked === true)}
+    />
+  );
+  const statusBadge = rule ? (
+    <Badge color={rule.enable ? "green" : "gray"}>
+      {rule.enable ? t("common.enabled") : t("common.disabled")}
+    </Badge>
+  ) : (
+    <Badge color="orange">{t("notification.ping_loss.not_configured")}</Badge>
+  );
+  const windowValue = rule
+    ? t("notification.ping_loss.minutes", {
+        count: rule.window_seconds / 60,
+      })
+    : "-";
+  const cooldownValue = rule
+    ? t("notification.ping_loss.minutes", {
+        count: rule.cooldown_seconds / 60,
+      })
+    : "-";
+  const lastNotified = rule?.last_notified
+    ? new Date(rule.last_notified).toLocaleString()
+    : t("notification.ping_loss.never");
+  const actionButtons = (
         <Flex gap="3" align="center" className="admin-card-actions admin-ping-loss-actions w-full">
           <ConfigurationDialog targets={[target]} onSaved={onSaved}>
             <IconButton
@@ -626,6 +627,54 @@ const AlertRow = ({
           </ConfigurationDialog>
           {rule ? <DeleteRuleButton rule={rule} onDeleted={onSaved} /> : null}
         </Flex>
+  );
+
+  if (asCard) {
+    return (
+      <AdminMobileListCard
+        title={primary}
+        headerExtra={checkbox}
+        cells={[
+          [secondaryLabel, secondary],
+          [t("ping.target"), target.task.target || "-"],
+          [t("common.status"), statusBadge],
+          [t("notification.ping_loss.window"), windowValue],
+          [t("notification.ping_loss.threshold"), rule ? `${rule.loss_threshold.toFixed(1)}%` : "-"],
+          [t("notification.ping_loss.minimum_samples"), rule?.minimum_samples ?? "-"],
+          [t("notification.ping_loss.cooldown"), cooldownValue],
+          [t("notification.ping_loss.last_notified"), lastNotified],
+        ]}
+        actions={actionButtons}
+      />
+    );
+  }
+
+  return (
+    <TableRow data-state={selected ? "selected" : undefined}>
+      <TableCell className="w-12 px-3" data-label={t("common.select")}>
+        <div className="flex items-center justify-center">
+          {checkbox}
+        </div>
+      </TableCell>
+      <TableCell data-label={primaryLabel}>{primary}</TableCell>
+      <TableCell data-label={secondaryLabel}>{secondary}</TableCell>
+      <TableCell data-label={t("ping.target")}>{target.task.target || "-"}</TableCell>
+      <TableCell data-label={t("common.status")}>
+        {statusBadge}
+      </TableCell>
+      <TableCell data-label={t("notification.ping_loss.window")}>
+        {windowValue}
+      </TableCell>
+      <TableCell data-label={t("notification.ping_loss.threshold")}>{rule ? `${rule.loss_threshold.toFixed(1)}%` : "-"}</TableCell>
+      <TableCell data-label={t("notification.ping_loss.minimum_samples")}>{rule?.minimum_samples ?? "-"}</TableCell>
+      <TableCell data-label={t("notification.ping_loss.cooldown")}>
+        {cooldownValue}
+      </TableCell>
+      <TableCell data-label={t("notification.ping_loss.last_notified")}>
+        {lastNotified}
+      </TableCell>
+      <TableCell className="text-center" data-label={t("common.action")}>
+        {actionButtons}
       </TableCell>
     </TableRow>
   );

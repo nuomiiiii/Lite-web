@@ -61,6 +61,7 @@ import {
 } from "@/pages/admin/nodeDetailPreview";
 import { getRegionCode, getRegionDisplayName } from "@/utils/regionHelper";
 import { openRemoteTerminal } from "@/utils/remoteLaunch";
+import { nodeTrafficType, trafficUsed } from "@/utils/trafficAccounting";
 import { formatBytes, stringToBytes } from "@/utils/unitHelper";
 import { billingRequest } from "@/utils/billing";
 import { LITE_BLUE, LITE_BLUE_SOFT_STRONG } from "@/theme/brand";
@@ -148,18 +149,6 @@ const solidButtonSx = {
   "& .MuiButton-startIcon": { mr: 0.75, ml: 0 },
   "& .MuiButton-endIcon": { ml: 0.5, mr: 0 },
 };
-
-function trafficUsed(
-  type: NodeDetail["effective_traffic_type"],
-  up: number,
-  down: number,
-) {
-  if (type === "up") return up;
-  if (type === "down") return down;
-  if (type === "max") return Math.max(up, down);
-  if (type === "min") return Math.min(up, down);
-  return up + down;
-}
 
 function cycleLabel(days: number, t: (key: string, fallback: string) => string) {
   if (days === 30) return t("admin.nodeDetail.payMonthly", "月付");
@@ -559,7 +548,7 @@ function NodeDetailPageBody() {
   ) : null;
   const plan = configLabel(node);
   const used = live
-    ? trafficUsed(node.effective_traffic_type, live.network.totalUp, live.network.totalDown)
+    ? trafficUsed(nodeTrafficType(node), live.network.totalUp, live.network.totalDown)
     : null;
   const limit = Number(node.effective_traffic_limit) || 0;
   const remaining = used == null || !limit ? null : Math.max(0, limit - used);

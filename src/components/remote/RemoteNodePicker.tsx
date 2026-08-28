@@ -1,18 +1,26 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import Box from "@mui/material/Box";
+import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import { useTranslation } from "react-i18next";
+
+import Flag from "@/components/Flag";
+import AdminNodeStatusSummary from "@/components/admin/AdminNodeStatusSummary";
+import { ADMIN_LIST_SEARCH_SX } from "@/components/admin/adminListLayout";
 import {
   ChevronLeft,
   ChevronRight,
   Layers3,
-  Network,
   Search,
   SearchX,
   SquareTerminal,
   X,
 } from "@/components/admin/muiIcons";
-import { useTranslation } from "react-i18next";
-
-import Flag from "@/components/Flag";
-import AdminNodeStatusSummary from "@/components/admin/AdminNodeStatusSummary";
+import { NODE_OFFLINE, NODE_ONLINE } from "@/theme/brand";
 import {
   displayRemoteAddress,
   filterRemoteNodes,
@@ -21,7 +29,6 @@ import {
   type RemoteNodePickerItem,
   type RemoteNodeStatusFilter,
 } from "@/utils/remoteNodePicker";
-import "./RemoteNodePicker.css";
 
 type RemoteNodePickerProps<T extends RemoteNodePickerItem> = {
   nodes: readonly T[];
@@ -98,175 +105,253 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
   }, [hasResults, rowsPerPage]);
 
   return (
-    <div className="remote-node-picker">
-      <div className="remote-node-picker-controls">
-        <div className="remote-node-picker-search">
-          <Search size={16} aria-hidden="true" />
-          <label className="remote-node-picker-sr-only" htmlFor={searchID}>
-            {t("terminal.search_placeholder")}
-          </label>
-          <input
-            id={searchID}
-            ref={searchRef}
-            type="search"
-            value={query}
-            placeholder={t("terminal.search_placeholder")}
-            autoComplete="off"
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setPage(1);
-            }}
-          />
-          {query ? (
-            <button
-              type="button"
-              aria-label={t("terminal.clear_search")}
-              onClick={() => {
-                setQuery("");
-                setPage(1);
-                searchRef.current?.focus();
-              }}
-            >
-              <X size={14} aria-hidden="true" />
-            </button>
-          ) : null}
-        </div>
+    <Box className="remote-node-picker" sx={{ minWidth: 0 }}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={1.5}
+        sx={{ mb: 2.5, alignItems: { xs: "stretch", sm: "center" }, justifyContent: "space-between" }}
+      >
+        <TextField
+          inputRef={searchRef}
+          id={searchID}
+          size="small"
+          type="search"
+          value={query}
+          placeholder={t("terminal.search_placeholder")}
+          autoComplete="off"
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setPage(1);
+          }}
+          sx={{ ...ADMIN_LIST_SEARCH_SX, flex: "1 1 280px", maxWidth: { sm: 520 } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={16} />
+                </InputAdornment>
+              ),
+              endAdornment: query ? (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    aria-label={t("terminal.clear_search")}
+                    onClick={() => {
+                      setQuery("");
+                      setPage(1);
+                      searchRef.current?.focus();
+                    }}
+                  >
+                    <X size={14} />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            },
+          }}
+        />
+        <AdminNodeStatusSummary
+          total={nodes.length}
+          online={onlineCount}
+          available={available}
+          value={status}
+          onValueChange={(value) => {
+            setStatus(value);
+            setPage(1);
+          }}
+        />
+      </Stack>
 
-        <div className="remote-node-picker-filter">
-          <AdminNodeStatusSummary
-            total={nodes.length}
-            online={onlineCount}
-            available={available}
-            value={status}
-            onValueChange={(value) => {
-              setStatus(value);
-              setPage(1);
-            }}
-          />
-        </div>
-      </div>
-
-      <div className="remote-node-picker-results">
+      <Box sx={{ minHeight: 0 }}>
         {filteredNodes.length > 0 ? (
-          <div ref={resultsGridRef} className="remote-node-picker-grid">
-          {visibleNodes.map((node) => {
-            const online = onlineSet.has(node.uuid);
-            const knownOnline = available && online;
-            const knownOffline = available && !online;
-            const selected = selectedUUID === node.uuid;
-            const flag = node.region_override?.trim() || node.region?.trim() || "UN";
-            const ipv4 = displayRemoteAddress(node.ipv4);
-            const ipv6 = displayRemoteAddress(node.ipv6);
-            const addresses = [
-              ipv4 ? { type: "IPv4" as const, value: ipv4 } : null,
-              ipv6 ? { type: "IPv6" as const, value: ipv6 } : null,
-            ].filter((address): address is { type: "IPv4" | "IPv6"; value: string } => Boolean(address));
+          <Box
+            ref={resultsGridRef}
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))" },
+              gap: 1.5,
+            }}
+          >
+            {visibleNodes.map((node) => {
+              const online = onlineSet.has(node.uuid);
+              const knownOnline = available && online;
+              const knownOffline = available && !online;
+              const selected = selectedUUID === node.uuid;
+              const flag = node.region_override?.trim() || node.region?.trim() || "UN";
+              const ipv4 = displayRemoteAddress(node.ipv4);
+              const ipv6 = displayRemoteAddress(node.ipv6);
 
-            return (
-              <article
-                key={node.uuid}
-                className={`remote-node-picker-card${selected ? " is-selected" : ""}${knownOffline ? " is-offline" : ""}`}
-                role="button"
-                tabIndex={knownOnline ? 0 : -1}
-                aria-disabled={!knownOnline}
-                aria-label={knownOnline ? t("terminal.open_terminal") : t("nodeCard.offline")}
-                onClick={() => {
-                  if (knownOnline) onSelect(node);
-                }}
-                onKeyDown={(event) => {
-                  if (!knownOnline || (event.key !== "Enter" && event.key !== " ")) return;
-                  event.preventDefault();
-                  onSelect(node);
-                }}
-              >
-                <header className="remote-node-picker-card-header">
-                  <span className="remote-node-picker-identity">
-                    <span className="remote-node-picker-flag">
-                      <Flag flag={flag} compact />
-                    </span>
-                    <strong title={node.name}>{node.name}</strong>
-                  </span>
-                  <span
-                    className={`remote-node-picker-status ${online ? "is-online" : "is-offline"}`}
-                    aria-hidden={!available || undefined}
-                    style={!available ? { visibility: "hidden" } : undefined}
+              return (
+                <Paper
+                  key={node.uuid}
+                  variant="outlined"
+                  role="button"
+                  tabIndex={knownOnline ? 0 : -1}
+                  aria-disabled={!knownOnline}
+                  aria-label={knownOnline ? t("terminal.open_terminal") : t("nodeCard.offline")}
+                  onClick={() => {
+                    if (knownOnline) onSelect(node);
+                  }}
+                  onKeyDown={(event) => {
+                    if (!knownOnline || (event.key !== "Enter" && event.key !== " ")) return;
+                    event.preventDefault();
+                    onSelect(node);
+                  }}
+                  sx={{
+                    overflow: "hidden",
+                    borderRadius: "8px",
+                    borderColor: selected ? "primary.main" : "divider",
+                    bgcolor: selected ? "action.hover" : "background.paper",
+                    cursor: knownOnline ? "pointer" : "not-allowed",
+                    opacity: knownOffline ? 0.72 : 1,
+                    boxShadow: "none",
+                    "&:hover": knownOnline
+                      ? { borderColor: "primary.main" }
+                      : undefined,
+                    "&:focus-visible": {
+                      outline: "2px solid",
+                      outlineColor: "primary.main",
+                      outlineOffset: "2px",
+                    },
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    spacing={1.25}
+                    sx={{ p: 1.5, alignItems: "center", bgcolor: "action.hover" }}
                   >
-                    <span aria-hidden="true" />
-                    {online ? t("nodeCard.online") : t("nodeCard.offline")}
-                  </span>
-                </header>
-
-                <div className="remote-node-picker-address-panel">
-                  <div className="remote-node-picker-address-title">
-                    <Network size={15} aria-hidden="true" />
-                    <span>{t("terminal.ip_address")}</span>
-                  </div>
-                  <div className={`remote-node-picker-addresses${addresses.length === 0 ? " is-empty" : ""}`}>
-                    {addresses.length > 0 ? addresses.map(({ type, value }) => (
-                      <div className="remote-node-picker-address" key={type}>
-                        <span>{type}</span>
-                        <code title={value}>{value}</code>
-                      </div>
-                    )) : (
-                      <span>{t("terminal.address_unreported")}</span>
-                    )}
-                  </div>
-                </div>
-
-                <footer className="remote-node-picker-card-footer">
-                  <span className="remote-node-picker-group">
-                    <Layers3 size={14} aria-hidden="true" />
-                    <span title={node.group || t("terminal.ungrouped")}>
-                      {node.group?.trim() || t("terminal.ungrouped")}
-                    </span>
-                  </span>
-                  <span
-                    className="remote-node-picker-enter"
-                    aria-hidden="true"
-                  >
-                    <SquareTerminal size={19} aria-hidden="true" />
-                  </span>
-                </footer>
-              </article>
-            );
-          })}
-          </div>
+                    <Box sx={{ minWidth: 0, flex: 1, display: "flex", alignItems: "center", gap: 1.25 }}>
+                      <Box className="admin-node-country-flag" sx={{ flexShrink: 0, lineHeight: 0 }}>
+                        <Flag flag={flag} compact />
+                      </Box>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography noWrap sx={{ fontSize: 14, fontWeight: 600 }} title={node.name}>
+                          {node.name}
+                        </Typography>
+                        <Typography
+                          noWrap
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.75,
+                            fontSize: 12,
+                            color: online ? NODE_ONLINE : NODE_OFFLINE,
+                            visibility: available ? "visible" : "hidden",
+                          }}
+                        >
+                          <Box
+                            component="span"
+                            sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "currentColor" }}
+                          />
+                          {online ? t("nodeCard.online") : t("nodeCard.offline")}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Stack>
+                  <Box aria-label={t("terminal.ip_address")} sx={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+                    {[
+                      ["IPv4", ipv4],
+                      ["IPv6", ipv6],
+                    ].map(([label, value], index) => (
+                      <Box
+                        key={label}
+                        sx={{
+                          p: 1.35,
+                          borderTop: 1,
+                          borderRight: index % 2 === 0 ? 1 : 0,
+                          borderColor: "divider",
+                          minWidth: 0,
+                        }}
+                      >
+                        <Typography color="text.secondary" sx={{ mb: 0.4, fontSize: 11.5 }}>
+                          {label}
+                        </Typography>
+                        <Typography
+                          noWrap
+                          title={value || undefined}
+                          sx={{ fontSize: 13.5, fontWeight: 400, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" }}
+                        >
+                          {value || t("terminal.address_unreported")}
+                        </Typography>
+                      </Box>
+                    ))}
+                    <Box
+                      sx={{
+                        p: 1.35,
+                        borderTop: 1,
+                        borderRight: 1,
+                        borderColor: "divider",
+                        minWidth: 0,
+                      }}
+                    >
+                      <Typography color="text.secondary" sx={{ mb: 0.4, fontSize: 11.5 }}>
+                        {t("common.group", "分组")}
+                      </Typography>
+                      <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", minWidth: 0 }}>
+                        <Layers3 size={14} />
+                        <Typography noWrap title={node.group || t("terminal.ungrouped")} sx={{ fontSize: 13.5 }}>
+                          {node.group?.trim() || t("terminal.ungrouped")}
+                        </Typography>
+                      </Stack>
+                    </Box>
+                    <Box
+                      sx={{
+                        p: 1.35,
+                        borderTop: 1,
+                        borderColor: "divider",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                        color: knownOffline ? "error.main" : "primary.main",
+                      }}
+                    >
+                      <SquareTerminal size={19} aria-hidden="true" />
+                    </Box>
+                  </Box>
+                </Paper>
+              );
+            })}
+          </Box>
         ) : (
-          <div className="remote-node-picker-empty">
-            <SearchX size={26} aria-hidden="true" />
-            <strong>
+          <Stack
+            spacing={1}
+            sx={{ minHeight: 260, alignItems: "center", justifyContent: "center", color: "text.secondary", textAlign: "center" }}
+          >
+            <SearchX size={26} />
+            <Typography sx={{ fontWeight: 500, color: "text.primary" }}>
               {noMatches ? t("terminal.no_results") : t("terminal.no_servers")}
-            </strong>
-            {noMatches ? <span>{t("terminal.try_different")}</span> : null}
-          </div>
+            </Typography>
+            {noMatches ? (
+              <Typography variant="body2">{t("terminal.try_different")}</Typography>
+            ) : null}
+          </Stack>
         )}
-      </div>
+      </Box>
 
       {totalPages > 1 ? (
-        <div className="remote-node-picker-footer">
-          <nav className="remote-node-picker-pagination" aria-label={t("terminal.pagination")}>
-            <button
-              type="button"
-              disabled={currentPage === 1}
-              title={t("terminal.previous_page")}
-              aria-label={t("terminal.previous_page")}
-              onClick={() => setPage((value) => Math.max(1, value - 1))}
-            >
-              <ChevronLeft size={16} aria-hidden="true" />
-            </button>
-            <span>{t("terminal.page_status", { page: currentPage, total: totalPages })}</span>
-            <button
-              type="button"
-              disabled={currentPage === totalPages}
-              title={t("terminal.next_page")}
-              aria-label={t("terminal.next_page")}
-              onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
-            >
-              <ChevronRight size={16} aria-hidden="true" />
-            </button>
-          </nav>
-        </div>
+        <Stack direction="row" spacing={1} sx={{ mt: 1.75, justifyContent: "flex-end", alignItems: "center" }}>
+          <IconButton
+            size="small"
+            disabled={currentPage === 1}
+            title={t("terminal.previous_page")}
+            aria-label={t("terminal.previous_page")}
+            onClick={() => setPage((value) => Math.max(1, value - 1))}
+          >
+            <ChevronLeft size={16} />
+          </IconButton>
+          <Typography variant="body2" sx={{ minWidth: 54, textAlign: "center", color: "text.secondary" }}>
+            {t("terminal.page_status", { page: currentPage, total: totalPages })}
+          </Typography>
+          <IconButton
+            size="small"
+            disabled={currentPage === totalPages}
+            title={t("terminal.next_page")}
+            aria-label={t("terminal.next_page")}
+            onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+          >
+            <ChevronRight size={16} />
+          </IconButton>
+        </Stack>
       ) : null}
-    </div>
+    </Box>
   );
 }

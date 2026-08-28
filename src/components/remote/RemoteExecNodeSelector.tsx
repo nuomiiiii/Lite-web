@@ -8,6 +8,7 @@ import { CustomTags } from "@/components/PriceTags";
 import AdminNodeListFilters, {
   type AdminNodeStatusValue,
 } from "@/components/admin/AdminNodeListFilters";
+import { AdminMobileCardStack, AdminMobileListCard } from "@/components/admin/AdminMobileListCard";
 import { AdminListShell } from "@/components/admin/AdminListShell";
 import { ADMIN_LIST_OUTLINE_SX } from "@/components/admin/adminListLayout";
 import {
@@ -15,7 +16,9 @@ import {
   useAdminPagination,
 } from "@/components/admin/AdminPagination";
 import { ListChecks } from "@/components/admin/muiIcons";
+import { Flex } from "@/components/admin/ui";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Table,
   TableBody,
@@ -56,6 +59,7 @@ export default function RemoteExecNodeSelector({
   onChange,
 }: RemoteExecNodeSelectorProps) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const { liveData, available } = useAdminNodeLiveData();
   const [query, setQuery] = useState("");
   const [statusFilters, setStatusFilters] = useState<AdminNodeStatusValue[]>([]);
@@ -159,6 +163,52 @@ export default function RemoteExecNodeSelector({
 
       {filteredNodes.length > 0 ? (
         <>
+          {isMobile ? (
+            <AdminMobileCardStack>
+              {pageItems.map((node) => {
+                const selected = selectedSet.has(node.uuid);
+                const online = nodeOnlineState(available, onlineSet, node.uuid);
+                return (
+                  <div
+                    key={node.uuid}
+                    data-state={selected ? "selected" : undefined}
+                    aria-selected={selected}
+                    className="remote-exec-node-row"
+                    onClick={() => toggleNode(node.uuid)}
+                  >
+                    <AdminMobileListCard
+                      title={
+                        <RemoteExecNodeIdentity node={node} online={online} />
+                      }
+                      headerExtra={
+                        <Checkbox
+                          checked={selected}
+                          onClick={(event) => event.stopPropagation()}
+                          onCheckedChange={() => toggleNode(node.uuid)}
+                          aria-label={`${t("common.select")} ${node.name}`}
+                        />
+                      }
+                      cells={[
+                        [t("admin.nodeTable.network", "网络"), <RemoteExecNodeAddresses key="net" node={node} />],
+                        [t("common.group"), node.group || "--"],
+                        [t("common.remark"), node.remark || "--"],
+                        [
+                          t("admin.nodeTable.tags", "标签"),
+                          (node.tags || "").trim() ? (
+                            <Flex gap="1" wrap="wrap">
+                              <CustomTags tags={node.tags || ""} />
+                            </Flex>
+                          ) : (
+                            "--"
+                          ),
+                        ],
+                      ]}
+                    />
+                  </div>
+                );
+              })}
+            </AdminMobileCardStack>
+          ) : (
           <div className="admin-responsive-table-wrap remote-exec-node-table-wrap overflow-x-auto overflow-y-hidden">
             <Table container={false} className="admin-responsive-table admin-selection-table remote-exec-node-table min-w-[980px] table-fixed text-sm">
               <TableHeader>
@@ -177,13 +227,6 @@ export default function RemoteExecNodeSelector({
                 {pageItems.map((node) => {
                   const selected = selectedSet.has(node.uuid);
                   const online = nodeOnlineState(available, onlineSet, node.uuid);
-                  const flag = node.region_override?.trim() || node.region?.trim() || "UN";
-                  const addresses = ([
-                    ["IPv4", node.ipv4?.trim()],
-                    ["IPv6", node.ipv6?.trim()],
-                  ] as const).filter(
-                    (entry): entry is readonly ["IPv4" | "IPv6", string] => Boolean(entry[1]),
-                  );
                   return (
                     <TableRow
                       key={node.uuid}
@@ -201,32 +244,10 @@ export default function RemoteExecNodeSelector({
                         />
                       </TableCell>
                       <TableCell className="overflow-hidden" data-label={t("admin.nodeTable.name")}>
-                        <div className="remote-exec-node-identity">
-                          <span className="remote-exec-node-flag">
-                            <Flag flag={flag} compact />
-                          </span>
-                          <div className="min-w-0">
-                            <strong title={node.name}>{node.name}</strong>
-                            <span
-                              className={`remote-exec-node-status ${online ? "is-online" : "is-offline"}`}
-                              aria-hidden={online === null || undefined}
-                              style={online === null ? { visibility: "hidden" } : undefined}
-                            >
-                              <span aria-hidden="true" />
-                              {online ? t("nodeCard.online") : t("nodeCard.offline")}
-                            </span>
-                          </div>
-                        </div>
+                        <RemoteExecNodeIdentity node={node} online={online} />
                       </TableCell>
                       <TableCell data-label={t("terminal.ip_address")}>
-                        <div className="remote-exec-node-addresses">
-                          {addresses.length > 0 ? addresses.map(([type, address]) => (
-                            <div key={type} className="remote-exec-node-address" title={address || undefined}>
-                              <span>{type}</span>
-                              <code>{type === "IPv6" ? compactIPv6(address) : address}</code>
-                            </div>
-                          )) : <span className="text-muted-foreground">--</span>}
-                        </div>
+                        <RemoteExecNodeAddresses node={node} />
                       </TableCell>
                       <TableCell className="min-w-0 overflow-hidden" data-label={t("common.group")}>
                         <span className="admin-cell-clip font-normal text-muted-foreground" title={node.group || ""}>
@@ -253,6 +274,7 @@ export default function RemoteExecNodeSelector({
               </TableBody>
             </Table>
           </div>
+          )}
           <AdminPagination
             page={page}
             total={filteredNodes.length}
@@ -268,5 +290,59 @@ export default function RemoteExecNodeSelector({
         </div>
       )}
     </AdminListShell>
+  );
+}
+
+function RemoteExecNodeIdentity({
+  node,
+  online,
+}: {
+  node: NodeDetail;
+  online: boolean | null;
+}) {
+  const { t } = useTranslation();
+  const flag = node.region_override?.trim() || node.region?.trim() || "UN";
+  return (
+    <div className="remote-exec-node-identity">
+      <span className="remote-exec-node-flag">
+        <Flag flag={flag} compact />
+      </span>
+      <div className="min-w-0">
+        <strong title={node.name}>{node.name}</strong>
+        <span
+          className={`remote-exec-node-status ${online ? "is-online" : "is-offline"}`}
+          aria-hidden={online === null || undefined}
+          style={online === null ? { visibility: "hidden" } : undefined}
+        >
+          <span aria-hidden="true" />
+          {online ? t("nodeCard.online") : t("nodeCard.offline")}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function RemoteExecNodeAddresses({ node }: { node: NodeDetail }) {
+  const addresses = (
+    [
+      ["IPv4", node.ipv4?.trim()],
+      ["IPv6", node.ipv6?.trim()],
+    ] as const
+  ).filter(
+    (entry): entry is readonly ["IPv4" | "IPv6", string] => Boolean(entry[1]),
+  );
+  return (
+    <div className="remote-exec-node-addresses">
+      {addresses.length > 0 ? addresses.map(([type, address]) => (
+        <div
+          key={type}
+          className="remote-exec-node-address"
+          title={address || undefined}
+        >
+          <span>{type}</span>
+          <code>{type === "IPv6" ? compactIPv6(address) : address}</code>
+        </div>
+      )) : <span className="text-muted-foreground">--</span>}
+    </div>
   );
 }

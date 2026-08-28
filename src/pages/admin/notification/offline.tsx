@@ -6,6 +6,7 @@ import {
   AdminListShell,
 } from "@/components/admin/AdminListShell";
 import { ADMIN_LIST_OUTLINE_SX } from "@/components/admin/adminListLayout";
+import { AdminMobileCardStack, AdminMobileListCard } from "@/components/admin/AdminMobileListCard";
 import { AdminSelectionCount } from "@/components/admin/AdminSelectionCount";
 import {
   AdminPagination,
@@ -19,9 +20,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   NodeDetailsProvider,
   useNodeDetails,
+  type NodeDetail,
 } from "@/contexts/NodeDetailsContext";
 import {
   OfflineNotificationProvider,
@@ -37,6 +40,7 @@ import {
   Button,
   Dialog,
   Flex,
+  IconButton,
   Switch,
   TextField,
 } from "@/components/admin/ui";
@@ -438,6 +442,7 @@ const OfflineNotificationTable = ({
   const { offlineNotification } = useOfflineNotification();
   const { nodeDetail } = useNodeDetails();
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const filtered = [...nodeDetail]
     .sort((a, b) => a.weight - b.weight)
     .filter((node) => node.name.toLowerCase().includes(search.toLowerCase()));
@@ -446,6 +451,26 @@ const OfflineNotificationTable = ({
   React.useEffect(() => setPage(1), [search, setPage]);
   return (
     <>
+      {isMobile ? (
+        <AdminMobileCardStack>
+          {pageItems.map((node) => (
+            <OfflineNotificationRow
+              key={node.uuid}
+              node={node}
+              notification={offlineNotification.find((n) => n.client === node.uuid)}
+              selected={selected.includes(node.uuid)}
+              onSelectedChange={(checked) => {
+                if (checked) {
+                  onSelectionChange([...selected, node.uuid]);
+                } else {
+                  onSelectionChange(selected.filter((id) => id !== node.uuid));
+                }
+              }}
+              asCard
+            />
+          ))}
+        </AdminMobileCardStack>
+      ) : (
       <div className="admin-responsive-table-wrap overflow-x-auto">
       <Table container={false} className="admin-responsive-table admin-selection-table min-w-[720px]">
         <TableHeader>
@@ -463,74 +488,24 @@ const OfflineNotificationTable = ({
         </TableHeader>
         <TableBody>
           {pageItems.map((node) => (
-            <TableRow key={node.uuid}>
-              <TableCell className="w-12 px-3" data-label={t("common.select")}>
-                <div className="flex items-center justify-center">
-                  <Checkbox
-                    checked={selected.includes(node.uuid)}
-                    aria-label={`${t("common.select")} ${node.name}`}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        onSelectionChange([...selected, node.uuid]);
-                      } else {
-                        onSelectionChange(
-                          selected.filter((id) => id !== node.uuid)
-                        );
-                      }
-                    }}
-                  />
-                </div>
-              </TableCell>
-              <TableCell data-label={t("common.server")}>{node.name}</TableCell>
-              <TableCell data-label={t("common.status")}>
-                <Badge
-                  color={
-                    offlineNotification.find((n) => n.client === node.uuid)
-                      ?.enable
-                      ? "green"
-                      : "red"
-                  }
-                >
-                  {offlineNotification.find((n) => n.client === node.uuid)
-                    ?.enable
-                    ? t("common.enabled")
-                    : t("common.disabled")}
-                </Badge>
-              </TableCell>
-              {/* <TableCell>
-                {offlineNotification.find((n) => n.client === node.uuid)
-                  ?.cooldown || 1800}{" "}
-                {t("nodeCard.time_second")}
-              </TableCell> */}
-              <TableCell data-label={t("notification.offline.grace_period")}>
-                {offlineNotification.find((n) => n.client === node.uuid)
-                  ?.grace_period || 300}
-                {t("nodeCard.time_second")}
-              </TableCell>
-              <TableCell data-label={t("notification.offline.last_notified")}>
-                {(() => {
-                  const lastNotified = offlineNotification.find(
-                    (n) => n.client === node.uuid
-                  )?.last_notified;
-                  if (!lastNotified) return "-";
-                  const date = new Date(lastNotified);
-                  if (date.getFullYear() < 3)
-                    return t("notification.offline.never_triggered");
-                  return date.toLocaleString();
-                })()}
-              </TableCell>
-              <TableCell className="text-center" data-label={t("common.action")}>
-                <ActionButtons
-                  offlineNotifications={offlineNotification.find(
-                    (n) => n.client === node.uuid
-                  )}
-                />
-              </TableCell>
-            </TableRow>
+            <OfflineNotificationRow
+              key={node.uuid}
+              node={node}
+              notification={offlineNotification.find((n) => n.client === node.uuid)}
+              selected={selected.includes(node.uuid)}
+              onSelectedChange={(checked) => {
+                if (checked) {
+                  onSelectionChange([...selected, node.uuid]);
+                } else {
+                  onSelectionChange(selected.filter((id) => id !== node.uuid));
+                }
+              }}
+            />
           ))}
         </TableBody>
       </Table>
       </div>
+      )}
       <AdminPagination
         page={page}
         total={filtered.length}
@@ -540,6 +515,76 @@ const OfflineNotificationTable = ({
         summary={paginationSummary}
       />
     </>
+  );
+};
+
+const OfflineNotificationRow = ({
+  node,
+  notification,
+  selected,
+  onSelectedChange,
+  asCard = false,
+}: {
+  node: NodeDetail;
+  notification: OfflineNotification | undefined;
+  selected: boolean;
+  onSelectedChange: (checked: boolean) => void;
+  asCard?: boolean;
+}) => {
+  const { t } = useTranslation();
+  const checkbox = (
+    <Checkbox
+      checked={selected}
+      aria-label={`${t("common.select")} ${node.name}`}
+      onCheckedChange={(checked) => onSelectedChange(checked === true)}
+    />
+  );
+  const statusBadge = (
+    <Badge color={notification?.enable ? "green" : "red"}>
+      {notification?.enable ? t("common.enabled") : t("common.disabled")}
+    </Badge>
+  );
+  const gracePeriod = `${notification?.grace_period || 300}${t("nodeCard.time_second")}`;
+  const lastNotified = (() => {
+    if (!notification?.last_notified) return "-";
+    const date = new Date(notification.last_notified);
+    if (date.getFullYear() < 3) return t("notification.offline.never_triggered");
+    return date.toLocaleString();
+  })();
+  const actions = <ActionButtons offlineNotifications={notification} />;
+
+  if (asCard) {
+    return (
+      <AdminMobileListCard
+        title={node.name}
+        headerExtra={checkbox}
+        cells={[
+          [t("common.status"), statusBadge],
+          [t("notification.offline.grace_period"), gracePeriod],
+          [t("notification.offline.last_notified"), lastNotified],
+        ]}
+        actions={actions}
+      />
+    );
+  }
+
+  return (
+    <TableRow>
+      <TableCell className="w-12 px-3" data-label={t("common.select")}>
+        <div className="flex items-center justify-center">{checkbox}</div>
+      </TableCell>
+      <TableCell data-label={t("common.server")}>{node.name}</TableCell>
+      <TableCell data-label={t("common.status")}>{statusBadge}</TableCell>
+      <TableCell data-label={t("notification.offline.grace_period")}>
+        {gracePeriod}
+      </TableCell>
+      <TableCell data-label={t("notification.offline.last_notified")}>
+        {lastNotified}
+      </TableCell>
+      <TableCell className="text-center" data-label={t("common.action")}>
+        {actions}
+      </TableCell>
+    </TableRow>
   );
 };
 
@@ -554,20 +599,16 @@ const ActionButtons = ({
   const [editSaving, setEditSaving] = React.useState(false);
 
   return (
-    <Flex gap="3" align="center" className="admin-card-actions admin-single-text-action w-full">
+    <Flex gap="3" align="center" className="admin-card-actions admin-single-icon-action w-full">
       <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
         <Dialog.Trigger>
-          <Button
-            variant="ghost"
-            className="admin-single-action-button"
+          <IconButton
+            variant="soft"
             aria-label={t("common.modify", "修改")}
             title={t("common.modify", "修改")}
           >
             <Pencil size={16} />
-            <span className="admin-single-action-label">
-              {t("common.modify", "修改")}
-            </span>
-          </Button>
+          </IconButton>
         </Dialog.Trigger>
         <AppDialogContent>
           <Dialog.Title>{t("common.edit")}</Dialog.Title>

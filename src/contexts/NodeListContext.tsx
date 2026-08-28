@@ -50,7 +50,7 @@ export type NodeBasicInfo = {
   traffic_reset_day?: number | null;
   traffic_reset_allowance: number;
   effective_traffic_limit: number;
-  effective_traffic_type: "sum" | "max" | "min" | "up" | "down";
+  effective_traffic_type?: "sum" | "max" | "min" | "up" | "down";
   /** 过期时间 */
   expired_at: string;
   /** 创建时间 */
@@ -143,7 +143,7 @@ export const NodeListProvider: React.FC<{ children: React.ReactNode }> = ({
           traffic_reset_day: n.traffic_reset_day ?? null,
           traffic_reset_allowance: n.traffic_reset_allowance ?? 0,
           effective_traffic_limit: n.effective_traffic_limit ?? n.traffic_limit ?? 0,
-          effective_traffic_type: n.effective_traffic_type ?? n.traffic_limit_type ?? "sum",
+          effective_traffic_type: n.effective_traffic_type ?? n.traffic_limit_type,
           expired_at: n.expired_at ?? "",
           created_at: n.created_at ?? "",
           updated_at: n.updated_at ?? "",

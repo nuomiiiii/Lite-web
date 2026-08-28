@@ -6,6 +6,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { AdminMobileCardStack, AdminMobileListCard } from "@/components/admin/AdminMobileListCard";
 import { useNodeDetails } from "@/contexts/NodeDetailsContext";
 import { usePingTask, type PingTask } from "@/contexts/PingTaskContext";
 import {
@@ -50,6 +52,7 @@ export const ServerView = ({
       );
     });
   }, [nodeDetail, pingTasks, search]);
+  const isMobile = useIsMobile();
   const { page, setPage, pageItems, pageSize, setPageSize } =
     useAdminPagination(filteredNodes);
 
@@ -57,6 +60,20 @@ export const ServerView = ({
 
   return (
     <>
+      {isMobile ? (
+        <AdminMobileCardStack>
+          {pageItems.map((n) => (
+            <ServerRow
+              key={n.uuid}
+              nodeUuid={n.uuid}
+              nodeName={n.name}
+              nodeRegion={n.region}
+              pingTasks={pingTasks}
+              asCard
+            />
+          ))}
+        </AdminMobileCardStack>
+      ) : (
       <div className="admin-responsive-table-wrap overflow-x-auto">
       <Table container={false} className="admin-responsive-table min-w-[640px]">
         <TableHeader>
@@ -78,6 +95,7 @@ export const ServerView = ({
         </TableBody>
       </Table>
       </div>
+      )}
       <AdminPagination
         page={page}
         total={filteredNodes.length}
@@ -95,7 +113,8 @@ const ServerRow: React.FC<{
   nodeName: string;
   nodeRegion?: string;
   pingTasks: PingTask[];
-}> = ({ nodeUuid, nodeName, nodeRegion, pingTasks }) => {
+  asCard?: boolean;
+}> = ({ nodeUuid, nodeName, nodeRegion, pingTasks, asCard = false }) => {
   const { t } = useTranslation();
   const { refresh } = usePingTask();
   const [open, setOpen] = React.useState(false);
@@ -172,83 +191,101 @@ const ServerRow: React.FC<{
       .finally(() => setSaving(false));
   };
 
+  const taskNames =
+    ownedTasks.length > 0
+      ? ownedTasks.map((task) => task.name).join("、")
+      : "";
+  const taskValue = (
+    <div
+      className="min-w-0 truncate whitespace-nowrap leading-5"
+      title={taskNames || undefined}
+    >
+      {taskNames || (
+        <span className="text-muted-foreground">{t("common.none")}</span>
+      )}
+    </div>
+  );
+  const taskBindDialog = (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger>
+        <IconButton variant="ghost" className="shrink-0">
+          <MoreHorizontal size={16} />
+        </IconButton>
+      </Dialog.Trigger>
+      <AppDialogContent maxWidth="450px">
+        <Dialog.Title>
+          {t("common.server")} - {nodeName}
+        </Dialog.Title>
+        <div className="mt-2">
+          <Selector
+            value={selectedIds}
+            onChange={setSelectedIds}
+            items={[...pingTasks.filter((task) => task.id !== undefined)]}
+            getId={(task) => String(task.id)}
+            getLabel={(task) => (
+              <span className="text-sm">
+                {task.name}
+                {task.default_on && (
+                  <span className="ml-2 text-xs text-accent-11">
+                    {t("ping.default_on_short")}
+                  </span>
+                )}
+                <span className="ml-2 text-xs text-gray-500">
+                  {task.type}/{task.interval}s
+                </span>
+              </span>
+            )}
+            headerLabel={t("ping.task")}
+            searchPlaceholder={t("common.search", { defaultValue: "Search" })}
+            filterItem={(item, keyword) =>
+              String(item.name).toLowerCase().includes(keyword.toLowerCase())
+            }
+          />
+        </div>
+        <Flex gap="2" justify="end" className="mt-4">
+          <Dialog.Close>
+            <Button
+              variant="soft"
+              color="gray"
+              type="button"
+              onClick={() => setOpen(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+          </Dialog.Close>
+          <Button onClick={handleSave} disabled={saving}>
+            {t("common.save")}
+          </Button>
+        </Flex>
+      </AppDialogContent>
+    </Dialog.Root>
+  );
+  const serverIdentity = (
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="inline-flex size-7 shrink-0 items-center justify-center text-muted-foreground">
+        {nodeRegion ? <Flag flag={nodeRegion} compact /> : <Server size={17} />}
+      </span>
+      <span className="min-w-0 truncate font-medium">{nodeName}</span>
+    </div>
+  );
+
+  if (asCard) {
+    return (
+      <AdminMobileListCard
+        title={serverIdentity}
+        cells={[[t("ping.task"), taskValue]]}
+        actions={<div className="admin-card-actions">{taskBindDialog}</div>}
+      />
+    );
+  }
+
   return (
     <TableRow>
-      <TableCell data-label={t("common.server")}>
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="inline-flex size-7 shrink-0 items-center justify-center text-muted-foreground">
-            {nodeRegion ? <Flag flag={nodeRegion} compact /> : <Server size={17} />}
-          </span>
-          <span className="min-w-0 truncate font-medium">{nodeName}</span>
-        </div>
-      </TableCell>
+      <TableCell data-label={t("common.server")}>{serverIdentity}</TableCell>
       <TableCell data-label={t("ping.task")}>
         <div className="flex min-w-0 items-center gap-2">
-          <div
-            className="min-w-0 flex-1 truncate whitespace-nowrap leading-5"
-            title={
-              ownedTasks.length > 0
-                ? ownedTasks.map((task) => task.name).join("、")
-                : undefined
-            }
-          >
-            {ownedTasks.length > 0
-              ? ownedTasks.map((task) => task.name).join("、")
-              : <span className="text-muted-foreground">{t("common.none")}</span>}
-          </div>
-          <Dialog.Root open={open} onOpenChange={setOpen}>
-            <Dialog.Trigger>
-              <IconButton variant="ghost" className="shrink-0">
-                <MoreHorizontal size={16} />
-              </IconButton>
-            </Dialog.Trigger>
-            <AppDialogContent maxWidth="450px">
-              <Dialog.Title>
-                {t("common.server")} - {nodeName}
-              </Dialog.Title>
-              <div className="mt-2">
-                <Selector
-                  value={selectedIds}
-                  onChange={setSelectedIds}
-                  items={[...pingTasks.filter((t) => t.id !== undefined)]}
-                  getId={(task) => String(task.id)}
-                  getLabel={(task) => (
-                    <span className="text-sm">
-                      {task.name}
-                      {task.default_on && (
-                        <span className="ml-2 text-xs text-accent-11">
-                          {t("ping.default_on_short")}
-                        </span>
-                      )}
-                      <span className="ml-2 text-xs text-gray-500">
-                        {task.type}/{task.interval}s
-                      </span>
-                    </span>
-                  )}
-                  headerLabel={t("ping.task")}
-                  searchPlaceholder={t("common.search", { defaultValue: "Search" })}
-                  filterItem={(item, keyword) =>
-                    String(item.name).toLowerCase().includes(keyword.toLowerCase())
-                  }
-                />
-              </div>
-              <Flex gap="2" justify="end" className="mt-4">
-                <Dialog.Close>
-                  <Button
-                    variant="soft"
-                    color="gray"
-                    type="button"
-                    onClick={() => setOpen(false)}
-                  >
-                    {t("common.cancel")}
-                  </Button>
-                </Dialog.Close>
-                <Button onClick={handleSave} disabled={saving}>
-                  {t("common.save")}
-                </Button>
-              </Flex>
-            </AppDialogContent>
-          </Dialog.Root>
+          <div className="min-w-0 flex-1">{taskValue}</div>
+          {taskBindDialog}
         </div>
       </TableCell>
     </TableRow>

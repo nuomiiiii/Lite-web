@@ -69,5 +69,6 @@ test("traffic report selection uses an aligned column and mobile row cards", () 
   assert.match(source, /admin-responsive-table[^"\n]*admin-selection-table[^"\n]*min-w-\[640px\]/);
   assert.match(source, /data-label=\{t\("common\.server"\)\}/);
   assert.match(source, /common\.deselect_all[\s\S]*common\.select_all/);
-  assert.match(source, /admin-single-text-action/);
+  assert.match(source, /<IconButton[\s\S]*<Pencil size=\{16\} \/>/);
+  assert.doesNotMatch(source, /admin-single-action-label/);
 });

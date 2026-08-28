@@ -61,11 +61,13 @@ test("回程任务、记录和规则复用服务器列表的筛选条和表格�
   assert.match(source, /<AdminListShell>/);
   assert.match(source, /<AdminListSearch/);
   assert.match(source, /AdminListSearch[\s\S]*取消全选[\s\S]*批量修改[\s\S]*新建任务/);
-  assert.match(source, /className="admin-responsive-table w-full min-w-\[1120px\]/);
+  assert.match(source, /<AdminMobileListCard/);
+  assert.match(source, /className="admin-responsive-table admin-selection-table return-route-task-table w-full min-w-\[1120px\]/);
   assert.match(source, /data-label="任务 \/ 节点"/);
   assert.match(source, /data-label="线路变化"/);
-  assert.match(source, /data-label="操作" className="p-3"><Flex justify="start"/);
-  assert.match(source, /<TableHead>操作<\/TableHead>/);
+  assert.match(source, /data-label="操作" className="p-3 text-left align-middle">\{actionButtons\}/);
+  assert.match(source, /className="admin-card-actions return-route-actions"/);
+  assert.match(source, /<TableHead className="text-left">操作<\/TableHead>/);
   assert.doesNotMatch(source, /overflow-hidden rounded-md border border-\[var\(--gray-a5\)\]/);
 });
 
@@ -81,4 +83,23 @@ test("CN2 和 CUG 待确认不显示切线确认次数", () => {
   assert.match(source, /new Set\(\["CN2 待确认", "CUG 待确认"\]\)/);
   assert.match(source, /pendingLineOptions\.has\(status\.candidate_line\) \? null/);
   assert.match(source, /status\.candidate_count\}\/\{needed\}/);
+});
+
+test("状态标签只保留文字，不带图标", () => {
+  assert.match(source, /healthy: \{ color: "green" as const, text: "线路正常" \}/);
+  assert.doesNotMatch(source, /text: "线路正常", icon:/);
+  assert.doesNotMatch(source, /<Badge color="blue"><RefreshCw/);
+  assert.match(source, /<Badge color="blue">探测中<\/Badge>/);
+});
+
+test("桌面回程任务行把线路状态和操作左对齐", async () => {
+  const css = await readFile(
+    new URL("../src/global.css", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /return-route-task-table/);
+  assert.match(source, /data-label="线路" className="p-3 text-left align-middle"/);
+  assert.match(source, /data-label="状态" className="p-3 text-left align-middle"/);
+  assert.match(source, /data-label="操作" className="p-3 text-left align-middle"/);
+  assert.match(css, /justify-content: flex-start !important;/);
 });

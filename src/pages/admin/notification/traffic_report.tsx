@@ -10,7 +10,10 @@ import {
 import {
   NodeDetailsProvider,
   useNodeDetails,
+  type NodeDetail,
 } from "@/contexts/NodeDetailsContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { AdminMobileCardStack, AdminMobileListCard } from "@/components/admin/AdminMobileListCard";
 import {
   TrafficReportNotificationProvider,
   useTrafficReportNotification,
@@ -37,6 +40,7 @@ import {
   Button,
   Dialog,
   Flex,
+  IconButton,
   Switch,
   TextField,
 } from "@/components/admin/ui";
@@ -725,6 +729,7 @@ const TrafficReportTable = ({
   const { trafficReportNotification } = useTrafficReportNotification();
   const { nodeDetail } = useNodeDetails();
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
 
   const filtered = nodeDetail.filter((node) =>
     node.name.toLowerCase().includes(search.toLowerCase())
@@ -735,6 +740,28 @@ const TrafficReportTable = ({
 
   return (
     <>
+      {isMobile ? (
+        <AdminMobileCardStack>
+          {pageItems.map((node) => (
+            <TrafficReportRow
+              key={node.uuid}
+              node={node}
+              notification={trafficReportNotification.find(
+                (item) => item.client === node.uuid,
+              )}
+              selected={selected.includes(node.uuid)}
+              onSelectedChange={(checked) => {
+                if (checked) {
+                  onSelectionChange([...selected, node.uuid]);
+                } else {
+                  onSelectionChange(selected.filter((id) => id !== node.uuid));
+                }
+              }}
+              asCard
+            />
+          ))}
+        </AdminMobileCardStack>
+      ) : (
       <div className="admin-responsive-table-wrap overflow-x-auto">
       <Table container={false} className="admin-responsive-table admin-selection-table min-w-[640px]">
         <TableHeader>
@@ -750,49 +777,27 @@ const TrafficReportTable = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pageItems.map((node) => {
-            const n = trafficReportNotification.find(
-              (item) => item.client === node.uuid
-            );
-            return (
-              <TableRow key={node.uuid}>
-                <TableCell className="w-12 px-3" data-label={t("common.select", "选择")}>
-                  <div className="flex items-center justify-center">
-                    <Checkbox
-                      checked={selected.includes(node.uuid)}
-                      aria-label={t("common.select", "选择")}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          onSelectionChange([...selected, node.uuid]);
-                        } else {
-                          onSelectionChange(
-                            selected.filter((id) => id !== node.uuid)
-                          );
-                        }
-                      }}
-                    />
-                  </div>
-                </TableCell>
-                <TableCell data-label={t("common.server")}>{node.name}</TableCell>
-                <TableCell data-label={t("common.status")}>
-                  <Badge color={n?.enable ? "green" : "red"}>
-                    {n?.enable ? t("common.enabled") : t("common.disabled")}
-                  </Badge>
-                </TableCell>
-                <TableCell data-label={t("notification.traffic_report.report_type")}>{reportTypeLabel(n, t)}</TableCell>
-                <TableCell data-label={t("notification.traffic_report.report_content")}>{reportContentLabel(n, t)}</TableCell>
-                <TableCell className="text-center" data-label={t("common.action")}>
-                  <ActionButtons
-                    nodeUUID={node.uuid}
-                    trafficReport={n}
-                  />
-                </TableCell>
-              </TableRow>
-            );
-          })}
+          {pageItems.map((node) => (
+            <TrafficReportRow
+              key={node.uuid}
+              node={node}
+              notification={trafficReportNotification.find(
+                (item) => item.client === node.uuid,
+              )}
+              selected={selected.includes(node.uuid)}
+              onSelectedChange={(checked) => {
+                if (checked) {
+                  onSelectionChange([...selected, node.uuid]);
+                } else {
+                  onSelectionChange(selected.filter((id) => id !== node.uuid));
+                }
+              }}
+            />
+          ))}
         </TableBody>
       </Table>
       </div>
+      )}
       <AdminPagination
         page={page}
         total={filtered.length}
@@ -802,6 +807,71 @@ const TrafficReportTable = ({
         summary={paginationSummary}
       />
     </>
+  );
+};
+
+const TrafficReportRow = ({
+  node,
+  notification,
+  selected,
+  onSelectedChange,
+  asCard = false,
+}: {
+  node: NodeDetail;
+  notification: TrafficReportNotification | undefined;
+  selected: boolean;
+  onSelectedChange: (checked: boolean) => void;
+  asCard?: boolean;
+}) => {
+  const { t } = useTranslation();
+  const checkbox = (
+    <Checkbox
+      checked={selected}
+      aria-label={t("common.select", "选择")}
+      onCheckedChange={(checked) => onSelectedChange(checked === true)}
+    />
+  );
+  const statusBadge = (
+    <Badge color={notification?.enable ? "green" : "red"}>
+      {notification?.enable ? t("common.enabled") : t("common.disabled")}
+    </Badge>
+  );
+  const actions = (
+    <ActionButtons nodeUUID={node.uuid} trafficReport={notification} />
+  );
+
+  if (asCard) {
+    return (
+      <AdminMobileListCard
+        title={node.name}
+        headerExtra={checkbox}
+        cells={[
+          [t("common.status"), statusBadge],
+          [t("notification.traffic_report.report_type"), reportTypeLabel(notification, t)],
+          [t("notification.traffic_report.report_content"), reportContentLabel(notification, t)],
+        ]}
+        actions={actions}
+      />
+    );
+  }
+
+  return (
+    <TableRow>
+      <TableCell className="w-12 px-3" data-label={t("common.select", "选择")}>
+        <div className="flex items-center justify-center">{checkbox}</div>
+      </TableCell>
+      <TableCell data-label={t("common.server")}>{node.name}</TableCell>
+      <TableCell data-label={t("common.status")}>{statusBadge}</TableCell>
+      <TableCell data-label={t("notification.traffic_report.report_type")}>
+        {reportTypeLabel(notification, t)}
+      </TableCell>
+      <TableCell data-label={t("notification.traffic_report.report_content")}>
+        {reportContentLabel(notification, t)}
+      </TableCell>
+      <TableCell className="text-center" data-label={t("common.action")}>
+        {actions}
+      </TableCell>
+    </TableRow>
   );
 };
 
@@ -818,20 +888,16 @@ const ActionButtons = ({
   const [editSaving, setEditSaving] = React.useState(false);
 
   return (
-    <Flex gap="2" align="center" className="admin-card-actions admin-single-text-action w-full">
+    <Flex gap="2" align="center" className="admin-card-actions admin-single-icon-action w-full">
       <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
         <Dialog.Trigger>
-          <Button
-            variant="ghost"
-            className="admin-single-action-button"
+          <IconButton
+            variant="soft"
             aria-label={t("common.modify", "修改")}
             title={t("common.modify", "修改")}
           >
             <Pencil size={16} />
-            <span className="admin-single-action-label">
-              {t("common.modify", "修改")}
-            </span>
-          </Button>
+          </IconButton>
         </Dialog.Trigger>
         <AppDialogContent maxWidth="560px">
           <Dialog.Title>{t("common.edit")}</Dialog.Title>

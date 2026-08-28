@@ -106,9 +106,12 @@ test("keeps the admin navigation in the intended groups", () => {
     remoteManagement?.children?.map((item) => item.path),
     [
       "/admin/exec",
-      "/admin/terminal",
       "/admin/settings/xtermjs",
     ],
+  );
+  assert.equal(
+    remoteManagement?.children?.some((item) => item.path === "/admin/terminal"),
+    false,
   );
 
   assert.deepEqual(
@@ -253,6 +256,7 @@ test("system UI routes do not embed the legacy public dashboard", () => {
   assert.match(routesSource, /path:\s*["']\/admin["']/);
   assert.match(routesSource, /path:\s*["']\/install["']/);
   assert.match(routesSource, /path:\s*["']\/terminal["']/);
+  assert.doesNotMatch(routesSource, /pages\/admin\/terminal/);
   assert.match(routesSource, /path:\s*["']\/manage\/\*["']/);
 });
 

@@ -49,7 +49,6 @@ const adminRoutePreloaders: Record<string, () => Promise<unknown>> = {
   "/admin/return-route": loadAdminReturnRoute,
   "/admin/logs": () => import("./pages/admin/log"),
   "/admin/exec": () => import("./pages/admin/exec"),
-  "/admin/terminal": () => import("./pages/admin/terminal"),
   "/admin/theme_managed": () => import("./pages/admin/theme_managed.tsx"),
   "/admin/theme_raw": () => import("./pages/admin/theme_raw.tsx"),
   "/admin/market/themes": () => import("./pages/admin/market/themes"),
@@ -294,12 +293,6 @@ export const routes: RouteObject[] = [
       {
         path: "exec",
         element: React.createElement(lazy(() => import("./pages/admin/exec"))),
-      },
-      {
-        path: "terminal",
-        element: React.createElement(
-          lazy(() => import("./pages/admin/terminal")),
-        ),
       }
     ],
   },

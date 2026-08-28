@@ -31,7 +31,9 @@ test("reset traffic requires a billing reset day and shows the effective quota",
 
 test("system node data keeps the effective cycle quota", () => {
   assert.match(listSource, /n\.effective_traffic_limit \?\? n\.traffic_limit \?\? 0/);
-  assert.match(listSource, /n\.effective_traffic_type \?\? n\.traffic_limit_type \?\? "sum"/);
+  assert.match(listSource, /n\.effective_traffic_type \?\? n\.traffic_limit_type/);
+  assert.doesNotMatch(listSource, /effective_traffic_type \?\? n\.traffic_limit_type \?\? "sum"/);
+  assert.doesNotMatch(listSource, /traffic_limit_type \?\? "max"/);
 });
 
 test("new nodes default the edit form traffic accounting mode to sum", () => {

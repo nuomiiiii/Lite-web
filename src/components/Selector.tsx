@@ -125,10 +125,10 @@ function SelectorInner<T>(props: SelectorProps<T>) {
         </TextField.Root>
       </div>
       <div className="selector overflow-hidden rounded-md border border-[var(--gray-a5)]">
-        <Table container={false} className="table-fixed">
+        <Table container={false}>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12 px-2 text-center">
+              <TableHead>
                 {showHeaderSelectAll ? (
                   <Checkbox
                     checked={checkAllState}
@@ -151,7 +151,7 @@ function SelectorInner<T>(props: SelectorProps<T>) {
                     handleCheck(id, !value.includes(id));
                   }}
                 >
-                  <TableCell className="w-12 px-2 text-center">
+                  <TableCell>
                     <Checkbox
                       checked={value.includes(id)}
                       onClick={(event) => event.stopPropagation()}
@@ -170,7 +170,7 @@ function SelectorInner<T>(props: SelectorProps<T>) {
                   handleCheck(id, !value.includes(id));
                 }}
               >
-                <TableCell className="w-12 px-2 text-center">
+                <TableCell>
                   <Checkbox
                     checked={value.includes(id)}
                     onClick={(event) => event.stopPropagation()}
