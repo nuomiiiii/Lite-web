@@ -19,7 +19,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import MigrationGuideShell from "@/components/install/MigrationGuideShell";
-import RestrictedLoginDialog from "@/components/RestrictedLoginDialog";
 import { isGuidePreview } from "@/utils/guidePreview";
 import { useSearchParams } from "react-router-dom";
 
@@ -57,19 +56,6 @@ type UpgradeStatus = {
   error?: string;
 };
 
-type LoginMethods = {
-  oauth_enabled: boolean;
-  oauth_provider: string;
-  password_login_enabled: boolean;
-};
-
-type Me = {
-  logged_in: boolean;
-  username: string;
-};
-
-type AuthStatus = LoginMethods & Me;
-
 type APIResponse<T> = {
   status: "success" | "error";
   message: string;
@@ -82,16 +68,6 @@ const examples: Record<Driver, string> = {
   postgresql:
     "host=127.0.0.1 port=5432 user=lite password=secret dbname=lite sslmode=disable",
 };
-
-function previewAuth(): AuthStatus {
-  return {
-    logged_in: true,
-    username: "preview",
-    oauth_enabled: false,
-    oauth_provider: "",
-    password_login_enabled: true,
-  };
-}
 
 function previewUpgradeStatus(): UpgradeStatus {
   return {
@@ -132,12 +108,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return payload.data;
 }
 
-async function getMe(): Promise<Me> {
-  const response = await fetch("/api/me", { cache: "no-store" });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return (await response.json()) as Me;
-}
-
 const Upgrade127 = () => {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
@@ -148,9 +118,6 @@ const Upgrade127 = () => {
   );
   const [searchParams] = useSearchParams();
   const preview = searchParams.get("preview") === "1" || isGuidePreview();
-  const [auth, setAuth] = useState<AuthStatus | null>(() =>
-    isGuidePreview() ? previewAuth() : null,
-  );
   const [status, setStatus] = useState<UpgradeStatus | null>(() =>
     isGuidePreview() ? previewUpgradeStatus() : null,
   );
@@ -163,30 +130,6 @@ const Upgrade127 = () => {
   const [busy, setBusy] = useState(false);
   const [confirmSQLite, setConfirmSQLite] = useState(false);
   const [confirmLarge, setConfirmLarge] = useState(false);
-
-  const refreshAuth = useCallback(async () => {
-    if (preview) {
-      const next = previewAuth();
-      setAuth(next);
-      return next;
-    }
-    try {
-      const [methods, me] = await Promise.all([
-        request<LoginMethods>("/auth"),
-        getMe(),
-      ]);
-      const next = { ...methods, ...me };
-      setAuth(next);
-      return next;
-    } catch (error) {
-      setPageError(
-        error instanceof Error
-          ? error.message
-          : t(`${I18N_PREFIX}.network_error`),
-      );
-      return null;
-    }
-  }, [preview, t]);
 
   const refreshStatus = useCallback(async () => {
     if (preview) {
@@ -201,17 +144,11 @@ const Upgrade127 = () => {
       setPageError("");
       return next;
     } catch (error) {
-      if (error instanceof Error && error.message.includes("Unauthorized")) {
-        setAuth((current) =>
-          current ? { ...current, logged_in: false } : current,
-        );
-      } else {
-        setPageError(
-          error instanceof Error
-            ? error.message
-            : t(`${I18N_PREFIX}.network_error`),
-        );
-      }
+      setPageError(
+        error instanceof Error
+          ? error.message
+          : t(`${I18N_PREFIX}.network_error`),
+      );
       return null;
     }
   }, [preview, t]);
@@ -219,19 +156,15 @@ const Upgrade127 = () => {
   useEffect(() => {
     if (preview) {
       setPageError("");
-      setAuth(previewAuth());
       setStatus(previewUpgradeStatus());
       return;
     }
-    void refreshAuth().then((next) => {
-      if (next?.logged_in) void refreshStatus();
-    });
-  }, [preview, refreshAuth, refreshStatus]);
+    void refreshStatus();
+  }, [preview, refreshStatus]);
 
   useEffect(() => {
     if (preview) return;
     if (
-      !auth?.logged_in ||
       !status ||
       (status.state !== "migrating" && status.state !== "cleaning")
     ) {
@@ -239,7 +172,7 @@ const Upgrade127 = () => {
     }
     const timer = window.setInterval(() => void refreshStatus(), 700);
     return () => window.clearInterval(timer);
-  }, [auth?.logged_in, preview, refreshStatus, status]);
+  }, [preview, refreshStatus, status]);
 
   useEffect(() => {
     if (preview || status?.state !== "completed") return;
@@ -575,15 +508,6 @@ const Upgrade127 = () => {
           )}
         </Stack>
       </MigrationGuideShell>
-
-      <RestrictedLoginDialog
-        auth={auth}
-        requestFailedKey={`${I18N_PREFIX}.request_failed`}
-        onAuthenticated={async () => {
-          const next = await refreshAuth();
-          if (next?.logged_in) await refreshStatus();
-        }}
-      />
 
       <Dialog
         open={cleanupOpen}

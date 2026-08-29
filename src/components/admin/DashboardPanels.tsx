@@ -115,8 +115,22 @@ export function SummaryPanel({
         </Box>
       </div>
       <div className="mt-2 text-2xl font-bold tabular-nums text-foreground">{value}</div>
-      <div className="mt-2 text-sm text-muted-foreground">{children}</div>
+      <div className="mt-2 min-w-0 text-sm text-muted-foreground">{children}</div>
     </section>
+  );
+}
+
+function DashboardChip({
+  children,
+  tone = "accent",
+}: {
+  children: React.ReactNode;
+  tone?: "accent" | "orange" | "red";
+}) {
+  return (
+    <span className={`km-dashboard-chip km-dashboard-chip--${tone}`}>
+      {children}
+    </span>
   );
 }
 
@@ -637,9 +651,7 @@ export function ResourceRankingPanel({ data, limit }: { data: DashboardData; lim
         title={t("admin_dashboard.resource_ranking")}
         description={t("admin_dashboard.resource_ranking_hint")}
         trailing={(
-          <span className="rounded-full bg-[var(--accent-a3)] px-2.5 py-1 text-xs font-medium text-[var(--accent-11)]">
-            Top {limit}
-          </span>
+          <DashboardChip>Top {limit}</DashboardChip>
         )}
       />
       <div
@@ -759,7 +771,7 @@ export function BillingTrendPanel({
         title={t("admin_dashboard.daily_billable")}
         description={t("admin_dashboard.daily_billable_hint")}
         responsive
-        trailing={<span className="rounded-full bg-[var(--accent-a3)] px-2.5 py-1 text-xs font-medium text-[var(--accent-11)]">{t("admin_dashboard.recent_month")}</span>}
+        trailing={<DashboardChip>{t("admin_dashboard.recent_month")}</DashboardChip>}
       />
       {charts && !charts.traffic.error && !charts.traffic.history_ready ? (
         <p className="mb-2 text-xs text-muted-foreground">{t("admin_dashboard.history_preparing")}</p>
@@ -809,9 +821,9 @@ export function DailyTrafficRankingPanel({
         title={t("admin_dashboard.daily_traffic_ranking")}
         description={t("admin_dashboard.daily_traffic_ranking_hint")}
         trailing={(
-          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--accent-a3)] px-2.5 py-1 text-xs font-medium text-[var(--accent-11)]">
+          <DashboardChip>
             <ArrowUpDown size={13} /> Top {limit}
-          </span>
+          </DashboardChip>
         )}
       />
       {error || charts?.traffic.error ? (
@@ -886,9 +898,9 @@ export function LatencyRankingPanel({
         title={t("admin_dashboard.latency_ranking")}
         description={t("admin_dashboard.latency_ranking_hint")}
         trailing={(
-          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--orange-a3)] px-2.5 py-1 text-xs font-medium text-[var(--orange-11)]">
+          <DashboardChip tone="orange">
             <Timer size={13} /> Top {limit}
-          </span>
+          </DashboardChip>
         )}
       />
       {error || charts?.latency.error ? (
@@ -942,9 +954,9 @@ export function LatencyJitterRankingPanel({
         title={t("admin_dashboard.latency_jitter_ranking")}
         description={t("admin_dashboard.latency_jitter_ranking_hint")}
         trailing={(
-          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--orange-a3)] px-2.5 py-1 text-xs font-medium text-[var(--orange-11)]">
+          <DashboardChip tone="orange">
             <Activity size={13} /> Top {limit}
-          </span>
+          </DashboardChip>
         )}
       />
       {error || charts?.latency.jitter_error ? (
@@ -1012,9 +1024,9 @@ export function PacketLossRankingPanel({
         title={t("admin_dashboard.packet_loss_ranking")}
         description={t("admin_dashboard.packet_loss_ranking_hint")}
         trailing={(
-          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--red-a3)] px-2.5 py-1 text-xs font-medium text-[var(--red-11)]">
+          <DashboardChip tone="red">
             <WifiOff size={13} /> Top {limit}
-          </span>
+          </DashboardChip>
         )}
       />
       {error || charts?.packet_loss?.error ? (
@@ -1204,14 +1216,14 @@ function LegacyAdminDashboard() {
               label={t("admin_dashboard.today_billable")}
               value={charts && !charts.traffic.error ? formatBytes(charts.traffic.today_billable) : "-"}
             >
-              {charts && !charts.traffic.error ? <div className="grid grid-cols-2 gap-3">
-                <span className="flex min-w-0 items-center gap-1.5">
+              {charts && !charts.traffic.error ? <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <span className="inline-flex min-w-0 items-center gap-1.5">
                   <ArrowUpFromLine size={14} className="shrink-0 text-[var(--accent-11)]" />
-                  <span className="truncate">{t("admin_dashboard.upload")} {formatBytes(charts.traffic.today_up)}</span>
+                  <span className="whitespace-nowrap">{t("admin_dashboard.upload")} {formatBytes(charts.traffic.today_up)}</span>
                 </span>
-                <span className="flex min-w-0 items-center justify-end gap-1.5 text-right">
+                <span className="inline-flex min-w-0 items-center gap-1.5">
                   <ArrowDownToLine size={14} className="shrink-0 text-[var(--orange-11)]" />
-                  <span className="truncate">{t("admin_dashboard.download")} {formatBytes(charts.traffic.today_down)}</span>
+                  <span className="whitespace-nowrap">{t("admin_dashboard.download")} {formatBytes(charts.traffic.today_down)}</span>
                 </span>
               </div> : (
                 <span>{chartsError || charts?.traffic.error ? t("admin_dashboard.data_unavailable") : t("admin_dashboard.chart_loading")}</span>
@@ -1284,7 +1296,7 @@ function LegacyAdminDashboard() {
                 <PanelHeader
                   title={t("admin_dashboard.daily_billable")}
                   description={t("admin_dashboard.daily_billable_hint")}
-                  trailing={<span className="rounded-full bg-[var(--accent-a3)] px-2.5 py-1 text-xs font-medium text-[var(--accent-11)]">{t("admin_dashboard.recent_month")}</span>}
+                  trailing={<DashboardChip>{t("admin_dashboard.recent_month")}</DashboardChip>}
                 />
                 {charts && !charts.traffic.error && !charts.traffic.history_ready ? (
                   <p className="mb-2 text-xs text-muted-foreground">{t("admin_dashboard.history_preparing")}</p>

@@ -92,6 +92,9 @@ test("node detail overview keeps flag assets, spec icons, and HK preview values"
     /borderRadius: "8px",\s*bgcolor: LITE_BLUE_SOFT/,
   );
   assert.match(detailSource, /LITE_BLUE_SOFT_STRONG/);
+  assert.match(detailSource, /km-admin-terminal-button/);
+  assert.doesNotMatch(detailSource, /bgcolor: "text\.primary"/);
+  assert.match(detailSource, /html\.dark &": \{\s*bgcolor: "rgba\(7, 141, 238, 0\.22\)"/);
   assert.match(detailSource, /displayOrEmpty\(node\.cpu_cores/);
   assert.match(detailSource, /displayOrEmpty\(node\.ipv4\)/);
   assert.doesNotMatch(detailSource, /PREVIEW\.cores/);

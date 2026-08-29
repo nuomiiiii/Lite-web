@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -148,4 +149,39 @@ test("billing alert labels distinguish overdue and upcoming states", () => {
   const now = Date.parse("2026-08-08T00:00:00Z");
   assert.equal(formatBillingAlertStatus("2026-08-11T00:00:00Z", "zh-CN", now), "3 天后到期");
   assert.equal(formatBillingAlertStatus("2026-08-07T12:00:00Z", "zh-CN", now), "已到期 1 天");
+});
+
+test("today's billable summary always lists upload and download together", () => {
+  const source = readFileSync(new URL("../src/pages/admin/dashboard.tsx", import.meta.url), "utf8");
+  const block = source.match(/case "traffic_summary":[\s\S]*?case "storage_summary":/);
+  assert.ok(block);
+  assert.match(block[0], /admin_dashboard\.upload/);
+  assert.match(block[0], /admin_dashboard\.download/);
+  assert.match(block[0], /today_up/);
+  assert.match(block[0], /today_down/);
+});
+
+test("daily traffic ranking keeps a blue download marker", () => {
+  const source = readFileSync(
+    new URL("../src/components/admin/DashboardPanels.tsx", import.meta.url),
+    "utf8",
+  );
+  const css = readFileSync(new URL("../src/global.css", import.meta.url), "utf8");
+  assert.match(source, /bg-\[var\(--blue-9\)\]/);
+  assert.match(source, /admin_dashboard\.download/);
+  assert.match(css, /--blue-9: #0090ff;/);
+});
+
+test("dashboard ranking chips share the same pressed chip style", () => {
+  const source = readFileSync(
+    new URL("../src/components/admin/DashboardPanels.tsx", import.meta.url),
+    "utf8",
+  );
+  const css = readFileSync(new URL("../src/global.css", import.meta.url), "utf8");
+  assert.match(source, /function DashboardChip/);
+  assert.equal((source.match(/<DashboardChip/g) ?? []).length >= 6, true);
+  assert.doesNotMatch(source, /rounded-full bg-\[var\(--accent-a3\)\] px-2\.5 py-1/);
+  assert.match(css, /\.km-dashboard-chip/);
+  assert.match(css, /html\.dark \[data-admin-shell\][\s\S]*--accent-a3: rgba\(59, 158, 255, 0\.24\)/);
+  assert.match(css, /html\.dark \[data-admin-shell\][\s\S]*--accent-11: #70b8ff/);
 });

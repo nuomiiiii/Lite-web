@@ -117,49 +117,6 @@ export default function MigrationGuideShell({
                 : "0 10px 28px rgba(0, 0, 0, 0.2)",
           }}
         >
-          {showProgress ? (
-            <Box sx={{ px: { xs: 2, sm: 4 }, pt: 2.5 }}>
-              <Stack
-                direction="row"
-                spacing={2}
-                sx={{ alignItems: "baseline", justifyContent: "space-between" }}
-              >
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {progress?.label}
-                </Typography>
-                {progress?.determinate !== false ? (
-                  <Typography
-                    variant="body2"
-                    sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}
-                  >
-                    {Math.round(progress?.value ?? 0)}%
-                  </Typography>
-                ) : null}
-              </Stack>
-              <LinearProgress
-                variant={
-                  progress?.determinate === false ? "indeterminate" : "determinate"
-                }
-                value={Math.min(100, Math.max(0, progress?.value ?? 0))}
-                sx={{
-                  mt: 1,
-                  height: 6,
-                  borderRadius: 2,
-                  bgcolor: alpha(theme.palette.primary.main, 0.12),
-                }}
-              />
-              {progress?.detail ? (
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: "block", mt: 1 }}
-                >
-                  {progress.detail}
-                </Typography>
-              ) : null}
-            </Box>
-          ) : null}
-
           <Box sx={{ px: { xs: 2, sm: 4 }, py: { xs: 3, sm: 4 } }}>
             <Typography
               component="div"
@@ -182,7 +139,51 @@ export default function MigrationGuideShell({
                 {subtitle}
               </Typography>
             ) : null}
-            <Box sx={{ mt: 3.5 }}>{children}</Box>
+
+            {showProgress ? (
+              <Box sx={{ mt: 2.5 }}>
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  sx={{ alignItems: "baseline", justifyContent: "space-between" }}
+                >
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {progress?.label}
+                  </Typography>
+                  {progress?.determinate !== false ? (
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}
+                    >
+                      {Math.round(progress?.value ?? 0)}%
+                    </Typography>
+                  ) : null}
+                </Stack>
+                <LinearProgress
+                  variant={
+                    progress?.determinate === false ? "indeterminate" : "determinate"
+                  }
+                  value={Math.min(100, Math.max(0, progress?.value ?? 0))}
+                  sx={{
+                    mt: 1,
+                    height: 6,
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.primary.main, 0.12),
+                  }}
+                />
+                {progress?.detail ? (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block", mt: 1 }}
+                  >
+                    {progress.detail}
+                  </Typography>
+                ) : null}
+              </Box>
+            ) : null}
+
+            <Box sx={{ mt: showProgress ? 3 : 3.5 }}>{children}</Box>
           </Box>
 
           {footer ? (

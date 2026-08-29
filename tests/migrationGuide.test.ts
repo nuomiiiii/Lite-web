@@ -30,6 +30,17 @@ test("migration pages use the shared MUI guide shell with progress", () => {
   assert.match(shellSource, /LITE_NAME/);
   assert.match(shellSource, /LITE_BLUE/);
   assert.match(shellSource, /textTransform: "none"/);
+  assert.match(
+    shellSource,
+    /\{subtitle \? \([\s\S]*\{showProgress \? \([\s\S]*LinearProgress/,
+  );
+});
+
+test("migration pages do not overlay a login dialog", () => {
+  for (const source of [storageSource, legacySource]) {
+    assert.doesNotMatch(source, /RestrictedLoginDialog/);
+    assert.doesNotMatch(source, /logged_in/);
+  }
 });
 
 test("1.2.7 upgrade keeps driver choice, cleanup, and start confirmation", () => {

@@ -47,6 +47,7 @@ export type RemoteNode = {
   ipv4?: string;
   ipv6?: string;
   group?: string;
+  tags?: string;
   region?: string;
   region_override?: string;
   mem_total?: number;

@@ -9,9 +9,6 @@ import { useTranslation } from "react-i18next";
 import { CheckCircle2, RefreshCw } from "lucide-react";
 
 import MigrationGuideShell from "@/components/install/MigrationGuideShell";
-import RestrictedLoginDialog, {
-  type RestrictedAuthStatus,
-} from "@/components/RestrictedLoginDialog";
 import { isGuidePreview } from "@/utils/guidePreview";
 import { useSearchParams } from "react-router-dom";
 
@@ -40,12 +37,6 @@ type MigrationStatus = {
   error?: string;
 };
 
-type Me = { logged_in: boolean; username: string };
-type AuthStatus = RestrictedAuthStatus & Me;
-type LoginMethods = Pick<
-  RestrictedAuthStatus,
-  "oauth_enabled" | "oauth_provider" | "password_login_enabled"
->;
 type APIResponse<T> = { status: "success" | "error"; message: string; data?: T };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -63,12 +54,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return payload.data;
 }
 
-async function getMe(): Promise<Me> {
-  const response = await fetch("/api/me", { cache: "no-store" });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return (await response.json()) as Me;
-}
-
 export default function StorageV4Upgrade() {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage || i18n.language || "en-US";
@@ -78,34 +63,11 @@ export default function StorageV4Upgrade() {
   );
   const [searchParams] = useSearchParams();
   const preview = searchParams.get("preview") === "1" || isGuidePreview();
-  const [auth, setAuth] = useState<AuthStatus | null>(() =>
-    isGuidePreview() ? previewAuth() : null,
-  );
   const [status, setStatus] = useState<MigrationStatus | null>(() =>
     isGuidePreview() ? previewStatus() : null,
   );
   const [pageError, setPageError] = useState("");
   const [retrying, setRetrying] = useState(false);
-
-  const refreshAuth = useCallback(async () => {
-    if (preview) {
-      const next = previewAuth();
-      setAuth(next);
-      return next;
-    }
-    try {
-      const [methods, me] = await Promise.all([
-        request<LoginMethods>("/auth"),
-        getMe(),
-      ]);
-      const next = { ...methods, ...me };
-      setAuth(next);
-      return next;
-    } catch (error) {
-      setPageError(error instanceof Error ? error.message : t(`${I18N_PREFIX}.network_error`));
-      return null;
-    }
-  }, [preview, t]);
 
   const refreshStatus = useCallback(async () => {
     if (preview) {
@@ -120,11 +82,7 @@ export default function StorageV4Upgrade() {
       setPageError("");
       return next;
     } catch (error) {
-      if (error instanceof Error && error.message.includes("Unauthorized")) {
-        setAuth((current) => current && { ...current, logged_in: false });
-      } else {
-        setPageError(error instanceof Error ? error.message : t(`${I18N_PREFIX}.network_error`));
-      }
+      setPageError(error instanceof Error ? error.message : t(`${I18N_PREFIX}.network_error`));
       return null;
     }
   }, [preview, t]);
@@ -132,21 +90,18 @@ export default function StorageV4Upgrade() {
   useEffect(() => {
     if (preview) {
       setPageError("");
-      setAuth(previewAuth());
       setStatus(previewStatus());
       return;
     }
-    void refreshAuth().then((next) => {
-      if (next?.logged_in) void refreshStatus();
-    });
-  }, [preview, refreshAuth, refreshStatus]);
+    void refreshStatus();
+  }, [preview, refreshStatus]);
 
   useEffect(() => {
     if (preview) return;
-    if (!auth?.logged_in || status?.state === "completed" || status?.state === "failed") return;
+    if (status?.state === "completed" || status?.state === "failed") return;
     const timer = window.setInterval(() => void refreshStatus(), 500);
     return () => window.clearInterval(timer);
-  }, [auth?.logged_in, preview, refreshStatus, status?.state]);
+  }, [preview, refreshStatus, status?.state]);
 
   useEffect(() => {
     if (preview || status?.state !== "completed") return;
@@ -189,13 +144,12 @@ export default function StorageV4Upgrade() {
       : null;
 
   return (
-    <>
-      <MigrationGuideShell
-        title={t(`${I18N_PREFIX}.title`)}
-        subtitle={t(`${I18N_PREFIX}.subtitle`)}
-        progress={progress}
-      >
-        <Stack spacing={2}>
+    <MigrationGuideShell
+      title={t(`${I18N_PREFIX}.title`)}
+      subtitle={t(`${I18N_PREFIX}.subtitle`)}
+      progress={progress}
+    >
+      <Stack spacing={2}>
           {pageError && !preview ? <Alert severity="error">{pageError}</Alert> : null}
 
           {status?.state === "completed" ? (
@@ -265,18 +219,8 @@ export default function StorageV4Upgrade() {
               <Typography color="text.secondary">{t(`${I18N_PREFIX}.loading`)}</Typography>
             </Stack>
           ) : null}
-        </Stack>
-      </MigrationGuideShell>
-
-      <RestrictedLoginDialog
-        auth={auth}
-        requestFailedKey={`${I18N_PREFIX}.login_failed`}
-        onAuthenticated={async () => {
-          const next = await refreshAuth();
-          if (next?.logged_in) await refreshStatus();
-        }}
-      />
-    </>
+      </Stack>
+    </MigrationGuideShell>
   );
 }
 
@@ -294,16 +238,6 @@ function Metric({ label, value }: { label: string; value: string }) {
       </Typography>
     </Box>
   );
-}
-
-function previewAuth(): AuthStatus {
-  return {
-    logged_in: true,
-    username: "preview",
-    oauth_enabled: false,
-    oauth_provider: "",
-    password_login_enabled: true,
-  };
 }
 
 function previewStatus(): MigrationStatus {

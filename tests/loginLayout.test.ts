@@ -6,20 +6,12 @@ const loginSource = readFileSync(
   new URL("../src/components/admin/shell/AdminLoginPage.tsx", import.meta.url),
   "utf8",
 );
-const restrictedLoginSource = readFileSync(
-  new URL("../src/components/RestrictedLoginDialog.tsx", import.meta.url),
-  "utf8",
-);
 const loginIdentitySource = readFileSync(
   new URL("../src/components/LoginIdentityHeader.tsx", import.meta.url),
   "utf8",
 );
 const mainSource = readFileSync(
   new URL("../src/main.tsx", import.meta.url),
-  "utf8",
-);
-const legacyUpgradeSource = readFileSync(
-  new URL("../src/pages/admin/update_1_2_7.tsx", import.meta.url),
   "utf8",
 );
 const adminAuthSource = readFileSync(
@@ -31,13 +23,15 @@ const rpc2Source = readFileSync(
   "utf8",
 );
 
-test("admin login is a standalone page, not a full-screen dialog overlay", () => {
+test("admin login is a standalone MUI page, not a dialog overlay", () => {
   assert.match(loginSource, /data-testid="admin-login-page"/);
   assert.match(loginSource, /data-testid="admin-login-toolbar"/);
   assert.match(loginSource, /data-testid="admin-login-card"/);
   assert.match(loginSource, /login\.heading/);
+  assert.match(loginSource, /from "@mui\/material\/Card"/);
   assert.doesNotMatch(loginSource, /Dialog\.Root/);
   assert.doesNotMatch(loginSource, /<AppDialogContent/);
+  assert.doesNotMatch(loginSource, /@radix-ui\/themes/);
 });
 
 test("login card does not use the framed favicon as a hero icon", () => {
@@ -48,26 +42,9 @@ test("login card does not use the framed favicon as a hero icon", () => {
   );
 });
 
-test("restricted login dialogs keep the shared identity header", () => {
-  assert.equal(
-    (restrictedLoginSource.match(/<LoginIdentityHeader dialog \/>/g) ?? [])
-      .length,
-    1,
-  );
-  assert.match(restrictedLoginSource, /<AppDialogContent[\s\S]{0,120}maxWidth="420px"/);
-});
-
 test("login fields use localized placeholders", () => {
   assert.match(loginSource, /placeholder=\{t\("login\.username_placeholder"\)\}/);
   assert.match(loginSource, /placeholder=\{t\("login\.password_placeholder"\)\}/);
-  assert.match(
-    restrictedLoginSource,
-    /placeholder=\{t\("login\.username_placeholder"\)\}/,
-  );
-  assert.match(
-    restrictedLoginSource,
-    /placeholder=\{t\("login\.password_placeholder"\)\}/,
-  );
 });
 
 test("login and RPC stay on the current origin and keep session cookies", () => {

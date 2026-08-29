@@ -1,6 +1,7 @@
 import AppDialogContent from "@/components/AppDialogContent";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Dialog, IconButton, TextField, Theme } from "@radix-ui/themes";
+import { ThemeProvider } from "@mui/material/styles";
 import { Plus, Server, X } from "@/components/admin/muiIcons";
 import { Toaster, toast } from "sonner";
 import {
@@ -26,6 +27,7 @@ import { getRemoteLaunchTarget } from "@/utils/remoteLaunch";
 import { useRPC2Call } from "@/contexts/RPC2Context";
 import { mergeLatestStatus } from "@/utils/liveData";
 import RemoteNodePicker from "@/components/remote/RemoteNodePicker";
+import { createAppTheme } from "@/theme/createAppTheme";
 import "./Terminal.css";
 
 type RemoteTab = {
@@ -35,6 +37,7 @@ type RemoteTab = {
 
 const maxTabs = 16;
 const liveStatusInterval = 3_000;
+const terminalMuiTheme = createAppTheme("dark");
 type AuthorizationState = "checking" | "required" | "authorized" | "error";
 
 type SortableRemoteTabProps = {
@@ -288,6 +291,7 @@ export default function TerminalWorkspace() {
   };
 
   return (
+    <ThemeProvider theme={terminalMuiTheme}>
     <Theme appearance="dark" accentColor="cyan" grayColor="slate" radius="small">
       <Toaster theme="dark" />
       <div className="remote-workspace">
@@ -345,7 +349,9 @@ export default function TerminalWorkspace() {
             nodes={nodes}
             onlineSet={online}
             selectedUUID={pickerUUID}
+            columns={2}
             pageSize={6}
+            rowsPerPage={3}
             onSelect={(node) => setPickerUUID(node.uuid)}
           />
           <div className="remote-dialog-actions">
@@ -391,5 +397,6 @@ export default function TerminalWorkspace() {
       </Dialog.Root>
 
     </Theme>
+    </ThemeProvider>
   );
 }

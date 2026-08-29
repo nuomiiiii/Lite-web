@@ -11,13 +11,13 @@ import { useTranslation } from "react-i18next";
 import Flag from "@/components/Flag";
 import AdminNodeStatusSummary from "@/components/admin/AdminNodeStatusSummary";
 import { ADMIN_LIST_SEARCH_SX } from "@/components/admin/adminListLayout";
+import { CustomTags } from "@/components/PriceTags";
 import {
   ChevronLeft,
   ChevronRight,
   Layers3,
   Search,
   SearchX,
-  SquareTerminal,
   X,
 } from "@/components/admin/muiIcons";
 import { NODE_OFFLINE, NODE_ONLINE } from "@/theme/brand";
@@ -37,6 +37,7 @@ type RemoteNodePickerProps<T extends RemoteNodePickerItem> = {
   selectedUUID?: string;
   pageSize?: number;
   rowsPerPage?: number;
+  columns?: 2;
   onSelect: (node: T) => void;
 };
 
@@ -47,6 +48,7 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
   selectedUUID,
   pageSize = 16,
   rowsPerPage,
+  columns,
   onSelect,
 }: RemoteNodePickerProps<T>) {
   const { t } = useTranslation();
@@ -105,11 +107,18 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
   }, [hasResults, rowsPerPage]);
 
   return (
-    <Box className="remote-node-picker" sx={{ minWidth: 0 }}>
+    <Box className="remote-node-picker" sx={{ display: "flex", minWidth: 0, minHeight: 0, flex: 1, flexDirection: "column" }}>
       <Stack
+        className="remote-node-picker-controls"
         direction={{ xs: "column", sm: "row" }}
-        spacing={1.5}
-        sx={{ mb: 2.5, alignItems: { xs: "stretch", sm: "center" }, justifyContent: "space-between" }}
+        spacing={{ xs: 1, sm: 1.5 }}
+        sx={{
+          mb: { xs: 1.25, sm: 2.5 },
+          flex: "0 0 auto",
+          flexShrink: 0,
+          alignItems: { xs: "stretch", sm: "center" },
+          justifyContent: { xs: "flex-start", sm: "space-between" },
+        }}
       >
         <TextField
           inputRef={searchRef}
@@ -123,7 +132,13 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
             setQuery(event.target.value);
             setPage(1);
           }}
-          sx={{ ...ADMIN_LIST_SEARCH_SX, flex: "1 1 280px", maxWidth: { sm: 520 } }}
+          sx={{
+            ...ADMIN_LIST_SEARCH_SX,
+            flex: { xs: "0 0 auto", sm: "1 1 280px" },
+            width: { xs: "100%", sm: "auto" },
+            maxWidth: { sm: 520 },
+            minWidth: { xs: 0, sm: 160 },
+          }}
           slotProps={{
             input: {
               startAdornment: (
@@ -161,13 +176,19 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
         />
       </Stack>
 
-      <Box sx={{ minHeight: 0 }}>
+      <Box className="remote-node-picker-results" sx={{ minHeight: 0, flex: 1, overflow: "auto" }}>
         {filteredNodes.length > 0 ? (
           <Box
             ref={resultsGridRef}
+            className="remote-node-picker-grid"
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))" },
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: columns === 2
+                  ? "repeat(2, minmax(0, 1fr))"
+                  : "repeat(auto-fill, minmax(min(280px, 100%), 1fr))",
+              },
               gap: 1.5,
             }}
           >
@@ -183,6 +204,7 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
               return (
                 <Paper
                   key={node.uuid}
+                  className="remote-node-picker-card"
                   variant="outlined"
                   role="button"
                   tabIndex={knownOnline ? 0 : -1}
@@ -197,13 +219,19 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
                     onSelect(node);
                   }}
                   sx={{
+                    display: "flex",
+                    minHeight: { xs: 0, sm: 204 },
+                    height: "100%",
+                    flexDirection: "column",
                     overflow: "hidden",
                     borderRadius: "8px",
                     borderColor: selected ? "primary.main" : "divider",
-                    bgcolor: selected ? "action.hover" : "background.paper",
+                    bgcolor: "background.paper",
                     cursor: knownOnline ? "pointer" : "not-allowed",
                     opacity: knownOffline ? 0.72 : 1,
-                    boxShadow: "none",
+                    boxShadow: selected
+                      ? (theme) => `inset 0 0 0 1px ${theme.palette.primary.main}`
+                      : "none",
                     "&:hover": knownOnline
                       ? { borderColor: "primary.main" }
                       : undefined,
@@ -247,7 +275,7 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
                       </Box>
                     </Box>
                   </Stack>
-                  <Box aria-label={t("terminal.ip_address")} sx={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+                  <Box aria-label={t("terminal.ip_address")} sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", flex: 1, minHeight: 0 }}>
                     {[
                       ["IPv4", ipv4],
                       ["IPv6", ipv6],
@@ -298,13 +326,25 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
                         p: 1.35,
                         borderTop: 1,
                         borderColor: "divider",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "flex-end",
-                        color: knownOffline ? "error.main" : "primary.main",
+                        minWidth: 0,
                       }}
                     >
-                      <SquareTerminal size={19} aria-hidden="true" />
+                      <Typography color="text.secondary" sx={{ mb: 0.4, fontSize: 11.5 }}>
+                        {t("common.tags", "标签")}
+                      </Typography>
+                      {(node.tags || "").trim() ? (
+                        <Box
+                          className="admin-cell-clip-row"
+                          title={node.tags}
+                          sx={{ minWidth: 0 }}
+                        >
+                          <CustomTags tags={node.tags || ""} />
+                        </Box>
+                      ) : (
+                        <Typography noWrap sx={{ fontSize: 13.5, color: "text.secondary" }}>
+                          --
+                        </Typography>
+                      )}
                     </Box>
                   </Box>
                 </Paper>
@@ -328,7 +368,12 @@ export default function RemoteNodePicker<T extends RemoteNodePickerItem>({
       </Box>
 
       {totalPages > 1 ? (
-        <Stack direction="row" spacing={1} sx={{ mt: 1.75, justifyContent: "flex-end", alignItems: "center" }}>
+        <Stack
+          className="remote-node-picker-footer"
+          direction="row"
+          spacing={1}
+          sx={{ mt: 1.5, flexShrink: 0, justifyContent: "flex-end", alignItems: "center" }}
+        >
           <IconButton
             size="small"
             disabled={currentPage === 1}

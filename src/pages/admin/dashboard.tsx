@@ -305,14 +305,14 @@ export default function AdminDashboard() {
             tone="accent"
           >
             {charts && !charts.traffic.error ? (
-              <div className="grid grid-cols-2 gap-3">
-                <span className="flex min-w-0 items-center gap-1.5">
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <span className="inline-flex min-w-0 items-center gap-1.5">
                   <ArrowUpward sx={{ fontSize: 14, color: "text.secondary" }} className="shrink-0" />
-                  <span className="truncate">{t("admin_dashboard.upload")} {formatBytes(charts.traffic.today_up)}</span>
+                  <span className="whitespace-nowrap">{t("admin_dashboard.upload")} {formatBytes(charts.traffic.today_up)}</span>
                 </span>
-                <span className="flex min-w-0 items-center justify-end gap-1.5 text-right">
+                <span className="inline-flex min-w-0 items-center gap-1.5">
                   <ArrowDownward sx={{ fontSize: 14, color: "text.secondary" }} className="shrink-0" />
-                  <span className="truncate">{t("admin_dashboard.download")} {formatBytes(charts.traffic.today_down)}</span>
+                  <span className="whitespace-nowrap">{t("admin_dashboard.download")} {formatBytes(charts.traffic.today_down)}</span>
                 </span>
               </div>
             ) : <span>{chartsError ? t("admin_dashboard.data_unavailable") : t("admin_dashboard.chart_loading")}</span>}

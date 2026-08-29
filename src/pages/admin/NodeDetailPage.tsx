@@ -135,8 +135,8 @@ function DetailSectionHeader({
 
 const solidButtonSx = {
   textTransform: "none" as const,
-  bgcolor: "text.primary",
-  color: "background.paper",
+  bgcolor: LITE_BLUE_SOFT_STRONG,
+  color: LITE_BLUE,
   minHeight: 36,
   height: 36,
   px: 1.5,
@@ -145,7 +145,16 @@ const solidButtonSx = {
   fontWeight: 600,
   borderRadius: "8px",
   boxShadow: "none",
-  "&:hover": { bgcolor: "text.primary", boxShadow: "none", filter: "brightness(0.92)" },
+  "&:hover": {
+    bgcolor: LITE_BLUE_SOFT_STRONG,
+    boxShadow: "none",
+    filter: "brightness(0.96)",
+  },
+  "html.dark &": {
+    bgcolor: "rgba(7, 141, 238, 0.22)",
+    color: "#7EC8F8",
+    "&:hover": { bgcolor: "rgba(7, 141, 238, 0.32)", boxShadow: "none", filter: "none" },
+  },
   "& .MuiButton-startIcon": { mr: 0.75, ml: 0 },
   "& .MuiButton-endIcon": { ml: 0.5, mr: 0 },
 };
