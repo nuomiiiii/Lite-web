@@ -75,7 +75,7 @@ test("theme tabs switch only the content below the stable page heading", () => {
   assert.match(tabsSource, /list\.scrollWidth - list\.clientWidth/);
   assert.match(tabsSource, /new ResizeObserver\(updateScrollEdges\)/);
   assert.match(tabsSource, /km-theme-config-scroll-button/);
-  assert.match(tabsSource, /reduceMotion \? false/);
+  assert.match(tabsSource, /reduceMotion \|\| isFirstPaint\.current/);
   assert.doesNotMatch(globalStyles, /admin-tab-content-enter/);
   assert.doesNotMatch(
     globalStyles,

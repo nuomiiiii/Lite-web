@@ -74,9 +74,11 @@ test("admin warmup respects reduced-data connections", () => {
     "src/pages/admin/theme_managed.tsx",
     "utf8",
   );
-  assert.match(managedTheme, /const \[loading, setLoading\] = useState\(true\)/);
+  assert.match(managedTheme, /setLoading\(true\)/);
   assert.match(managedTheme, /publicInfoLoading \|\| \(!publicInfo && !publicInfoError\)/);
   assert.match(managedTheme, /if \(!theme\) \{[\s\S]*setLoading\(false\);[\s\S]*setFirstLoading\(false\)/);
+  assert.match(managedTheme, /data-admin-route-pending=\{firstLoading \? "true" : undefined\}/);
+  assert.doesNotMatch(managedTheme, /<Loading/);
 });
 
 test("theme switching removes only Lite navigation and theme cache entries", () => {

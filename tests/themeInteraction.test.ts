@@ -45,6 +45,18 @@ test("theme pages share preview-image loading treatment", () => {
   assert.match(marketSource, /loading="eager"/);
   assert.doesNotMatch(themeSettingsSource, /style\.display = "none"/);
   assert.doesNotMatch(marketSource, /style\.display = "none"/);
+  assert.match(marketSource, /data-admin-route-pending="true"/);
+  assert.doesNotMatch(marketSource, /if \(loading\) return <Loading/);
+  assert.match(themeSettingsSource, /data-admin-route-pending="true"/);
+  assert.doesNotMatch(themeSettingsSource, /SettingsPageSkeleton/);
+  assert.match(
+    readFileSync("src/routes.ts", "utf8"),
+    /prefetchThemeMarket/,
+  );
+  assert.match(
+    readFileSync("src/routes.ts", "utf8"),
+    /prefetchInstalledThemes/,
+  );
   assert.match(globalStyles, /km-theme-preview-skeleton/);
   assert.match(globalStyles, /km-theme-preview-image\[data-loaded="true"\]/);
   assert.match(marketSource, /direction="column" gap="5"/);

@@ -279,7 +279,7 @@ export function createAppTheme(mode: "light" | "dark") {
       MuiMenu: {
         defaultProps: {
           marginThreshold: 8,
-          transitionDuration: { enter: 180, exit: 120 },
+          transitionDuration: { enter: 220, exit: 150 },
           slotProps: {
             paper: {
               elevation: 0,
@@ -320,6 +320,11 @@ export function createAppTheme(mode: "light" | "dark") {
             backgroundImage: "none",
             boxShadow: isLight ? CARD_SHADOW_LIGHT : CARD_SHADOW_DARK,
           },
+        },
+      },
+      MuiPopover: {
+        defaultProps: {
+          transitionDuration: { enter: 220, exit: 150 },
         },
       },
       MuiDialogTitle: {

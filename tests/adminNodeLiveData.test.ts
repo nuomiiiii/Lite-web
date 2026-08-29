@@ -178,12 +178,15 @@ test("server details open an overview billing metrics page", () => {
   assert.match(detailSource, /admin\.nodeDetail\.transfer/);
   assert.match(detailSource, /admin\.nodeDetail\.recordTrafficReset/);
   assert.match(detailSource, /billing\/ip-change/);
+  assert.match(detailSource, /billing\/one-time/);
   assert.match(detailSource, /useAdminTabParam\(DETAIL_TABS, "overview"\)/);
-  assert.match(detailSource, /currency: ""/);
+  assert.match(detailSource, /currencyForStorage\(currency\)/);
+  assert.match(detailSource, /BILLING_CURRENCY_OPTIONS/);
+  assert.match(detailSource, /rgba\(34, 197, 94, 0\.16\)/);
   assert.doesNotMatch(detailSource, /followBillingCurrency/);
-  assert.doesNotMatch(detailSource, /common\.currency/);
   assert.doesNotMatch(detailSource, /trafficResetNotePlaceholder/);
-  assert.doesNotMatch(detailSource, /common\.remark/);
+  assert.match(detailSource, /common\.remark/);
+  assert.match(detailSource, /admin\.nodeDetail\.oneTimeFee/);
   assert.match(detailSource, /AdminTextField\.Root/);
   assert.match(detailSource, /km-node-dialog-fields/);
   assert.doesNotMatch(detailSource, /admin-stop-billing-button/);

@@ -30,7 +30,6 @@ import {
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";
-import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import { useSettings } from "@/lib/api";
 import ThemePreviewImage from "@/components/ThemePreviewImage";
 import { themePreviewSrc } from "@/utils/themePreviewImage";
@@ -44,6 +43,11 @@ import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import { uploadArchive } from "@/utils/archiveUpload";
 import { resolveI18nText, type I18nText } from "@/utils/i18nText";
 import { clearThemeNavigationCache } from "@/utils/themeCache";
+import {
+  getInstalledThemesSnapshot,
+  prefetchInstalledThemes,
+  refreshInstalledThemes,
+} from "@/lib/themeList";
 import {
   UPLOAD_COMPLETED_VISIBLE_MS,
   UPLOAD_DIALOG_EXIT_MS,
@@ -73,8 +77,12 @@ const ThemePage = () => {
   const currentLanguage = i18n.resolvedLanguage || i18n.language;
   const displayText = (value?: I18nText) =>
     resolveI18nText(value, currentLanguage) || "";
-  const [themes, setThemes] = useState<Theme[]>([]);
-  const [themesLoading, setThemesLoading] = useState(true);
+  const [themes, setThemes] = useState<Theme[]>(
+    () => (getInstalledThemesSnapshot() as Theme[] | null) ?? [],
+  );
+  const [themesLoading, setThemesLoading] = useState(
+    () => getInstalledThemesSnapshot() === null,
+  );
   const [uploadState, setUploadState] = useState<UploadProgressState | null>(
     null,
   );
@@ -170,22 +178,9 @@ const ThemePage = () => {
   }, [currentTheme, publicInfo?.theme]);
 
   const loading = themesLoading || settingsLoading || !currentTheme;
-  // 获取主题列表
   const fetchThemes = async () => {
     try {
-      const response = await fetch("/api/admin/theme/list");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      const themeList = data.data || [];
-
-      // 根据 settings 中的 theme 设置活跃状态
-      const updatedThemes = themeList.map((theme: Theme) => ({
-        ...theme,
-        active: theme.short === currentTheme,
-      }));
-
+      const updatedThemes = (await refreshInstalledThemes(currentTheme)) as Theme[];
       setThemes(updatedThemes);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch themes");
@@ -438,8 +433,13 @@ const ThemePage = () => {
 
   // 同步活跃状态
   useEffect(() => {
-    fetchThemes();
-  }, [currentTheme]);
+    prefetchInstalledThemes()
+      .then((list) => setThemes(list as Theme[]))
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Failed to fetch themes");
+      })
+      .finally(() => setThemesLoading(false));
+  }, []);
 
   useEffect(() => {
     if (!settingsLoading && themes.length > 0) {
@@ -453,7 +453,7 @@ const ThemePage = () => {
   }, [currentTheme, settingsLoading, themes.length]);
 
   if (loading) {
-    return <SettingsPageSkeleton />;
+    return <div data-admin-route-pending="true" />;
   }
 
   if (error) {

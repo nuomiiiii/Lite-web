@@ -53,15 +53,21 @@ export {
   requestDashboardCharts,
 } from "@/utils/dashboardApi";
 
+export function SummaryCardSkeleton() {
+  return (
+    <div className="h-[112px] km-admin-surface p-3">
+      <Skeleton width="7rem" height="1rem" />
+      <Skeleton className="mt-4" width="9rem" height="1.9rem" />
+      <Skeleton className="mt-3" width="72%" height="0.85rem" />
+    </div>
+  );
+}
+
 export function OverviewSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-      {[0, 1, 2].map((item) => (
-        <div key={item} className="h-[112px] km-admin-surface p-3">
-          <Skeleton width="7rem" height="1rem" />
-          <Skeleton className="mt-4" width="9rem" height="1.9rem" />
-          <Skeleton className="mt-3" width="72%" height="0.85rem" />
-        </div>
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+      {[0, 1, 2, 3].map((item) => (
+        <SummaryCardSkeleton key={item} />
       ))}
     </div>
   );
@@ -81,7 +87,7 @@ export function SummaryPanel({
   tone?: "accent" | "green" | "orange" | "muted";
 }) {
   return (
-    <section className="min-h-[112px] km-admin-surface p-3">
+    <section className="min-h-[112px] h-full km-admin-surface p-3 transition-colors group-hover:border-[var(--accent-a7)]">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-muted-foreground">{label}</span>
         <Box

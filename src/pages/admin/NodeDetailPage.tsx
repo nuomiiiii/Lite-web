@@ -22,6 +22,7 @@ import {
   Button as AdminButton,
   Dialog as AdminDialog,
   Flex,
+  Select as AdminSelect,
   TextField as AdminTextField,
 } from "@/components/admin/ui";
 import {
@@ -70,6 +71,8 @@ import {
   metricCardSurfaceSx,
   metricCardSx,
 } from "@/pages/admin/nodeDetailCardStyles";
+
+const BILLING_CURRENCY_OPTIONS = ["¥", "$", "€", "£", "₽", "₣", "₹", "₫", "฿", "C$"];
 
 const DETAIL_TABS = ["overview", "billing", "metrics"] as const;
 
@@ -864,6 +867,7 @@ function BillingPanel({ node, onSaved }: { node: NodeDetail; onSaved: () => void
   const [cycleEl, setCycleEl] = useState<null | HTMLElement>(null);
   const [trafficResetOpen, setTrafficResetOpen] = useState(false);
   const [ipChangeOpen, setIpChangeOpen] = useState(false);
+  const [oneTimeFeeOpen, setOneTimeFeeOpen] = useState(false);
   const [currency] = useState(
     currencyForDisplay(node.currency || ""),
   );
@@ -1030,9 +1034,15 @@ function BillingPanel({ node, onSaved }: { node: NodeDetail; onSaved: () => void
             </Button>
             <Button
               onClick={() => setIpChangeOpen(true)}
-              sx={{ ...actionSx(LITE_BLUE_SOFT_STRONG, LITE_BLUE), gridColumn: "1 / -1" }}
+              sx={actionSx(LITE_BLUE_SOFT_STRONG, LITE_BLUE)}
             >
               {t("admin.nodeDetail.recordTrafficReset", "更换IP")}
+            </Button>
+            <Button
+              onClick={() => setOneTimeFeeOpen(true)}
+              sx={actionSx("rgba(34, 197, 94, 0.16)", "#118D57")}
+            >
+              {t("admin.nodeDetail.oneTimeFee", "一次性费用")}
             </Button>
           </Box>
           <Menu
@@ -1070,6 +1080,15 @@ function BillingPanel({ node, onSaved }: { node: NodeDetail; onSaved: () => void
             onClose={() => setIpChangeOpen(false)}
             onSaved={() => {
               setIpChangeOpen(false);
+              onSaved();
+            }}
+          />
+          <OneTimeFeeDialog
+            open={oneTimeFeeOpen}
+            node={node}
+            onClose={() => setOneTimeFeeOpen(false)}
+            onSaved={() => {
+              setOneTimeFeeOpen(false);
               onSaved();
             }}
           />
@@ -1269,6 +1288,119 @@ function IPChangeCostDialog({
             ) : null}
           </AdminTextField.Root>
         </div>
+        <Flex gap="2" justify="end" className="km-node-dialog-actions">
+          <AdminDialog.Close>
+            <AdminButton variant="soft" color="gray" disabled={saving}>
+              {t("common.cancel", "取消")}
+            </AdminButton>
+          </AdminDialog.Close>
+          <AdminButton disabled={saving || !amount.trim()} onClick={() => void submit()}>
+            {t("common.confirm", "确认")}
+          </AdminButton>
+        </Flex>
+      </AppDialogContent>
+    </AdminDialog.Root>
+  );
+}
+
+function OneTimeFeeDialog({
+  open,
+  node,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  node: NodeDetail;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { t } = useTranslation();
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [currency, setCurrency] = useState(() => currencyForDisplay(node.currency || "$") || "$");
+  const [saving, setSaving] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+  const currencyOptions = BILLING_CURRENCY_OPTIONS.includes(currency)
+    ? BILLING_CURRENCY_OPTIONS
+    : [currency, ...BILLING_CURRENCY_OPTIONS];
+
+  useEffect(() => {
+    if (!open) return;
+    setAmount("");
+    setNote("");
+    setCurrency(currencyForDisplay(node.currency || "$") || "$");
+    setIdempotencyKey(crypto.randomUUID());
+  }, [open, node.currency]);
+
+  const submit = async () => {
+    if (!amount.trim()) return;
+    setSaving(true);
+    try {
+      await billingRequest(`/api/admin/client/${node.uuid}/billing/one-time`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: amount.trim(),
+          currency: currencyForStorage(currency),
+          note: note.trim(),
+          idempotency_key: idempotencyKey,
+        }),
+      });
+      toast.success(t("admin.nodeDetail.oneTimeFeeSaved", "一次性费用已计入当月账单"));
+      onSaved();
+    } catch (error) {
+      toast.error(`${t("admin.nodeDetail.oneTimeFeeSaveFailed", "费用录入失败")}: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <AdminDialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !saving) onClose();
+      }}
+    >
+      <AppDialogContent maxWidth={400} className="km-node-dialog">
+        <AdminDialog.Title>{t("admin.nodeDetail.oneTimeFee", "一次性费用")}</AdminDialog.Title>
+        <AdminDialog.Description>
+          {t("admin.nodeDetail.oneTimeFeeHint", "费用按点击确认时的北京时间计入当月附加费用。")}
+        </AdminDialog.Description>
+        <Flex direction="column" gap="3" className="km-node-dialog-fields">
+          <div>
+            <FieldLabel>{t("common.amount", "金额")}</FieldLabel>
+            <div className="flex items-center gap-2">
+              <AdminSelect.Root value={currency} onValueChange={setCurrency}>
+                <AdminSelect.Trigger
+                  aria-label={t("admin.nodeTable.currency", "货币")}
+                  className="w-[4.75rem]"
+                />
+                <AdminSelect.Content>
+                  {currencyOptions.map((option) => (
+                    <AdminSelect.Item key={option} value={option}>{option}</AdminSelect.Item>
+                  ))}
+                </AdminSelect.Content>
+              </AdminSelect.Root>
+              <AdminTextField.Root
+                autoFocus
+                required
+                value={amount}
+                placeholder="0.00"
+                inputMode="decimal"
+                onChange={(event) => setAmount(event.target.value)}
+              />
+            </div>
+          </div>
+          <div>
+            <FieldLabel>{t("common.remark", "备注")}</FieldLabel>
+            <AdminTextField.Root
+              value={note}
+              placeholder={t("admin.nodeDetail.oneTimeFeeNotePlaceholder", "例如：服务器溢价、线路升级、补差价")}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          </div>
+        </Flex>
         <Flex gap="2" justify="end" className="km-node-dialog-actions">
           <AdminDialog.Close>
             <AdminButton variant="soft" color="gray" disabled={saving}>

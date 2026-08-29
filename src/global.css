@@ -1416,6 +1416,20 @@ html[data-admin-shell-active="true"] .MuiAlert-icon > svg {
   padding-right: 16px !important;
 }
 
+[data-admin-shell] .km-billing-details-table .km-billing-note {
+  width: 168px;
+  max-width: 168px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-admin-shell] .km-billing-details-table .km-billing-note .MuiTypography-root {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 [data-admin-shell] .km-billing-averages {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1683,6 +1697,7 @@ html.dark .admin-pagination-btn {
 
 .km-admin-sheet-tabs .MuiTab-root {
   display: inline-flex;
+  position: relative;
   align-items: center;
   justify-content: center;
   height: 52px;
@@ -1715,6 +1730,18 @@ html.dark .admin-pagination-btn {
 .km-admin-sheet-tabs .MuiTab-root.Mui-selected {
   color: #212b36;
   font-weight: 600;
+}
+
+.km-admin-sheet-tabs [role="tab"][aria-selected="true"]::after,
+.km-admin-sheet-tabs .MuiTab-root.Mui-selected::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: #078dee;
+  pointer-events: none;
 }
 
 .km-admin-tab-label {
@@ -1762,6 +1789,11 @@ html.dark .km-admin-sheet-tabs .MuiTab-root:hover {
 
 html.dark .km-admin-sheet-tabs .MuiTab-root.Mui-selected {
   color: #f4f6f8;
+}
+
+html.dark .km-admin-sheet-tabs [role="tab"][aria-selected="true"]::after,
+html.dark .km-admin-sheet-tabs .MuiTab-root.Mui-selected::after {
+  background: #48a9ee;
 }
 
 @media (max-width: 1023px) {
@@ -1841,6 +1873,11 @@ html.dark [data-admin-shell] .km-admin-detail-card .km-admin-detail-card {
   position: relative;
 }
 
+[data-admin-shell] [data-admin-tab-motion-ready="true"] [role="tab"][aria-selected="true"]::after,
+[data-admin-shell] [data-admin-tab-motion-ready="true"] .MuiTab-root.Mui-selected::after {
+  content: none;
+}
+
 [data-admin-shell] [data-admin-tab-motion-ready="true"]::after {
   position: absolute;
   z-index: 2;
@@ -1857,6 +1894,10 @@ html.dark [data-admin-shell] .km-admin-detail-card .km-admin-detail-card {
     width 220ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: width, transform;
+}
+
+[data-admin-shell] [data-admin-tab-motion-ready="true"][data-admin-tab-indicator-instant]::after {
+  transition: none;
 }
 
 html.dark [data-admin-shell] [data-admin-tab-motion-ready="true"]::after {
@@ -1951,11 +1992,16 @@ html[data-reduce-motion="true"] .admin-select-or-input-content {
 }
 
 @media (min-width: 768px) {
-  [data-dashboard-span="3"] .dashboard-alert-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  [data-dashboard-span="3"] .dashboard-alert-grid,
+  [data-dashboard-span="4"] .dashboard-alert-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   [data-dashboard-span="6"] .dashboard-alert-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  [data-dashboard-span="12"] .dashboard-alert-grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }

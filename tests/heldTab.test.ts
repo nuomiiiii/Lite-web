@@ -8,6 +8,11 @@ const globalCss = readFileSync("src/global.css", "utf8");
 const billingSource = readFileSync("src/pages/admin/billing.tsx", "utf8");
 const loadSource = readFileSync("src/pages/admin/notification/load.tsx", "utf8");
 const returnRouteSource = readFileSync("src/pages/admin/returnRoute.tsx", "utf8");
+const reverseProxySource = readFileSync(
+  "src/pages/admin/settings/reverse-proxy.tsx",
+  "utf8",
+);
+const metricsSource = readFileSync("src/pages/admin/settings/metrics.tsx", "utf8");
 const signOnSource = readFileSync("src/pages/admin/settings/sign-on.tsx", "utf8");
 
 test("held tabs keep the previous sheet until the next one has data", () => {
@@ -16,6 +21,17 @@ test("held tabs keep the previous sheet until the next one has data", () => {
   assert.match(billingSource, /displayTab === "monthly"/);
   assert.match(loadSource, /useHeldTab\(view, currentReady\)/);
   assert.match(returnRouteSource, /useHeldTab\(activeTab, tabReady\)/);
+  assert.match(reverseProxySource, /useHeldTab\(activeTab, tabReady\)/);
+  assert.match(metricsSource, /useHeldTab\(activeTab, tabReady\)/);
+  assert.match(metricsSource, /hidden=\{displayTab !== "monitoring"\}/);
+  assert.match(metricsSource, /prefetchMetricDefinitions/);
+  assert.match(metricsSource, /prefetchDatabaseOverview/);
+  assert.match(metricsSource, /activeTab !== "overview" \|\| overviewReady/);
+  assert.match(metricsSource, /loading \|\| \(activeTab === displayTab && !tabReady\)/);
+  assert.match(
+    readFileSync("src/routes.ts", "utf8"),
+    /prefetchDatabaseOverview/,
+  );
 });
 
 test("full-page loading holds the previous admin route; in-page spinners do not", () => {

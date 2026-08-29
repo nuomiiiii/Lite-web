@@ -77,6 +77,47 @@ export const preloadAdminRoute = async (target: string): Promise<void> => {
       .then((mod) => mod.prefetchBillingCenter())
       .catch(() => undefined);
   }
+  if (pathname === "/admin/settings/reverse-proxy") {
+    void import("./lib/https")
+      .then((mod) => mod.prefetchHTTPSSettings())
+      .catch(() => undefined);
+    void import("./lib/cloudflared")
+      .then((mod) => mod.prefetchCloudflaredStatus())
+      .catch(() => undefined);
+  }
+  if (pathname === "/admin/settings/xtermjs") {
+    void import("./hooks/useXtermjsSettings")
+      .then((mod) => mod.prefetchXtermjsSettings())
+      .catch(() => undefined);
+  }
+  if (pathname === "/admin/market/themes") {
+    void import("./lib/themeMarket")
+      .then((mod) => mod.prefetchThemeMarket())
+      .catch(() => undefined);
+  }
+  if (pathname === "/admin/settings/theme") {
+    void import("./lib/themeList")
+      .then((mod) => mod.prefetchInstalledThemes())
+      .catch(() => undefined);
+  }
+  if (pathname === "/admin/theme_managed") {
+    void import("./lib/themeManaged")
+      .then((mod) => mod.prefetchThemeManagedConfig())
+      .catch(() => undefined);
+  }
+  if (pathname === "/admin/settings/dashboard") {
+    void import("./hooks/useDashboardSettings")
+      .then((mod) => mod.prefetchDashboardSettings())
+      .catch(() => undefined);
+  }
+  if (pathname === "/admin/settings/metrics") {
+    void import("./lib/metricDefinitions")
+      .then((mod) => mod.prefetchMetricDefinitions())
+      .catch(() => undefined);
+    void import("./components/admin/DatabaseMaintenanceCard")
+      .then((mod) => mod.prefetchDatabaseOverview())
+      .catch(() => undefined);
+  }
   await Promise.all(
     expandAdminPreloadTargets(pathname).map((path) => {
       const preload = adminRoutePreloaders[path];

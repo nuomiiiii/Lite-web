@@ -83,15 +83,30 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return data?.data as T;
 }
 
+let httpsSettingsSnapshot: HTTPSPayload | null = null;
+
+export function getHTTPSSettingsSnapshot(): HTTPSPayload | null {
+  return httpsSettingsSnapshot;
+}
+
+function rememberHTTPSSettings(payload: HTTPSPayload): HTTPSPayload {
+  httpsSettingsSnapshot = payload;
+  return payload;
+}
+
 export async function getHTTPSSettings(): Promise<HTTPSPayload> {
   const response = await fetch("/api/admin/settings/https");
   const payload = await parseResponse<Partial<HTTPSPayload>>(response);
-  return {
+  return rememberHTTPSSettings({
     settings: { ...defaultSettings, ...(payload.settings ?? {}) },
     status: { ...defaultStatus, ...(payload.status ?? {}) },
     http_origin: payload.http_origin,
     https_origin: payload.https_origin,
-  };
+  });
+}
+
+export function prefetchHTTPSSettings(): Promise<HTTPSPayload> {
+  return getHTTPSSettings();
 }
 
 export function buildHTTPFallbackURL(
@@ -139,7 +154,13 @@ export async function updateHTTPSSettings(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(settings),
   });
-  return parseResponse<HTTPSPayload>(response);
+  const payload = await parseResponse<HTTPSPayload>(response);
+  return rememberHTTPSSettings({
+    settings: { ...defaultSettings, ...(payload.settings ?? {}) },
+    status: { ...defaultStatus, ...(payload.status ?? {}) },
+    http_origin: payload.http_origin,
+    https_origin: payload.https_origin,
+  });
 }
 
 export async function reloadHTTPSCertificate(): Promise<HTTPSStatus> {
@@ -147,5 +168,8 @@ export async function reloadHTTPSCertificate(): Promise<HTTPSStatus> {
     method: "POST",
   });
   const payload = await parseResponse<{ status: HTTPSStatus }>(response);
+  if (httpsSettingsSnapshot) {
+    httpsSettingsSnapshot = { ...httpsSettingsSnapshot, status: payload.status };
+  }
   return payload.status;
 }

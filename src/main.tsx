@@ -48,6 +48,7 @@ const AdminRoutePreloader = () => {
     const pathname = window.location.pathname.replace(/\/$/, "") || "/";
     if (pathname === "/admin") {
       void prefetchAdminDashboard(accountKey).catch(() => undefined);
+      void preloadAdminRoute("/admin/settings/dashboard").catch(() => undefined);
     }
     const connection = (
       navigator as Navigator & {

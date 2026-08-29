@@ -89,9 +89,11 @@
       "annualTotal": "年間費用合計",
       "baseAndExtra": "当月の確定基本費用 + 追加費用",
       "completeMonthsOnly": "トラフィックリセット日で確定した周期で計算",
+      "completeYearsOnly": "トラフィックリセット日で確定した年で計算",
       "currentPeriods": "現在の絞り込み期間",
-      "estimatedExpiry": "見積り · 30日以内に{{count}}台期限切れ",
-      "includesTrafficReset": "本日のトラフィックリセット・IP変更を含む",
+      "estimatedExpiry": "基本費用のみ · 30日以内に{{count}}台期限切れ",
+      "includesTrafficReset": "本日のトラフィックリセット・IP変更・一時費用を含む",
+      "oneTimeTotal": "一時費用合計",
       "otherTotal": "IP変更合計",
       "serverAccrual": "リセット日で確定した基本費用",
       "untilDate": "{{date}} 時点"
@@ -102,7 +104,8 @@
       "rangeTotal": "絞り込み範囲合計",
       "remainingValue": "残存価値",
       "today": "本日の費用",
-      "year": "今年累計"
+      "year": "今年累計",
+      "yearlyAverage": "年平均費用"
     },
     "sections": {
       "serverRates": "サーバー料金",
@@ -146,13 +149,14 @@
       "overview": "費用概要",
       "yearly": "年次請求"
     },
-    "title": "請求センター",
+    "title": "コストセンター",
     "trend": {
       "title": "今年の費用推移"
     },
     "types": {
       "ipChange": "IP変更",
       "base": "基本費用",
+      "oneTimeFee": "一時費用",
       "reversal": "取消",
       "trafficReset": "トラフィックリセット",
       "voided": "無効済み"
@@ -226,7 +230,10 @@
     "server_status_hint": "サーバーの稼働状況とオフラインノードの概要",
     "servers": "サーバー状態",
     "storage": "ストレージ",
-    "subtitle": "サーバー、トラフィック、ストレージの状態",
+    "cost_center": "コストセンター",
+    "cost_month": "今月累計",
+    "cost_year": "年間累計",
+    "subtitle": "サーバー、トラフィック、ストレージ、コスト",
     "title": "ダッシュボード",
     "today_billable": "本日の課金トラフィック",
     "today_traffic": "本日のリアルタイムトラフィック",
@@ -299,6 +306,11 @@
       "ipChangeHint": "確定時の北京時間で当日の請求に計上されます。",
       "ipChangeSaveFailed": "費用の記録に失敗しました",
       "ipChangeSaved": "IP変更費用を当日の請求に追加しました",
+      "oneTimeFee": "一時費用",
+      "oneTimeFeeHint": "確定時の北京時間で当月の付加費用に計上されます。",
+      "oneTimeFeeNotePlaceholder": "例：サーバープレミアム、回線アップグレード、差額精算",
+      "oneTimeFeeSaveFailed": "費用の記録に失敗しました",
+      "oneTimeFeeSaved": "一時費用を当月の請求に追加しました",
       "occurredAt": "発生日時",
       "recordTrafficReset": "IP変更",
       "trafficResetHint": "確定時の北京時間で当日の請求に計上されます。リセット通信量は今周期のみ有効です。",
@@ -781,7 +793,7 @@
   "navigation": {
     "account_security": "アカウントとセキュリティ",
     "appearance": "外観とテーマ",
-    "billing": "請求センター",
+    "billing": "コストセンター",
     "data_storage": "データとストレージ",
     "monitoring": "監視",
     "open": "ナビゲーションを開く",

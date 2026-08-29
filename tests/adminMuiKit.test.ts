@@ -68,6 +68,19 @@ test("error screens use MUI Alert and keep icon text aligned", () => {
   assert.match(theme, /MuiAlertTitle:[\s\S]*marginTop: 0/);
 });
 
+test("admin overlays share one enter and exit duration", () => {
+  const theme = readFileSync("src/theme/createAppTheme.ts", "utf8");
+  const dialog = readFileSync("src/components/admin/ui/dialog.tsx", "utf8");
+  const menu = readFileSync("src/components/admin/adminMenu.ts", "utf8");
+  const layout = readFileSync("src/pages/admin/_layout.tsx", "utf8");
+  assert.match(theme, /MuiMenu:[\s\S]*transitionDuration: \{ enter: 220, exit: 150 \}/);
+  assert.match(theme, /MuiPopover:[\s\S]*transitionDuration: \{ enter: 220, exit: 150 \}/);
+  assert.match(theme, /MuiDialog:[\s\S]*transitionDuration: \{ enter: 220, exit: 160 \}/);
+  assert.match(menu, /transitionDuration: \{ enter: 220, exit: 150 \}/);
+  assert.doesNotMatch(dialog, /transitionDuration:\s*0/);
+  assert.match(layout, /AdminRouteViewport/);
+});
+
 test("vite keeps system flags and logos on the admin origin", () => {
   const source = readFileSync("vite.config.ts", "utf8");
   assert.match(source, /pathname\.startsWith\("\/assets\/flags"\)/);

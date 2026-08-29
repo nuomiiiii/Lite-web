@@ -14,8 +14,13 @@ const localeFiles = ["en.json", "ja_JP.json", "zh_CN.json", "zh_TW.json"];
 test("reverse proxy separates built-in HTTPS and Cloudflare Tunnel", () => {
   assert.match(page, /<Tabs\.Trigger value="https"/);
   assert.match(page, /<Tabs\.Trigger value="cloudflare"/);
-  assert.match(page, /<HTTPSPanel \/>/);
-  assert.match(page, /<CloudflareTunnelPanel \/>/);
+  assert.match(page, /<HTTPSPanel onReady=\{markHttpsReady\} \/>/);
+  assert.match(page, /<CloudflareTunnelPanel onReady=\{markCloudflareReady\} \/>/);
+  assert.match(page, /useHeldTab\(activeTab, tabReady\)/);
+  assert.match(page, /hidden=\{displayTab !== "https"\}/);
+  assert.match(page, /hidden=\{displayTab !== "cloudflare"\}/);
+  assert.match(page, /data-admin-route-pending=\{routePending \? "true" : undefined\}/);
+  assert.doesNotMatch(page, /SettingsPageSkeleton/);
 });
 
 test("built-in HTTPS reads certificates only from server paths", () => {
@@ -155,4 +160,13 @@ test("Cloudflare token guidance keeps readable vertical rhythm", () => {
   assert.match(page, /mt-3 flex flex-col gap-2/);
   assert.match(page, /cloudflare_token_help[\s\S]*block leading-6/);
   assert.match(page, /token_guide[\s\S]*ExternalLink/);
+});
+
+test("hover preload fills reverse-proxy data before the page mounts", () => {
+  const routes = readFileSync("src/routes.ts", "utf8");
+  const cloudflared = readFileSync("src/lib/cloudflared.ts", "utf8");
+  assert.match(routes, /prefetchHTTPSSettings/);
+  assert.match(routes, /prefetchCloudflaredStatus/);
+  assert.match(api, /getHTTPSSettingsSnapshot/);
+  assert.match(cloudflared, /getCloudflaredStatusSnapshot/);
 });

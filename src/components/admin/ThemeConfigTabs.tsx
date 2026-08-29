@@ -59,6 +59,11 @@ const ThemeConfigTabs = ({
   const [scrollEdges, setScrollEdges] = useState({ left: false, right: false });
   const tabsListRef = useRef<HTMLDivElement | null>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const isFirstPaint = useRef(true);
+
+  useEffect(() => {
+    isFirstPaint.current = false;
+  }, []);
 
   useEffect(() => {
     tabRefs.current = tabRefs.current.slice(0, groups.length);
@@ -335,7 +340,11 @@ const ThemeConfigTabs = ({
         <motion.div
           key={currentTab}
           className="km-theme-config-section"
-          initial={reduceMotion ? false : { opacity: 0.35, x: tabDirection * 8 }}
+          initial={
+            reduceMotion || isFirstPaint.current
+              ? false
+              : { opacity: 0.35, x: tabDirection * 8 }
+          }
           animate={{ opacity: 1, x: 0 }}
           transition={
             reduceMotion

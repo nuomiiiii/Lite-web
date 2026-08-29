@@ -41,15 +41,17 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
-import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import { useAccount } from "@/contexts/AccountContext";
 import {
+  getDashboardSettingsSnapshot,
   saveDashboardSettings,
   useDashboardSettings,
 } from "@/hooks/useDashboardSettings";
 import {
   DASHBOARD_PRESETS,
+  DASHBOARD_SUMMARY_CARD_IDS,
   dashboardModuleSpans,
+  dashboardSettingsEqual,
   dashboardSettingsForPreset,
   enabledDashboardModules,
   packDashboardModules,
@@ -59,12 +61,10 @@ import {
 } from "@/utils/dashboardSettings";
 
 const previewSpan: Record<number, string> = {
-  1: "col-span-1",
-  2: "col-span-1 sm:col-span-2",
   3: "col-span-1 sm:col-span-3",
   4: "col-span-1 sm:col-span-4",
-  5: "col-span-1 sm:col-span-5",
   6: "col-span-1 sm:col-span-6",
+  12: "col-span-1 sm:col-span-12",
 };
 
 type SortableModuleRowProps = {
@@ -80,6 +80,7 @@ type SortableModuleRowProps = {
   moveUpLabel: string;
   moveDownLabel: string;
   widthLabel: string;
+  widthQuarterLabel: string;
   widthThirdLabel: string;
   widthHalfLabel: string;
   widthFullLabel: string;
@@ -101,6 +102,7 @@ function SortableModuleRow({
   moveUpLabel,
   moveDownLabel,
   widthLabel,
+  widthQuarterLabel,
   widthThirdLabel,
   widthHalfLabel,
   widthFullLabel,
@@ -150,9 +152,10 @@ function SortableModuleRow({
         >
           <Select.Trigger aria-label={widthLabel} className="w-[4.5rem]" />
           <Select.Content>
-            <Select.Item value="2">{widthThirdLabel}</Select.Item>
-            <Select.Item value="3">{widthHalfLabel}</Select.Item>
-            <Select.Item value="6">{widthFullLabel}</Select.Item>
+            <Select.Item value="3">{widthQuarterLabel}</Select.Item>
+            <Select.Item value="4">{widthThirdLabel}</Select.Item>
+            <Select.Item value="6">{widthHalfLabel}</Select.Item>
+            <Select.Item value="12">{widthFullLabel}</Select.Item>
           </Select.Content>
         </Select.Root>
         <Tooltip content={moveUpLabel}>
@@ -195,74 +198,48 @@ export default function DashboardSettingsPage() {
   const { t } = useTranslation();
   const { account } = useAccount();
   const accountKey = account?.uuid || account?.username || "authenticated";
+  const snapshot = getDashboardSettingsSnapshot(accountKey);
   const { settings, loading, error, refetch } = useDashboardSettings(accountKey);
-  const [draft, setDraft] = React.useState<DashboardSettings>(() => cloneSettings(settings));
-  const [saved, setSaved] = React.useState<DashboardSettings>(() => cloneSettings(settings));
+  const [draft, setDraft] = React.useState<DashboardSettings | null>(() =>
+    snapshot ? cloneSettings(snapshot) : null,
+  );
+  const [saved, setSaved] = React.useState<DashboardSettings | null>(() =>
+    snapshot ? cloneSettings(snapshot) : null,
+  );
   const [saving, setSaving] = React.useState(false);
+  const [painted, setPainted] = React.useState(false);
   const moduleSensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (loading) return;
-    setDraft(cloneSettings(settings));
-    setSaved(cloneSettings(settings));
+    setDraft((current) =>
+      current && dashboardSettingsEqual(current, settings)
+        ? current
+        : cloneSettings(settings),
+    );
+    setSaved((current) =>
+      current && dashboardSettingsEqual(current, settings)
+        ? current
+        : cloneSettings(settings),
+    );
   }, [loading, settings]);
 
-  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
-  const enabledCount = draft.modules.filter((module) => module.enabled).length;
-
-  const selectPreset = (preset: Exclude<DashboardSettings["preset"], "custom">) => {
-    setDraft(dashboardSettingsForPreset(preset));
-  };
-
-  const toggleModule = (id: DashboardModuleId, enabled: boolean) => {
-    setDraft((current) => ({
-      ...current,
-      preset: "custom",
-      modules: current.modules.map((module) => (
-        module.id === id ? { ...module, enabled } : module
-      )),
-    }));
-  };
-
-  const resizeModule = (id: DashboardModuleId, span: DashboardModuleSpan) => {
-    setDraft((current) => ({
-      ...current,
-      preset: "custom",
-      modules: current.modules.map((module) => (
-        module.id === id ? { ...module, span } : module
-      )),
-    }));
-  };
-
-  const moveModule = (index: number, direction: -1 | 1) => {
-    setDraft((current) => {
-      const target = index + direction;
-      if (target < 0 || target >= current.modules.length) return current;
-      const modules = current.modules.map((module) => ({ ...module }));
-      [modules[index], modules[target]] = [modules[target], modules[index]];
-      return { ...current, preset: "custom", modules };
-    });
-  };
-
-  const handleModuleDragEnd = ({ active, over }: DragEndEvent) => {
-    if (!over || active.id === over.id) return;
-    setDraft((current) => {
-      const oldIndex = current.modules.findIndex((module) => module.id === active.id);
-      const newIndex = current.modules.findIndex((module) => module.id === over.id);
-      if (oldIndex < 0 || newIndex < 0) return current;
-      return {
-        ...current,
-        preset: "custom",
-        modules: arrayMove(current.modules, oldIndex, newIndex),
-      };
-    });
-  };
+  React.useLayoutEffect(() => {
+    if (loading || !draft || !saved) {
+      setPainted(false);
+      return;
+    }
+    if (painted) return;
+    const frame = window.requestAnimationFrame(() => setPainted(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, [draft, loading, painted, saved]);
 
   const handleSave = async () => {
+    if (!draft) return;
     setSaving(true);
     try {
       const confirmed = await saveDashboardSettings(draft, { accountKey });
@@ -276,8 +253,7 @@ export default function DashboardSettingsPage() {
     }
   };
 
-  if (loading) return <SettingsPageSkeleton />;
-  if (error) {
+  if (error && !draft) {
     return (
       <Callout.Root color="red">
         <Callout.Icon><AlertCircle size={16} /></Callout.Icon>
@@ -291,6 +267,69 @@ export default function DashboardSettingsPage() {
       </Callout.Root>
     );
   }
+
+  if (loading || !draft || !saved) {
+    return <div data-admin-route-pending="true" />;
+  }
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const enabledCount = draft.modules.filter((module) => module.enabled).length;
+
+  const selectPreset = (preset: Exclude<DashboardSettings["preset"], "custom">) => {
+    setDraft(dashboardSettingsForPreset(preset));
+  };
+
+  const toggleModule = (id: DashboardModuleId, enabled: boolean) => {
+    setDraft((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        preset: "custom",
+        modules: current.modules.map((module) => (
+          module.id === id ? { ...module, enabled } : module
+        )),
+      };
+    });
+  };
+
+  const resizeModule = (id: DashboardModuleId, span: DashboardModuleSpan) => {
+    setDraft((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        preset: "custom",
+        modules: current.modules.map((module) => (
+          module.id === id ? { ...module, span } : module
+        )),
+      };
+    });
+  };
+
+  const moveModule = (index: number, direction: -1 | 1) => {
+    setDraft((current) => {
+      if (!current) return current;
+      const target = index + direction;
+      if (target < 0 || target >= current.modules.length) return current;
+      const modules = current.modules.map((module) => ({ ...module }));
+      [modules[index], modules[target]] = [modules[target], modules[index]];
+      return { ...current, preset: "custom", modules };
+    });
+  };
+
+  const handleModuleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    setDraft((current) => {
+      if (!current) return current;
+      const oldIndex = current.modules.findIndex((module) => module.id === active.id);
+      const newIndex = current.modules.findIndex((module) => module.id === over.id);
+      if (oldIndex < 0 || newIndex < 0) return current;
+      return {
+        ...current,
+        preset: "custom",
+        modules: arrayMove(current.modules, oldIndex, newIndex),
+      };
+    });
+  };
 
   const visibleModules = enabledDashboardModules(draft);
   const packedPreview = packDashboardModules(
@@ -311,7 +350,10 @@ export default function DashboardSettingsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div
+      className="flex flex-col gap-3"
+      data-admin-route-pending={painted ? undefined : "true"}
+    >
       <AdminPageTitle description={t("settings.dashboard.page_description")}>
         {t("settings.dashboard.title")}
       </AdminPageTitle>
@@ -451,6 +493,7 @@ export default function DashboardSettingsPage() {
                     moveUpLabel={t("settings.dashboard.move_up")}
                     moveDownLabel={t("settings.dashboard.move_down")}
                     widthLabel={t("settings.dashboard.module_width")}
+                    widthQuarterLabel={t("settings.dashboard.width_quarter")}
                     widthThirdLabel={t("settings.dashboard.width_third")}
                     widthHalfLabel={t("settings.dashboard.width_half")}
                     widthFullLabel={t("settings.dashboard.width_full")}
@@ -465,19 +508,18 @@ export default function DashboardSettingsPage() {
 
           <div className="min-w-0">
             <div className="mb-2 text-xs font-medium text-muted-foreground">{t("settings.dashboard.preview")}</div>
-            <div className="grid min-h-[260px] grid-cols-1 content-start gap-2 rounded-md border bg-[var(--gray-a2)] p-3 sm:grid-cols-6">
+            <div className="grid min-h-[260px] grid-cols-1 content-start gap-2 rounded-md border bg-[var(--gray-a2)] p-3 sm:grid-cols-12">
               {draft.preset === "overview" ? (
                 <>
-                  <div className="col-span-1 grid grid-cols-1 gap-2 sm:col-span-6 sm:grid-cols-3">
-                    {(["server_status", "traffic_summary", "storage_summary"] as const)
-                      .map((id) => previewModule(id))}
+                  <div className="col-span-1 grid grid-cols-1 gap-2 sm:col-span-12 sm:grid-cols-4">
+                    {DASHBOARD_SUMMARY_CARD_IDS.map((id) => previewModule(id))}
                   </div>
-                  {previewModule("latency_trend", "col-span-1 sm:col-span-6")}
-                  <div className="col-span-1 grid grid-cols-1 gap-2 sm:col-span-6 sm:grid-cols-2">
+                  {previewModule("latency_trend", "col-span-1 sm:col-span-12")}
+                  <div className="col-span-1 grid grid-cols-1 gap-2 sm:col-span-12 sm:grid-cols-2">
                     {(["traffic_trend", "billing_trend"] as const)
                       .map((id) => previewModule(id))}
                   </div>
-                  <div className="col-span-1 grid grid-cols-1 gap-2 sm:col-span-6 sm:grid-cols-2">
+                  <div className="col-span-1 grid grid-cols-1 gap-2 sm:col-span-12 sm:grid-cols-2">
                     {(["return_route", "alerts"] as const)
                       .map((id) => previewModule(id))}
                   </div>

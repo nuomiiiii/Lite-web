@@ -1,4 +1,3 @@
-import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import { AdminSheetTabs, AdminTabLabel } from "@/components/admin/AdminSheetTabs";
 import { SettingCard } from "@/components/admin/SettingCard";
@@ -6,6 +5,8 @@ import { useSettings } from "@/lib/api";
 import {
   CLOUDFLARED_STOP_CONFIRM_TEXT,
   getCloudflaredStatus,
+  getCloudflaredStatusSnapshot,
+  prefetchCloudflaredStatus,
   removeCloudflaredToken,
   startCloudflared,
   stopCloudflared,
@@ -15,6 +16,8 @@ import {
   buildHTTPFallbackURL,
   buildHTTPSRedirectURL,
   getHTTPSSettings,
+  getHTTPSSettingsSnapshot,
+  prefetchHTTPSSettings,
   classifyHTTPSError,
   reloadHTTPSCertificate,
   updateHTTPSSettings,
@@ -50,15 +53,34 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useAdminTabParam } from "@/hooks/useAdminTabParam";
+import { useHeldTab } from "@/hooks/useHeldTab";
 
 const REVERSE_PROXY_TABS = ["https", "cloudflare"] as const;
 
 export default function ReverseProxySettings() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useAdminTabParam(REVERSE_PROXY_TABS, "https");
+  const [httpsReady, setHttpsReady] = React.useState(() => getHTTPSSettingsSnapshot() !== null);
+  const [cloudflareReady, setCloudflareReady] = React.useState(
+    () => getCloudflaredStatusSnapshot() !== null,
+  );
+  const tabReady = activeTab === "https" ? httpsReady : cloudflareReady;
+  const displayTab = useHeldTab(activeTab, tabReady);
+  const routePending = activeTab === displayTab && !tabReady;
+  const markHttpsReady = React.useCallback(() => setHttpsReady(true), []);
+  const markCloudflareReady = React.useCallback(() => setCloudflareReady(true), []);
+
+  React.useEffect(() => {
+    void prefetchHTTPSSettings();
+    void prefetchCloudflaredStatus();
+  }, []);
 
   return (
-    <Flex direction="column" gap="3">
+    <Flex
+      direction="column"
+      gap="3"
+      data-admin-route-pending={routePending ? "true" : undefined}
+    >
       <AdminPageTitle
         description={t(
           "settings.reverse_proxy.page_description",
@@ -68,7 +90,7 @@ export default function ReverseProxySettings() {
         {t("settings.reverse_proxy.title", "Reverse Proxy")}
       </AdminPageTitle>
       <Tabs.Root
-        value={activeTab}
+        value={displayTab}
         onValueChange={setActiveTab}
       >
         <AdminSheetTabs>
@@ -88,12 +110,20 @@ export default function ReverseProxySettings() {
             </Tabs.Trigger>
           </Tabs.List>
         </AdminSheetTabs>
-        <Tabs.Content value="https" className="admin-tab-panel pt-3">
-          {activeTab === "https" ? <HTTPSPanel /> : null}
-        </Tabs.Content>
-        <Tabs.Content value="cloudflare" className="admin-tab-panel pt-3">
-          {activeTab === "cloudflare" ? <CloudflareTunnelPanel /> : null}
-        </Tabs.Content>
+        <div
+          className="admin-tab-panel pt-3"
+          data-state={displayTab === "https" ? "active" : "inactive"}
+          hidden={displayTab !== "https"}
+        >
+          <HTTPSPanel onReady={markHttpsReady} />
+        </div>
+        <div
+          className="admin-tab-panel pt-3"
+          data-state={displayTab === "cloudflare" ? "active" : "inactive"}
+          hidden={displayTab !== "cloudflare"}
+        >
+          <CloudflareTunnelPanel onReady={markCloudflareReady} />
+        </div>
       </Tabs.Root>
     </Flex>
   );
@@ -125,12 +155,13 @@ function extractListenPort(listen: string): string {
   return match?.[1] ?? "36888";
 }
 
-function HTTPSPanel() {
+function HTTPSPanel({ onReady }: { onReady: () => void }) {
   const { t, i18n } = useTranslation();
-  const [settings, setSettings] = React.useState(emptyHTTPSSettings);
-  const [status, setStatus] = React.useState(emptyHTTPSStatus);
-  const [port, setPort] = React.useState("36888");
-  const [loading, setLoading] = React.useState(true);
+  const snapshot = getHTTPSSettingsSnapshot();
+  const [settings, setSettings] = React.useState(snapshot?.settings ?? emptyHTTPSSettings);
+  const [status, setStatus] = React.useState(snapshot?.status ?? emptyHTTPSStatus);
+  const [port, setPort] = React.useState(() => extractListenPort(snapshot?.settings.https_listen ?? "36888"));
+  const [loading, setLoading] = React.useState(() => snapshot === null);
   const [saving, setSaving] = React.useState(false);
   const [reloading, setReloading] = React.useState(false);
 
@@ -175,8 +206,9 @@ function HTTPSPanel() {
       }
     } finally {
       setLoading(false);
+      onReady();
     }
-  }, [t]);
+  }, [onReady]);
 
   React.useEffect(() => {
     void refresh(false, true);
@@ -250,7 +282,7 @@ function HTTPSPanel() {
   };
 
   if (loading) {
-    return <SettingsPageSkeleton />;
+    return null;
   }
 
   const date = (value?: string) => {
@@ -513,12 +545,12 @@ const emptyStatus: CloudflaredStatus = {
   envTokenPresent: false,
 };
 
-function CloudflareTunnelPanel() {
+function CloudflareTunnelPanel({ onReady }: { onReady: () => void }) {
   const { t } = useTranslation();
-  const { settings, loading: settingsLoading, error: settingsError } =
-    useSettings();
-  const [status, setStatus] = React.useState<CloudflaredStatus>(emptyStatus);
-  const [loading, setLoading] = React.useState(true);
+  const { settings, error: settingsError } = useSettings();
+  const snapshot = getCloudflaredStatusSnapshot();
+  const [status, setStatus] = React.useState<CloudflaredStatus>(snapshot ?? emptyStatus);
+  const [loading, setLoading] = React.useState(() => snapshot === null);
   const [refreshing, setRefreshing] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [token, setToken] = React.useState("");
@@ -551,8 +583,9 @@ function CloudflareTunnelPanel() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      onReady();
     }
-  }, []);
+  }, [onReady, t]);
 
   React.useEffect(() => {
     void refreshStatus();
@@ -591,8 +624,8 @@ function CloudflareTunnelPanel() {
     }
   };
 
-  if (settingsLoading || loading) {
-    return <SettingsPageSkeleton />;
+  if (loading) {
+    return null;
   }
 
   if (settingsError) {

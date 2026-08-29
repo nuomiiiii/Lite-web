@@ -5,6 +5,7 @@ export type AmountBreakdown = {
   base: string;
   extra: string;
   other?: string;
+  one_time?: string;
   total: string;
 };
 
@@ -19,6 +20,7 @@ export type BillingPeriod = {
   base: string;
   extra: string;
   other: string;
+  one_time?: string;
   total: string;
   status?: "in_progress" | "settled" | "no_record" | "projected";
   server_count?: number;
@@ -43,6 +45,7 @@ export type BillingOverview = {
     base_percent: string;
     extra_percent: string;
     other_percent: string;
+    one_time_percent?: string;
   };
 };
 
@@ -86,6 +89,7 @@ export type BillingPeriodPage = {
   items: BillingPeriod[];
   summary: AmountBreakdown;
   monthly_average?: string;
+  yearly_average?: string;
   available_years: number[];
   pagination: BillingPageInfo;
 };
@@ -316,6 +320,7 @@ export function billingTypeLabel(type: string): string {
     base_accrual: "基础费用",
     traffic_reset: "流量重置",
     ip_change: "更换IP",
+    adjustment: "一次性费用",
     reversal: "冲销",
     voided: "已作废",
   };

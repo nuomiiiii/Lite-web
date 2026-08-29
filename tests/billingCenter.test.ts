@@ -12,6 +12,8 @@ const pageSource = readFileSync("src/pages/admin/billing.tsx", "utf8");
 const routesSource = readFileSync("src/routes.ts", "utf8");
 const menuSource = readFileSync("src/config/menuConfig.json", "utf8");
 const preloadSource = readFileSync("src/utils/adminPreload.ts", "utf8");
+const iconHelperSource = readFileSync("src/utils/iconHelper.ts", "utf8");
+const dashboardSource = readFileSync("src/pages/admin/dashboard.tsx", "utf8");
 const multiSelectSource = readFileSync(
   "src/components/admin/AdminMultiSelect.tsx",
   "utf8",
@@ -28,6 +30,9 @@ test("registers and preloads the billing center after the server menu", () => {
   assert.match(routesSource, /importAdminBilling/);
   assert.match(routesSource, /prefetchBillingCenter/);
   assert.match(preloadSource, /"\/admin\/billing"/);
+  assert.match(menuSource, /"icon": "Payments"/);
+  assert.match(iconHelperSource, /Payments: wrapMuiIcon\(AccountBalanceWalletOutlined\)/);
+  assert.match(dashboardSource, /icon=\{<AccountBalanceWalletOutlined/);
 });
 
 test("keeps financial query values as decimal strings and CSV filters", () => {
@@ -158,7 +163,12 @@ test("restores base fees in details and defaults yearly bills to the current yea
   assert.match(pageSource, /detailsSearchPlaceholder/);
   assert.match(pageSource, /billing\.filters\.region/);
   assert.match(pageSource, /billing\.filters\.group/);
-  assert.doesNotMatch(pageSource, /billing\.table\.note/);
+  assert.match(pageSource, /billing\.table\.note/);
+  assert.match(pageSource, /km-billing-note/);
+  assert.match(
+    readFileSync("src/global.css", "utf8"),
+    /km-billing-details-table \.km-billing-note/,
+  );
   assert.match(pageSource, /flexWrap: \{ xs: "wrap", md: "nowrap" \}/);
   assert.match(pageSource, /rangeForSelectedYear/);
   assert.match(pageSource, /useState<string\[\]>\(\(\) => \[currentBeijingYear\(\)\]\)/);
@@ -176,9 +186,16 @@ test("aligns converted averages and treats other costs as IP changes", () => {
   assert.match(pageSource, /fontVariantNumeric:\s*"tabular-nums"/);
   assert.doesNotMatch(pageSource, /oneTimeAdjustment/);
   assert.doesNotMatch(pageSource, /value:\s*"one_time"/);
-  assert.doesNotMatch(pageSource, /value:\s*"adjustment"/);
+  assert.match(pageSource, /value:\s*"adjustment"/);
   assert.match(pageSource, /t\("billing.types.ipChange"\)/);
-  assert.match(pageSource, /metricGridSx\(monthly \? 5 : 4\)/);
+  assert.match(pageSource, /t\("billing.types.oneTimeFee"\)/);
+  assert.match(pageSource, /metricGridSx\(6\)/);
+  assert.match(pageSource, /billing\.metrics\.yearlyAverage/);
+  assert.match(pageSource, /ONE_TIME_FEE_COLOR/);
+  assert.match(pageSource, /alignItems: "stretch"/);
+  assert.match(pageSource, /height: "100%", display: "flex", flexDirection: "column"/);
+  assert.doesNotMatch(pageSource, /minHeight: \{ lg: 420 \}/);
+  assert.doesNotMatch(pageSource, /justifyContent: "center"/);
   assert.match(pageSource, /<Globe size=\{18\} \/>/);
   assert.match(pageSource, /barGap=\{0\}/);
   assert.doesNotMatch(pageSource, /billing.types.base"\)\}<\/span>/);

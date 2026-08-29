@@ -101,6 +101,11 @@
       "notFound": "未找到该服务器",
       "notSupported": "当前版本暂不支持",
       "occurredAt": "发生时间",
+      "oneTimeFee": "一次性费用",
+      "oneTimeFeeHint": "费用按点击确认时的北京时间计入当月附加费用。",
+      "oneTimeFeeNotePlaceholder": "例如：服务器溢价、线路升级、补差价",
+      "oneTimeFeeSaved": "一次性费用已计入当月账单",
+      "oneTimeFeeSaveFailed": "费用录入失败",
       "os": "操作系统",
       "outbound": "出站",
       "overview": "概览",
@@ -356,6 +361,9 @@
     "average_latency": "平均时延",
     "billable": "计费流量",
     "chart_loading": "图表数据加载中",
+    "cost_center": "成本中心",
+    "cost_month": "本月累计",
+    "cost_year": "年度累计",
     "current_alerts": "当前告警",
     "current_minute": "当前分钟",
     "daily_billable": "每日计费流量",
@@ -430,7 +438,7 @@
     "server_status_hint": "服务器在线状态与离线节点概览",
     "servers": "服务器状态",
     "storage": "存储",
-    "subtitle": "服务器、流量与存储状态",
+    "subtitle": "服务器、流量、存储与成本",
     "title": "仪表盘",
     "today_billable": "今日计费流量",
     "today_traffic": "今日实时流量",
@@ -530,9 +538,11 @@
       "annualTotal": "年度费用合计",
       "baseAndExtra": "当月锁定基础费用 + 附加费用",
       "completeMonthsOnly": "按流量重置日锁定的账期计算",
+      "completeYearsOnly": "按流量重置日锁定的年份计算",
       "currentPeriods": "当前筛选账期",
-      "estimatedExpiry": "估算 · 30 天内到期 {{count}} 台",
-      "includesTrafficReset": "含今日流量重置、更换IP",
+      "estimatedExpiry": "仅基础费用 · 30 天内到期 {{count}} 台",
+      "includesTrafficReset": "含今日流量重置、更换IP、一次性费用",
+      "oneTimeTotal": "一次性费用合计",
       "otherTotal": "更换IP合计",
       "serverAccrual": "按重置日锁定的基础费用",
       "untilDate": "截至 {{date}}"
@@ -543,7 +553,8 @@
       "rangeTotal": "筛选范围合计",
       "remainingValue": "剩余价值",
       "today": "今日费用",
-      "year": "本年累计"
+      "year": "本年累计",
+      "yearlyAverage": "年均费用"
     },
     "sections": {
       "serverRates": "服务器资费",
@@ -587,13 +598,14 @@
       "overview": "费用概览",
       "yearly": "年度账单"
     },
-    "title": "账单中心",
+    "title": "成本中心",
     "trend": {
       "title": "今年费用趋势"
     },
     "types": {
       "base": "基础费用",
       "ipChange": "更换IP",
+      "oneTimeFee": "一次性费用",
       "reversal": "冲销",
       "trafficReset": "流量重置",
       "voided": "已作废"
@@ -1010,7 +1022,7 @@
   "navigation": {
     "account_security": "账户与安全",
     "appearance": "外观与主题",
-    "billing": "账单中心",
+    "billing": "成本中心",
     "data_storage": "数据与存储",
     "monitoring": "监测",
     "notification_channels": "通知渠道",
@@ -1290,6 +1302,8 @@
       "module_alerts_description": "离线、资源、流量、回程和账单告警",
       "module_billing_trend": "计费流量趋势",
       "module_billing_trend_description": "最近 30 天每日计费流量",
+      "module_cost_center": "成本中心",
+      "module_cost_center_description": "本月累计、年度累计与剩余价值",
       "module_daily_traffic_ranking": "单日流量消耗排行",
       "module_daily_traffic_ranking_description": "按节点计费规则排列今日计费流量",
       "module_latency_jitter_ranking": "延迟抖动排行",
@@ -1328,7 +1342,7 @@
       "preset_operations": "运维值守",
       "preset_operations_description": "聚焦告警、线路、资源与存储健康",
       "preset_overview": "默认布局",
-      "preset_overview_description": "三项概览、整行时延趋势、双列流量趋势，以及线路与告警",
+      "preset_overview_description": "四项概览、整行时延趋势、双列流量趋势，以及线路与告警",
       "preset_resources": "资源与容量",
       "preset_resources_description": "查看当前负载排行与存储容量",
       "preset_traffic": "流量与账单",
@@ -1343,6 +1357,7 @@
       "title": "仪表盘配置",
       "width_full": "整行",
       "width_half": "1/2",
+      "width_quarter": "1/4",
       "width_third": "1/3"
     },
     "database": {

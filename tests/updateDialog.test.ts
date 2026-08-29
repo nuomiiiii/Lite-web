@@ -2,6 +2,46 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+import {
+  GITHUB_ALERT_LABELS,
+  remarkGithubAlerts,
+} from "../src/utils/githubMarkdown.ts";
+
+test("github alerts become styled callouts instead of raw markers", () => {
+  const tree = {
+    type: "root",
+    children: [
+      {
+        type: "blockquote",
+        children: [
+          {
+            type: "paragraph",
+            children: [
+              {
+                type: "text",
+                value: "[!IMPORTANT]\nLite 2.3.0 版本 目前仍处于管理页面UI焕新阶段。",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  remarkGithubAlerts()(tree);
+  const quote = tree.children[0];
+  assert.equal(quote.data?.hProperties?.["data-alert"], "important");
+  assert.deepEqual(quote.data?.hProperties?.className, [
+    "km-md-alert",
+    "km-md-alert--important",
+  ]);
+  assert.equal(
+    quote.children?.[0]?.children?.[0]?.value,
+    "Lite 2.3.0 版本 目前仍处于管理页面UI焕新阶段。",
+  );
+  assert.equal(GITHUB_ALERT_LABELS.important, "Important");
+});
+
+
 const source = [
   "src/components/admin/shell/AdminShell.tsx",
   "src/components/admin/shell/AdminSidebar.tsx",
@@ -139,8 +179,9 @@ test("update dialog keeps its title, release body, and actions separated", () =>
 
 test("release notes render GitHub-flavored Markdown without raw HTML", () => {
   assert.match(source, /<ReactMarkdown/);
-  assert.match(source, /remarkPlugins=\{\[remarkGfm\]\}/);
+  assert.match(source, /remarkGfm, remarkGithubAlerts/);
   assert.match(source, /skipHtml/);
+  assert.match(source, /km-md-alert--/);
   assert.doesNotMatch(source, /whitespace-pre-wrap/);
   assert.match(source, /rel="noopener noreferrer"/);
 });

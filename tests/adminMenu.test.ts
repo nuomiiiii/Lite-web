@@ -118,7 +118,7 @@ test("keeps the admin navigation in the intended groups", () => {
     menuConfig.footer.map((item) => item.path),
     [
       "/admin/logs",
-      "https://nuomiiiii.github.io/komari-document/",
+      "https://nuomiiiii.github.io/Lite-document/",
     ],
   );
   assert.equal(allPaths(menuConfig.footer).includes("/admin/about"), false);
@@ -296,10 +296,16 @@ test("EULA acceptance closes only after settings persist successfully", () => {
 test("admin tabs and dialogs share the saved motion preference", () => {
   assert.match(adminPanelSource, /dataset\.adminShellActive = "true"/);
   assert.match(adminPanelSource, /data-admin-tab-motion-ready/);
+  assert.match(adminPanelSource, /data-admin-tab-indicator-instant/);
+  assert.doesNotMatch(adminPanelSource, /setTimeout\(\(\) => registerTabListsWithin\(root\), 400\)/);
   assert.doesNotMatch(globalCssSource, /admin-tab-content-enter/);
   assert.match(
     globalCssSource,
     /\[data-admin-tab-motion-ready="true"\]::after[\s\S]*width 220ms cubic-bezier\(0\.22, 1, 0\.36, 1\)/,
+  );
+  assert.match(
+    globalCssSource,
+    /\.km-admin-sheet-tabs \[role="tab"\]\[aria-selected="true"\]::after/,
   );
   assert.match(globalCssSource, /\.km-admin-sheet-tabs \.MuiTabs-indicator[\s\S]*display: none/);
   assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*\.admin-tab-panel/);

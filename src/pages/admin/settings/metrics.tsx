@@ -5,7 +5,11 @@ import {
   AdminPagination,
   useAdminPagination,
 } from "@/components/admin/AdminPagination";
-import { DatabaseMaintenanceCard } from "@/components/admin/DatabaseMaintenanceCard";
+import {
+  DatabaseMaintenanceCard,
+  getDatabaseOverviewSnapshot,
+  prefetchDatabaseOverview,
+} from "@/components/admin/DatabaseMaintenanceCard";
 import { Selector } from "@/components/Selector";
 import {
   SettingCard,
@@ -24,6 +28,13 @@ import { useSettings } from "@/lib/api";
 import type { SettingsResponse } from "@/lib/api";
 import { useRPC2Call } from "@/contexts/RPC2Context";
 import { resolveI18nText, type I18nText } from "@/utils/i18nText";
+import {
+  getMetricDefinitionsSnapshot,
+  prefetchMetricDefinitions,
+  rememberMetricDefinitions,
+  type MetricDefinition,
+} from "@/lib/metricDefinitions";
+import { useHeldTab } from "@/hooks/useHeldTab";
 import {
   AppDialogContent,
   Badge,
@@ -72,21 +83,13 @@ interface MigrationStatusResponse {
   error?: string;
 }
 
-interface MetricDefinition {
-  name: string;
-  description?: I18nText | null;
-  type: string;
-  unit?: string;
-  retention_days: number;
-  metadata?: Record<string, string>;
-}
+const SAFE_RAW_RETENTION_DAYS = 1;
 
 type MetricRetentionChange = {
   name: string;
   retention_days: number;
 };
 
-const SAFE_RAW_RETENTION_DAYS = 1;
 type MetricTextField = "name" | "description";
 type TranslationFunction = ReturnType<typeof useTranslation>["t"];
 
@@ -212,6 +215,24 @@ export default function MetricsSettings() {
   const { settings, loading, error, updateMultipleSettings } = useSettings();
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = useAdminTabParam(STORAGE_TABS, "overview");
+  const [monitoringReady, setMonitoringReady] = React.useState(
+    () => getMetricDefinitionsSnapshot() !== null,
+  );
+  const [overviewReady, setOverviewReady] = React.useState(
+    () => getDatabaseOverviewSnapshot() !== null,
+  );
+  const tabReady =
+    (activeTab !== "monitoring" || monitoringReady) &&
+    (activeTab !== "overview" || overviewReady);
+  const displayTab = useHeldTab(activeTab, tabReady);
+  const routePending =
+    loading || (activeTab === displayTab && !tabReady);
+  const markMonitoringReady = React.useCallback(() => setMonitoringReady(true), []);
+
+  React.useEffect(() => {
+    void prefetchMetricDefinitions();
+    void prefetchDatabaseOverview().finally(() => setOverviewReady(true));
+  }, []);
 
   const saveMetricSettings = React.useCallback(
     async (changes: Partial<SettingsResponse>) => {
@@ -230,16 +251,19 @@ export default function MetricsSettings() {
 
   const metricDatabaseDriver = resolveMetricDatabaseDriver(settings);
 
-  if (loading) {
-    return <SettingsPageSkeleton />;
-  }
-
   if (error) {
     return <Text color="red">{error}</Text>;
   }
 
+  if (routePending) {
+    return <SettingsPageSkeleton />;
+  }
+
   return (
-    <Flex direction="column" gap="3">
+    <Flex
+      direction="column"
+      gap="3"
+    >
       <AdminPageTitle
         description={t(
           "settings.storage.page_description",
@@ -250,7 +274,7 @@ export default function MetricsSettings() {
       </AdminPageTitle>
 
       <Tabs.Root
-        value={activeTab}
+        value={displayTab}
         onValueChange={setActiveTab}
       >
         <AdminSheetTabs>
@@ -273,11 +297,19 @@ export default function MetricsSettings() {
           </Tabs.List>
         </AdminSheetTabs>
 
-        <Tabs.Content value="overview" className="admin-tab-panel pt-3">
-          {activeTab === "overview" ? <DatabaseMaintenanceCard /> : null}
-        </Tabs.Content>
+        <div
+          className="admin-tab-panel pt-3"
+          data-state={displayTab === "overview" ? "active" : "inactive"}
+          hidden={displayTab !== "overview"}
+        >
+          <DatabaseMaintenanceCard />
+        </div>
 
-        <Tabs.Content value="monitoring" className="admin-tab-panel pt-3">
+        <div
+          className="admin-tab-panel pt-3"
+          data-state={displayTab === "monitoring" ? "active" : "inactive"}
+          hidden={displayTab !== "monitoring"}
+        >
           <Flex direction="column" gap="3">
             {saveError && (
               <Callout.Root color="red" variant="surface">
@@ -308,6 +340,7 @@ export default function MetricsSettings() {
                 settings.metric_retention_days,
                 SAFE_RAW_RETENTION_DAYS,
               )}
+              onReady={markMonitoringReady}
             />
 
             <SettingCardShortTextInput
@@ -374,16 +407,18 @@ export default function MetricsSettings() {
               </>
             )}
           </Flex>
-        </Tabs.Content>
+        </div>
 
-        <Tabs.Content value="migration" className="admin-tab-panel pt-3">
-          {activeTab === "migration" ? (
-            <Flex direction="column" gap="3">
-              <MigrationCard />
-              <DatabaseMaintenanceCard mode="maintenance" />
-            </Flex>
-          ) : null}
-        </Tabs.Content>
+        <div
+          className="admin-tab-panel pt-3"
+          data-state={displayTab === "migration" ? "active" : "inactive"}
+          hidden={displayTab !== "migration"}
+        >
+          <Flex direction="column" gap="3">
+            <MigrationCard />
+            <DatabaseMaintenanceCard mode="maintenance" />
+          </Flex>
+        </div>
       </Tabs.Root>
     </Flex>
   );
@@ -391,14 +426,26 @@ export default function MetricsSettings() {
 
 function MetricRetentionTable({
   defaultRetentionDays,
+  onReady,
 }: {
   defaultRetentionDays: number;
+  onReady: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const { call } = useRPC2Call();
-  const [metrics, setMetrics] = React.useState<MetricDefinition[]>([]);
-  const [drafts, setDrafts] = React.useState<Record<string, string>>({});
-  const [loading, setLoading] = React.useState(true);
+  const snapshot = getMetricDefinitionsSnapshot();
+  const [metrics, setMetrics] = React.useState<MetricDefinition[]>(
+    snapshot ?? [],
+  );
+  const [drafts, setDrafts] = React.useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      (snapshot ?? []).map((metric) => [
+        metric.name,
+        String(toNumber(metric.retention_days, defaultRetentionDays)),
+      ]),
+    ),
+  );
+  const [loading, setLoading] = React.useState(() => snapshot === null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [batchDialogOpen, setBatchDialogOpen] = React.useState(false);
@@ -412,13 +459,13 @@ function MetricRetentionTable({
 
   const fetchMetrics = React.useCallback(
     async (silent = false) => {
-      if (!silent) setLoading(true);
+      if (!silent && getMetricDefinitionsSnapshot() === null) setLoading(true);
       try {
         const data = await call<unknown, MetricDefinition[]>(
           "admin:listMetricDefinitions",
           {},
         );
-        const list = Array.isArray(data) ? data : [];
+        const list = rememberMetricDefinitions(Array.isArray(data) ? data : []);
         setMetrics(list);
         setDrafts(
           Object.fromEntries(
@@ -437,9 +484,10 @@ function MetricRetentionTable({
         }
       } finally {
         if (!silent) setLoading(false);
+        onReady();
       }
     },
-    [call, defaultRetentionDays, t],
+    [call, defaultRetentionDays, onReady, t],
   );
 
   React.useEffect(() => {

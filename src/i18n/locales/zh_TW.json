@@ -89,9 +89,11 @@
       "annualTotal": "年度費用合計",
       "baseAndExtra": "當月鎖定基礎費用 + 附加費用",
       "completeMonthsOnly": "按流量重置日鎖定的帳期計算",
+      "completeYearsOnly": "按流量重置日鎖定的年份計算",
       "currentPeriods": "目前篩選帳期",
-      "estimatedExpiry": "估算 · 30 天內到期 {{count}} 台",
-      "includesTrafficReset": "含今日流量重置、更換IP",
+      "estimatedExpiry": "僅基礎費用 · 30 天內到期 {{count}} 台",
+      "includesTrafficReset": "含今日流量重置、更換IP、一次性費用",
+      "oneTimeTotal": "一次性費用合計",
       "otherTotal": "更換IP合計",
       "serverAccrual": "按重置日鎖定的基礎費用",
       "untilDate": "截至 {{date}}"
@@ -102,7 +104,8 @@
       "rangeTotal": "篩選範圍合計",
       "remainingValue": "剩餘價值",
       "today": "今日費用",
-      "year": "本年累計"
+      "year": "本年累計",
+      "yearlyAverage": "年均費用"
     },
     "sections": {
       "serverRates": "伺服器資費",
@@ -146,13 +149,14 @@
       "overview": "費用概覽",
       "yearly": "年度帳單"
     },
-    "title": "帳單中心",
+    "title": "成本中心",
     "trend": {
       "title": "今年費用趨勢"
     },
     "types": {
       "ipChange": "更換IP",
       "base": "基礎費用",
+      "oneTimeFee": "一次性費用",
       "reversal": "沖銷",
       "trafficReset": "流量重置",
       "voided": "已作廢"
@@ -226,7 +230,10 @@
     "server_status_hint": "伺服器在線狀態與離線節點概覽",
     "servers": "伺服器狀態",
     "storage": "儲存",
-    "subtitle": "伺服器、流量與儲存狀態",
+    "cost_center": "成本中心",
+    "cost_month": "本月累計",
+    "cost_year": "年度累計",
+    "subtitle": "伺服器、流量、儲存與成本",
     "title": "儀表板",
     "today_billable": "今日計費流量",
     "today_traffic": "今日即時流量",
@@ -299,6 +306,11 @@
       "ipChangeHint": "費用按點擊確認時的北京時間計入當天帳單。",
       "ipChangeSaveFailed": "費用錄入失敗",
       "ipChangeSaved": "更換 IP 費用已計入當天帳單",
+      "oneTimeFee": "一次性費用",
+      "oneTimeFeeHint": "費用按點擊確認時的北京時間計入當月附加費用。",
+      "oneTimeFeeNotePlaceholder": "例如：伺服器溢價、線路升級、補差價",
+      "oneTimeFeeSaveFailed": "費用錄入失敗",
+      "oneTimeFeeSaved": "一次性費用已計入當月帳單",
       "occurredAt": "發生時間",
       "recordTrafficReset": "更換IP",
       "trafficResetHint": "費用按點擊確認時的北京時間計入當天帳單；重置流量額度僅本週期有效。",
@@ -781,7 +793,7 @@
   "navigation": {
     "account_security": "帳戶與安全",
     "appearance": "外觀與主題",
-    "billing": "帳單中心",
+    "billing": "成本中心",
     "data_storage": "資料與儲存",
     "monitoring": "監測",
     "open": "開啟導覽",

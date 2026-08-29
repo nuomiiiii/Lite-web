@@ -1,5 +1,6 @@
 import type { SvgIconComponent } from "@mui/icons-material";
 import type { SvgIconProps } from "@mui/material/SvgIcon";
+import AccountBalanceWalletOutlined from "@mui/icons-material/AccountBalanceWalletOutlined";
 import AccountCircleOutlined from "@mui/icons-material/AccountCircleOutlined";
 import AlternateEmailOutlined from "@mui/icons-material/AlternateEmailOutlined";
 import AltRouteOutlined from "@mui/icons-material/AltRouteOutlined";
@@ -16,7 +17,6 @@ import MenuBookOutlined from "@mui/icons-material/MenuBookOutlined";
 import MoreHoriz from "@mui/icons-material/MoreHoriz";
 import NotificationsOutlined from "@mui/icons-material/NotificationsOutlined";
 import PaletteOutlined from "@mui/icons-material/PaletteOutlined";
-import PaymentsOutlined from "@mui/icons-material/PaymentsOutlined";
 import PowerOffOutlined from "@mui/icons-material/PowerOffOutlined";
 import PublicOutlined from "@mui/icons-material/PublicOutlined";
 import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
@@ -78,5 +78,5 @@ export const iconMap: Record<string, ReturnType<typeof wrapMuiIcon>> = {
   Store: wrapMuiIcon(StorefrontOutlined),
   Route: wrapMuiIcon(AltRouteOutlined),
   LayoutDashboard: wrapMuiIcon(DashboardOutlined),
-  Payments: wrapMuiIcon(PaymentsOutlined),
+  Payments: wrapMuiIcon(AccountBalanceWalletOutlined),
 };

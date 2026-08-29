@@ -75,9 +75,11 @@ export default function AdminShell({ content }: AdminShellProps) {
       );
       list.style.setProperty("--admin-tab-highlight-width", `${tabRect.width}px`);
       if (!list.hasAttribute("data-admin-tab-motion-ready")) {
+        list.setAttribute("data-admin-tab-indicator-instant", "");
+        list.setAttribute("data-admin-tab-motion-ready", "true");
         window.requestAnimationFrame(() => {
           if (list.isConnected)
-            list.setAttribute("data-admin-tab-motion-ready", "true");
+            list.removeAttribute("data-admin-tab-indicator-instant");
         });
       }
     };
@@ -137,11 +139,14 @@ export default function AdminShell({ content }: AdminShellProps) {
       registerTabListsWithin(root);
     });
     pageResizeObserver.observe(page);
-    const lateScan = window.setTimeout(() => registerTabListsWithin(root), 400);
+    const tabListObserver = new MutationObserver(() => {
+      registerTabListsWithin(root);
+    });
+    tabListObserver.observe(page, { childList: true, subtree: true });
     const handleResize = () => tabLists.forEach(scheduleIndicator);
     window.addEventListener("resize", handleResize, { passive: true });
     return () => {
-      window.clearTimeout(lateScan);
+      tabListObserver.disconnect();
       tabAttrObserver.disconnect();
       pageResizeObserver.disconnect();
       resizeObserver.disconnect();
@@ -150,6 +155,7 @@ export default function AdminShell({ content }: AdminShellProps) {
       tabLists.forEach((list) => {
         list.removeEventListener("scroll", handleTabListScroll);
         list.removeAttribute("data-admin-tab-motion-ready");
+        list.removeAttribute("data-admin-tab-indicator-instant");
         list.style.removeProperty("--admin-tab-highlight-x");
         list.style.removeProperty("--admin-tab-highlight-width");
       });
