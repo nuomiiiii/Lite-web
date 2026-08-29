@@ -402,11 +402,14 @@ export default function DashboardSettingsPage() {
             <span>{t("settings.dashboard.summary_refresh")}</span>
             <Select.Root
               value={String(draft.refresh_seconds)}
-              onValueChange={(value) => setDraft((current) => ({
-                ...current,
-                preset: "custom",
-                refresh_seconds: Number(value) as DashboardSettings["refresh_seconds"],
-              }))}
+              onValueChange={(value) => setDraft((current) => {
+                if (!current) return current;
+                return {
+                  ...current,
+                  preset: "custom",
+                  refresh_seconds: Number(value) as DashboardSettings["refresh_seconds"],
+                };
+              })}
             >
               <Select.Trigger className="w-24" />
               <Select.Content>
@@ -420,11 +423,14 @@ export default function DashboardSettingsPage() {
             <span>{t("settings.dashboard.chart_refresh")}</span>
             <Select.Root
               value={String(draft.chart_refresh_seconds)}
-              onValueChange={(value) => setDraft((current) => ({
-                ...current,
-                preset: "custom",
-                chart_refresh_seconds: Number(value) as DashboardSettings["chart_refresh_seconds"],
-              }))}
+              onValueChange={(value) => setDraft((current) => {
+                if (!current) return current;
+                return {
+                  ...current,
+                  preset: "custom",
+                  chart_refresh_seconds: Number(value) as DashboardSettings["chart_refresh_seconds"],
+                };
+              })}
             >
               <Select.Trigger className="w-24" />
               <Select.Content>
@@ -438,11 +444,14 @@ export default function DashboardSettingsPage() {
             <span>{t("settings.dashboard.ranking_limit")}</span>
             <Select.Root
               value={String(draft.ranking_limit)}
-              onValueChange={(value) => setDraft((current) => ({
-                ...current,
-                preset: "custom",
-                ranking_limit: Number(value) as DashboardSettings["ranking_limit"],
-              }))}
+              onValueChange={(value) => setDraft((current) => {
+                if (!current) return current;
+                return {
+                  ...current,
+                  preset: "custom",
+                  ranking_limit: Number(value) as DashboardSettings["ranking_limit"],
+                };
+              })}
             >
               <Select.Trigger className="w-24" />
               <Select.Content>
