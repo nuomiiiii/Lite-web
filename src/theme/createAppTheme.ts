@@ -234,7 +234,14 @@ export function createAppTheme(mode: "light" | "dark") {
         },
       },
       MuiAppBar: {
-        defaultProps: { color: "transparent", elevation: 0 },
+        defaultProps: { color: "inherit", elevation: 0 },
+        styleOverrides: {
+          root: {
+            backgroundImage: "none",
+            backgroundColor: isLight ? "#FFFFFF" : "#161C24",
+            transition: "none",
+          },
+        },
       },
       MuiDrawer: {
         styleOverrides: {

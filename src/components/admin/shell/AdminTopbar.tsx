@@ -39,13 +39,16 @@ export default function AdminTopbar({
   return (
     <AppBar
       position="sticky"
+      color="inherit"
       sx={{
         bgcolor: "background.default",
+        backgroundImage: "none",
         color: "text.primary",
         boxShadow: "none",
         zIndex: 11,
         borderBottom: "1px solid",
         borderColor: "divider",
+        transition: "none",
       }}
     >
       <Toolbar

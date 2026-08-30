@@ -1,4 +1,4 @@
-import React, { lazy, StrictMode, Suspense, useMemo } from "react";
+import React, { lazy, StrictMode, Suspense, useCallback, useLayoutEffect, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import "./global.css";
 import {
@@ -132,17 +132,34 @@ const App = () => {
 
   const resolvedAppearance = useSystemTheme(appearance);
 
-  React.useEffect(() => {
-    const isDark = resolvedAppearance === "dark";
+  const applyDocumentAppearance = useCallback((isDark: boolean) => {
     document.documentElement.classList.toggle("dark", isDark);
-  }, [resolvedAppearance]);
+  }, []);
+
+  useLayoutEffect(() => {
+    applyDocumentAppearance(resolvedAppearance === "dark");
+  }, [applyDocumentAppearance, resolvedAppearance]);
+
+  const setAppearanceSynced = useCallback(
+    (value: Appearance) => {
+      const resolved =
+        value === "system"
+          ? window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light"
+          : value;
+      applyDocumentAppearance(resolved === "dark");
+      setAppearance(value);
+    },
+    [applyDocumentAppearance, setAppearance],
+  );
 
   const themeContextValue = useMemo(
     () => ({
       appearance,
-      setAppearance,
+      setAppearance: setAppearanceSynced,
     }),
-    [appearance, setAppearance],
+    [appearance, setAppearanceSynced],
   );
   const routing = useRoutes(routes);
   const appTree = isRestrictedGuideRoute ? (
