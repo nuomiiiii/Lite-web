@@ -43,6 +43,8 @@ export default function MigrationGuideShell({
       data-testid="migration-guide"
       sx={{
         minHeight: "100dvh",
+        pt: "var(--safe-area-top)",
+        pb: "var(--safe-area-bottom)",
         bgcolor:
           theme.palette.mode === "light"
             ? "#eef2f6"

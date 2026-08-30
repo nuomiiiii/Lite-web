@@ -11,7 +11,15 @@ import Typography from "@mui/material/Typography";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import Close from "@mui/icons-material/Close";
 import { Github } from "@/components/admin/muiIcons";
-import { useRef, useState, type ReactNode } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 
@@ -189,180 +197,332 @@ function NavLinkItem({
 
   if (!mini) return button;
   return (
-    <Tooltip title={label} placement="right" arrow>
+    <Tooltip
+      title={label}
+      placement="right"
+      arrow
+      slotProps={{ transition: { timeout: 0 } }}
+    >
       <Box>{button}</Box>
     </Tooltip>
   );
 }
 
+type MiniFlyout = {
+  item: AdminMenuItem;
+  anchorEl: HTMLElement;
+};
+
+const MiniGroupButton = memo(function MiniGroupButton({
+  childActive,
+  label,
+  icon,
+  onClick,
+  buttonRef,
+}: {
+  childActive: boolean;
+  label: string;
+  icon: string;
+  onClick: (event: MouseEvent<HTMLDivElement>) => void;
+  buttonRef: (node: HTMLElement | null) => void;
+}) {
+  return (
+    <ListItemButton
+      ref={buttonRef}
+      selected={childActive}
+      onClick={onClick}
+      sx={miniItemSx}
+      aria-haspopup="menu"
+    >
+      <ListItemIcon
+        sx={{
+          minWidth: 0,
+          color: childActive ? "text.primary" : "text.secondary",
+        }}
+      >
+        {renderIcon(icon, label, childActive)}
+      </ListItemIcon>
+    </ListItemButton>
+  );
+});
+
 function MiniGroup({
   item,
   childActive,
-  onNavigate,
+  open,
+  onOpen,
+  onClose,
+  onKeep,
+  onCloseSoon,
 }: {
   item: AdminMenuItem;
   childActive: boolean;
+  open: boolean;
+  onOpen: (anchorEl: HTMLElement) => void;
+  onClose: () => void;
+  onKeep: () => void;
+  onCloseSoon: () => void;
+}) {
+  const { t } = useTranslation();
+  const label = item.rawLabel || t(item.labelKey);
+  const buttonRef = useRef<HTMLElement | null>(null);
+  const openRef = useRef(open);
+  openRef.current = open;
+
+  const setButtonRef = useCallback((node: HTMLElement | null) => {
+    buttonRef.current = node;
+    if (node) {
+      node.setAttribute("aria-expanded", openRef.current ? "true" : "false");
+    }
+  }, []);
+
+  useEffect(() => {
+    buttonRef.current?.setAttribute("aria-expanded", open ? "true" : "false");
+  }, [open]);
+
+  const onButtonClick = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      const hoverMenu = window.matchMedia(
+        "(hover: hover) and (pointer: fine)",
+      ).matches;
+      if (hoverMenu) {
+        onOpen(event.currentTarget);
+        return;
+      }
+      if (openRef.current) onClose();
+      else onOpen(event.currentTarget);
+    },
+    [onOpen, onClose],
+  );
+
+  return (
+    <Box
+      data-admin-mini-group=""
+      onMouseEnter={() => {
+        onKeep();
+        if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+          return;
+        }
+        if (buttonRef.current) onOpen(buttonRef.current);
+      }}
+      onMouseLeave={onCloseSoon}
+    >
+      <MiniGroupButton
+        childActive={childActive}
+        label={label}
+        icon={item.icon}
+        onClick={onButtonClick}
+        buttonRef={setButtonRef}
+      />
+    </Box>
+  );
+}
+
+function MiniFlyoutMenu({
+  flyout,
+  onKeep,
+  onClose,
+  onCloseSoon,
+  onNavigate,
+}: {
+  flyout: MiniFlyout | null;
+  onKeep: () => void;
+  onClose: () => void;
+  onCloseSoon: () => void;
   onNavigate: () => void;
 }) {
   const { t } = useTranslation();
   const location = useLocation();
-  const label = item.rawLabel || t(item.labelKey);
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const closeTimer = useRef<number | null>(null);
-  const open = Boolean(anchorEl);
+  const open = Boolean(flyout);
+  const item = flyout?.item ?? null;
+  const [slide, setSlide] = useState(false);
 
-  const cancelClose = () => {
-    if (closeTimer.current) {
-      window.clearTimeout(closeTimer.current);
-      closeTimer.current = null;
+  useEffect(() => {
+    if (!open) {
+      setSlide(false);
+      return;
     }
-  };
+    const timer = window.setTimeout(() => setSlide(true), 40);
+    return () => window.clearTimeout(timer);
+  }, [open]);
 
-  const scheduleClose = () => {
-    cancelClose();
-    closeTimer.current = window.setTimeout(() => setAnchorEl(null), 140);
-  };
+  useEffect(() => {
+    if (!open) return;
+    const apply = () => {
+      const paper = document.querySelector(".admin-mini-nav-menu");
+      if (!(paper instanceof HTMLElement)) return;
+      paper.style.setProperty(
+        "transition",
+        slide
+          ? "top 180ms cubic-bezier(0.22, 1, 0.36, 1), left 180ms cubic-bezier(0.22, 1, 0.36, 1)"
+          : "none",
+      );
+    };
+    apply();
+    const id = requestAnimationFrame(apply);
+    return () => cancelAnimationFrame(id);
+  }, [open, slide]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("[data-admin-mini-group]")) return;
+      if (target.closest(".admin-mini-nav-menu")) return;
+      onClose();
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [open, onClose]);
+
+  const label = item ? item.rawLabel || t(item.labelKey) : "";
 
   return (
-    <Box
-      onMouseEnter={cancelClose}
-      onMouseLeave={scheduleClose}
-      sx={{ mb: 0.5 }}
-    >
-      <Tooltip title={open ? "" : label} placement="right" arrow>
-        <ListItemButton
-          selected={childActive}
-          onClick={(event) => {
-            cancelClose();
-            const hoverMenu = window.matchMedia(
-              "(hover: hover) and (pointer: fine)",
-            ).matches;
-            if (hoverMenu) {
-              setAnchorEl(event.currentTarget);
-              return;
-            }
-            setAnchorEl((current) =>
-              current ? null : event.currentTarget,
-            );
-          }}
-          onMouseEnter={(event) => {
-            if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
-              return;
-            }
-            cancelClose();
-            setAnchorEl(event.currentTarget);
-          }}
-          sx={miniItemSx}
-          aria-haspopup="menu"
-          aria-expanded={open}
-        >
-          <ListItemIcon
-            sx={{
-              minWidth: 0,
-              color: childActive ? "text.primary" : "text.secondary",
-            }}
-          >
-            {renderIcon(item.icon, label, childActive)}
-          </ListItemIcon>
-        </ListItemButton>
-      </Tooltip>
-      <Popover
-        open={open}
-        anchorEl={anchorEl}
-        onClose={() => setAnchorEl(null)}
-        disableRestoreFocus
-        disableScrollLock
-        hideBackdrop
-        anchorOrigin={{ vertical: "center", horizontal: "right" }}
-        transformOrigin={{ vertical: "center", horizontal: "left" }}
-        slotProps={{
-          paper: {
-            elevation: 0,
-            onMouseEnter: cancelClose,
-            onMouseLeave: scheduleClose,
-            sx: {
-              ml: 1,
-              minWidth: 200,
-              py: 0.75,
-              borderRadius: "8px",
-              boxShadow:
-                "0 0 2px 0 rgba(145, 158, 171, 0.24), 0 12px 24px -4px rgba(145, 158, 171, 0.16)",
+    <Popover
+      open={open}
+      anchorEl={flyout?.anchorEl ?? null}
+      onClose={onClose}
+      disableAutoFocus
+      disableEnforceFocus
+      disableRestoreFocus
+      disableScrollLock
+      hideBackdrop
+      transitionDuration={0}
+      marginThreshold={0}
+      anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      transformOrigin={{ vertical: "top", horizontal: "left" }}
+      slotProps={{
+        root: {
+          sx: { pointerEvents: "none" },
+        },
+        paper: {
+          elevation: 0,
+          onMouseEnter: onKeep,
+          onMouseLeave: onCloseSoon,
+          className: `admin-mini-nav-menu${slide ? " admin-mini-nav-slide" : ""}`,
+          sx: {
+            ml: 1,
+            minWidth: 200,
+            py: 0.75,
+            overflow: "hidden",
+            pointerEvents: "auto",
+            borderRadius: "8px",
+            boxShadow:
+              "0 0 2px 0 rgba(145, 158, 171, 0.24), 0 12px 24px -4px rgba(145, 158, 171, 0.16)",
+            "&&": {
+              transition: slide
+                ? "top 180ms cubic-bezier(0.22, 1, 0.36, 1), left 180ms cubic-bezier(0.22, 1, 0.36, 1)"
+                : "none",
             },
           },
-        }}
-      >
-        <Typography
-          variant="subtitle2"
-          sx={{ px: 2, py: 0.75, color: "text.secondary" }}
+        },
+      }}
+    >
+      {item ? (
+        <Box
+          key={item.path}
+          sx={{
+            animation: "adminMiniFlySwap 160ms cubic-bezier(0.22, 1, 0.36, 1)",
+            "@keyframes adminMiniFlySwap": {
+              from: { opacity: 0, transform: "translateY(6px)" },
+              to: { opacity: 1, transform: "translateY(0)" },
+            },
+          }}
         >
-          {label}
-        </Typography>
-        <List disablePadding>
-        {item.children?.map((child) => {
-          const childLabel = child.rawLabel || t(child.labelKey);
-          const isExternal =
-            child.path.startsWith("http://") || child.path.startsWith("https://");
-          const active = !isExternal && navActive(location.pathname, child.path);
-          const openInNewTab =
-            child.newTab === true || (isExternal && child.newTab !== false);
-          const content = (
-            <>
-              <ListItemIcon sx={{ minWidth: 36, color: active ? "text.primary" : "text.secondary" }}>
-                {renderIcon(child.icon, childLabel, active)}
-              </ListItemIcon>
-              <ListItemText
-                primary={childLabel}
-                slotProps={{
-                    primary: { sx: { fontSize: 16, lineHeight: "20px", fontWeight: active ? 600 : 400 } },
-                }}
-              />
-            </>
-          );
-          const itemSx = { mx: 1, borderRadius: "8px", minHeight: 40 };
-          if (openInNewTab || child.reloadDocument) {
-            return (
-              <ListItemButton
-                key={child.path}
-                component="a"
-                href={child.path}
-                target={openInNewTab ? "_blank" : undefined}
-                rel={openInNewTab ? "noopener noreferrer" : undefined}
-                data-admin-reload-document={
-                  child.reloadDocument ? "true" : undefined
-                }
-                selected={active}
-                onClick={() => {
-                  setAnchorEl(null);
-                  onNavigate();
-                }}
-                sx={itemSx}
-              >
-                {content}
-              </ListItemButton>
-            );
-          }
-          return (
-            <ListItemButton
-              key={child.path}
-              component={Link}
-              to={child.path}
-              selected={active}
-              onPointerEnter={() => {
-                if (!isExternal) void preloadAdminRoute(child.path);
-              }}
-              onClick={() => {
-                setAnchorEl(null);
-                onNavigate();
-              }}
-              sx={itemSx}
-            >
-              {content}
-            </ListItemButton>
-          );
-        })}
-        </List>
-      </Popover>
-    </Box>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              px: 2,
+              py: 0.75,
+              color: "text.secondary",
+              lineHeight: "20px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {label}
+          </Typography>
+          <List disablePadding>
+            {item.children?.map((child) => {
+              const childLabel = child.rawLabel || t(child.labelKey);
+              const isExternal =
+                child.path.startsWith("http://") ||
+                child.path.startsWith("https://");
+              const active =
+                !isExternal && navActive(location.pathname, child.path);
+              const openInNewTab =
+                child.newTab === true || (isExternal && child.newTab !== false);
+              const content = (
+                <>
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 36,
+                      color: active ? "text.primary" : "text.secondary",
+                    }}
+                  >
+                    {renderIcon(child.icon, childLabel, active)}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={childLabel}
+                    slotProps={{
+                      primary: {
+                        sx: {
+                          fontSize: 16,
+                          lineHeight: "20px",
+                          fontWeight: active ? 600 : 400,
+                          whiteSpace: "nowrap",
+                        },
+                      },
+                    }}
+                  />
+                </>
+              );
+              const itemSx = { mx: 1, borderRadius: "8px", minHeight: 40 };
+              if (openInNewTab || child.reloadDocument) {
+                return (
+                  <ListItemButton
+                    key={child.path}
+                    component="a"
+                    href={child.path}
+                    target={openInNewTab ? "_blank" : undefined}
+                    rel={openInNewTab ? "noopener noreferrer" : undefined}
+                    data-admin-reload-document={
+                      child.reloadDocument ? "true" : undefined
+                    }
+                    selected={active}
+                    onClick={() => {
+                      onClose();
+                      onNavigate();
+                    }}
+                    sx={itemSx}
+                  >
+                    {content}
+                  </ListItemButton>
+                );
+              }
+              return (
+                <ListItemButton
+                  key={child.path}
+                  component={Link}
+                  to={child.path}
+                  selected={active}
+                  onPointerEnter={() => {
+                    if (!isExternal) void preloadAdminRoute(child.path);
+                  }}
+                  onClick={() => {
+                    onClose();
+                    onNavigate();
+                  }}
+                  sx={itemSx}
+                >
+                  {content}
+                </ListItemButton>
+              );
+            })}
+          </List>
+        </Box>
+      ) : null}
+    </Popover>
   );
 }
 
@@ -426,6 +586,51 @@ export default function AdminSidebar({
 }: AdminSidebarProps) {
   const { t } = useTranslation();
   const location = useLocation();
+  const [miniFlyout, setMiniFlyout] = useState<MiniFlyout | null>(null);
+  const miniCloseTimer = useRef<number | null>(null);
+
+  const cancelMiniClose = useCallback(() => {
+    if (miniCloseTimer.current != null) {
+      window.clearTimeout(miniCloseTimer.current);
+      miniCloseTimer.current = null;
+    }
+  }, []);
+
+  const keepMiniFlyout = useCallback(() => {
+    cancelMiniClose();
+  }, [cancelMiniClose]);
+
+  const closeMiniFlyout = useCallback(() => {
+    cancelMiniClose();
+    setMiniFlyout(null);
+  }, [cancelMiniClose]);
+
+  const closeMiniFlyoutSoon = useCallback(() => {
+    cancelMiniClose();
+    miniCloseTimer.current = window.setTimeout(() => {
+      setMiniFlyout(null);
+      miniCloseTimer.current = null;
+    }, 140);
+  }, [cancelMiniClose]);
+
+  const openMiniFlyout = useCallback(
+    (item: AdminMenuItem, anchorEl: HTMLElement) => {
+      cancelMiniClose();
+      setMiniFlyout((current) => {
+        if (current?.item.path === item.path && current.anchorEl === anchorEl) {
+          return current;
+        }
+        return { item, anchorEl };
+      });
+    },
+    [cancelMiniClose],
+  );
+
+  useEffect(() => {
+    if (!mini) closeMiniFlyout();
+  }, [mini, closeMiniFlyout]);
+
+  useEffect(() => () => cancelMiniClose(), [cancelMiniClose]);
 
   const renderGroup = (item: AdminMenuItem): ReactNode => {
     if (!item.children?.length) {
@@ -449,7 +654,11 @@ export default function AdminSidebar({
           key={item.path}
           item={item}
           childActive={childActive}
-          onNavigate={onNavigate}
+          open={miniFlyout?.item.path === item.path}
+          onOpen={(anchorEl) => openMiniFlyout(item, anchorEl)}
+          onClose={closeMiniFlyout}
+          onKeep={keepMiniFlyout}
+          onCloseSoon={closeMiniFlyoutSoon}
         />
       );
     }
@@ -562,6 +771,15 @@ export default function AdminSidebar({
         <List disablePadding sx={{ px: mini ? 0 : 0 }}>
           {menuItems.map(renderGroup)}
         </List>
+        {mini ? (
+          <MiniFlyoutMenu
+            flyout={miniFlyout}
+            onKeep={keepMiniFlyout}
+            onClose={closeMiniFlyout}
+            onCloseSoon={closeMiniFlyoutSoon}
+            onNavigate={onNavigate}
+          />
+        ) : null}
       </Box>
 
       <Box sx={{ py: 1 }}>

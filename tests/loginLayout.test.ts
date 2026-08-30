@@ -87,13 +87,21 @@ test("login and admin chrome adapt to compact viewports", () => {
     new URL("../src/components/admin/shell/AdminShell.tsx", import.meta.url),
     "utf8",
   );
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const globalStyles = readFileSync(new URL("../src/global.css", import.meta.url), "utf8");
   assert.match(loginSource, /max-width:599\.95px/);
   assert.match(loginSource, /100dvh/);
-  assert.match(loginSource, /env\(safe-area-inset-top\)/);
+  assert.match(loginSource, /var\(--safe-area-top\)/);
+  assert.match(shellSource, /var\(--safe-area-top\)/);
+  assert.match(shellSource, /var\(--safe-area-bottom\)/);
   assert.match(
     shellSource,
     /min\(280px, calc\(100vw - 48px\)\)/,
   );
+  assert.match(html, /viewport-fit=cover/);
+  assert.match(html, /apple-mobile-web-app-status-bar-style" content="black-translucent"/);
+  assert.match(html, /rel="apple-touch-icon" href="\/apple-touch-icon\.png/);
+  assert.match(globalStyles, /--safe-area-top: env\(safe-area-inset-top, 0px\)/);
 });
 
 test("restricted guide routes provide public site information to the login card", () => {

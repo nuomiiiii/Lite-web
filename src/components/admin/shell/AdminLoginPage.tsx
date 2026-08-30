@@ -58,14 +58,14 @@ function LoginToolbar() {
         alignItems: "center",
         justifyContent: "space-between",
         pl: {
-          xs: "max(12px, env(safe-area-inset-left))",
-          sm: "max(24px, env(safe-area-inset-left))",
+          xs: "max(12px, var(--safe-area-left))",
+          sm: "max(24px, var(--safe-area-left))",
         },
         pr: {
-          xs: "max(8px, env(safe-area-inset-right))",
-          sm: "max(24px, env(safe-area-inset-right))",
+          xs: "max(8px, var(--safe-area-right))",
+          sm: "max(24px, var(--safe-area-right))",
         },
-        pt: "env(safe-area-inset-top)",
+        pt: "var(--safe-area-top)",
       }}
     >
       <Link
@@ -330,7 +330,7 @@ function AdminLoginForm() {
           px: { xs: 2, sm: 3 },
           pt: { xs: 2, sm: 4 },
           pb: {
-            xs: "max(24px, env(safe-area-inset-bottom))",
+            xs: "max(24px, var(--safe-area-bottom))",
             sm: 6,
           },
           position: "relative",

@@ -211,6 +211,13 @@ test("desktop navigation expands by default and can collapse to a mini rail", ()
   assert.match(adminPanelSource, /data-admin-nav-mini/);
   assert.match(adminPanelSource, /readDesktopNavMini\(\)/);
   assert.match(adminPanelSource, /<MiniGroup/);
+  assert.match(adminPanelSource, /function MiniFlyoutMenu/);
+  assert.match(adminPanelSource, /admin-mini-nav-slide/);
+  assert.match(adminPanelSource, /const MiniGroupButton = memo/);
+  assert.doesNotMatch(
+    adminPanelSource,
+    /function MiniGroup\([\s\S]*?<Tooltip[\s\S]*?function MiniFlyoutMenu/,
+  );
   assert.doesNotMatch(adminPanelSource, /lite-admin-nav-collapsed/);
   assert.match(adminPanelSource, /const navRowSx = \{/);
   assert.match(adminPanelSource, /sx=\{navRowSx\}/);
@@ -389,11 +396,11 @@ test("admin floating controls and switches animate consistently", () => {
 test("admin command buttons use motion instead of abrupt active flashes", () => {
   assert.match(
     globalCssSource,
-    /\[data-admin-shell\] button\[aria-pressed\],[\s\S]*background-color 160ms/,
+    /\[data-admin-shell\] button\[aria-pressed\],[\s\S]*\[data-admin-mini-group\] \.MuiListItemButton-root[\s\S]*background-color 160ms/,
   );
   assert.match(
     globalCssSource,
-    /\[data-admin-shell\] button\[aria-pressed\]:active[\s\S]*scale\(0\.99\)/,
+    /\[data-admin-shell\] button\[aria-pressed\]:active[\s\S]*\[data-admin-mini-group\] \.MuiListItemButton-root:active[\s\S]*scale\(0\.99\)/,
   );
   assert.match(globalCssSource, /data-reduce-motion="true"[\s\S]*button\[aria-pressed\]/);
 });

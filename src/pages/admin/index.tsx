@@ -1233,6 +1233,32 @@ function nodeNetworkAddresses(node: NodeDetail) {
   );
 }
 
+function nodeBillingTagsNeedStack(root: HTMLElement) {
+  const groups = root.querySelectorAll<HTMLElement>(".admin-node-billing-tags");
+  for (const group of groups) {
+    const badges = Array.from(group.children) as HTMLElement[];
+    if (badges.length < 2) continue;
+    const cell = group.closest("td");
+    const box = cell ?? group;
+    if (box.clientWidth <= 0) continue;
+    const cellStyle = getComputedStyle(box);
+    const available =
+      box.clientWidth -
+      (Number.parseFloat(cellStyle.paddingLeft) || 0) -
+      (Number.parseFloat(cellStyle.paddingRight) || 0);
+    const gap =
+      Number.parseFloat(getComputedStyle(group).columnGap || getComputedStyle(group).gap) ||
+      0;
+    let needed = 0;
+    for (let i = 0; i < badges.length; i += 1) {
+      needed += Math.max(badges[i].scrollWidth, badges[i].offsetWidth);
+      if (i > 0) needed += gap;
+    }
+    if (needed > available + 0.5) return true;
+  }
+  return false;
+}
+
 function nodeDeploymentStatusPresentation(
   status: string | undefined | null,
   t: TFunction,
@@ -1383,12 +1409,14 @@ const SortableRow = React.memo(({
           {node.remark || "--"}
         </span>
       </TableCell>
-      <TableCell className="!align-middle" data-label={t("admin.nodeTable.billing")}>
+      <TableCell className="!align-middle min-w-0 whitespace-normal" data-label={t("admin.nodeTable.billing")}>
         {Number(node.price) === 0 ? (
           <span className="text-sm text-muted-foreground">--</span>
         ) : (
           <PriceTags
-            className="[&_label]:!text-xs"
+            className="admin-node-billing-tags [&_label]:!text-xs"
+            direction="row"
+            wrap="nowrap"
             price={node.price}
             billing_cycle={node.billing_cycle}
             expired_at={node.expired_at}
@@ -1460,6 +1488,8 @@ const SortableMobileCard = React.memo(function SortableMobileCard({
     ) : (
       <PriceTags
         className="[&_label]:!text-xs"
+        direction="row"
+        wrap="nowrap"
         price={node.price}
         billing_cycle={node.billing_cycle}
         expired_at={node.expired_at}
@@ -1597,6 +1627,30 @@ const NodeTable = ({
     pageStart,
     pageStart + pageSize,
   );
+  const tableWrapRef = React.useRef<HTMLDivElement>(null);
+  const [billingStack, setBillingStack] = useState(false);
+  const billingLayoutKey = visibleNodes
+    .map(
+      (node) =>
+        `${node.uuid}:${node.price}:${node.billing_cycle}:${node.expired_at}:${node.currency}`,
+    )
+    .join("|");
+
+  React.useLayoutEffect(() => {
+    if (isMobile) return;
+    const root = tableWrapRef.current;
+    if (!root) return;
+    const update = () => {
+      setBillingStack(nodeBillingTagsNeedStack(root));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(root);
+    const table = root.querySelector("table");
+    if (table) observer.observe(table);
+    void document.fonts?.ready.then(update);
+    return () => observer.disconnect();
+  }, [isMobile, billingLayoutKey]);
 
   React.useEffect(() => {
     setLocalNodes(nodes);
@@ -1697,7 +1751,8 @@ const NodeTable = ({
             </AdminMobileCardStack>
           </SortableContext>
         ) : (
-        <Table className="admin-responsive-table admin-node-table min-w-[1136px] table-fixed text-sm">
+        <div ref={tableWrapRef}>
+        <Table className={`admin-responsive-table admin-node-table min-w-[1136px] table-fixed text-sm${billingStack ? " admin-node-billing-stack" : ""}`}>
           <TableHeader>
             <TableRow>
               <TableHead className="w-[44px]">
@@ -1740,6 +1795,7 @@ const NodeTable = ({
             </SortableContext>
           </TableBody>
         </Table>
+        </div>
         )}
       <AdminPagination
         page={visiblePage}

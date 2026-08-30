@@ -360,6 +360,8 @@ export default function InstallGuideShell({
       data-testid="install-guide"
       sx={{
         minHeight: "100dvh",
+        pt: "var(--safe-area-top)",
+        pb: "var(--safe-area-bottom)",
         bgcolor:
           theme.palette.mode === "light"
             ? "#eef2f6"

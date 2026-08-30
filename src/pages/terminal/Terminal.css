@@ -648,7 +648,7 @@
   .remote-server-picker-dialog.rt-DialogContent {
     width: min(calc(100vw - 16px), 560px);
     max-height: calc(100dvh - 12px);
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    padding-bottom: max(12px, var(--safe-area-bottom));
   }
 
   .remote-server-picker-dialog .remote-node-picker {
@@ -839,7 +839,7 @@
     position: absolute;
     z-index: 4;
     right: 8px;
-    bottom: calc(var(--mobile-keyboard-inset, 0px) + max(8px, env(safe-area-inset-bottom)));
+    bottom: calc(var(--mobile-keyboard-inset, 0px) + max(8px, var(--safe-area-bottom)));
     left: 8px;
     display: flex;
     align-items: center;
@@ -873,7 +873,7 @@
 
   .terminal-page .xterm {
     max-width: 100%;
-    padding-bottom: calc(var(--xterm-padding, 16px) + var(--mobile-keyboard-inset, 0px) + max(60px, env(safe-area-inset-bottom)));
+    padding-bottom: calc(var(--xterm-padding, 16px) + var(--mobile-keyboard-inset, 0px) + max(60px, var(--safe-area-bottom)));
   }
 
   .terminal-page .xterm-helper-textarea {

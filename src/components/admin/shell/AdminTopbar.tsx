@@ -53,7 +53,7 @@ export default function AdminTopbar({
           minHeight: { xs: 56, sm: 72 },
           px: { xs: 1, sm: 3 },
           alignItems: "center",
-          pt: "env(safe-area-inset-top)",
+          pt: "var(--safe-area-top)",
         }}
       >
         {isMobile ? (

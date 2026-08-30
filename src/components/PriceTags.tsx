@@ -10,6 +10,7 @@ const PriceTags = ({
   tags = "",
   ip4 = "",
   ip6 = "",
+  className,
   ...props
 }: {
   expired_at?: string | number | null;
@@ -24,7 +25,7 @@ const PriceTags = ({
 
   if (price == 0) {
     return (
-      <Flex gap="1" {...props} wrap="wrap">
+      <Flex gap="1" {...props} wrap="wrap" className={className}>
         <CustomTags tags={tags} />
       </Flex>
     );
@@ -43,7 +44,7 @@ const PriceTags = ({
     : price.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 
   return (
-    <Flex gap="1" {...props} wrap="wrap">
+    <Flex gap="1" wrap="wrap" {...props} className={className}>
       {ip4 && (
         <Badge size="1" variant="soft" className="text-sm" color="green">
           <label className="flex justify-center items-center gap-1 text-xs">

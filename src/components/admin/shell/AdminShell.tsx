@@ -240,8 +240,9 @@ export default function AdminShell({ content }: AdminShellProps) {
             overflowX: "hidden",
             overflowY: "hidden",
             zIndex: isMobile ? 50 : 12,
-            pt: isMobile ? "env(safe-area-inset-top)" : 0,
-            pb: isMobile ? "env(safe-area-inset-bottom)" : 0,
+            pt: isMobile ? "var(--safe-area-top)" : 0,
+            pb: isMobile ? "var(--safe-area-bottom)" : 0,
+            pl: isMobile ? "var(--safe-area-left)" : 0,
             borderRight: "1px solid rgba(145, 158, 171, 0.2)",
             transition: (theme) =>
               theme.transitions.create("width", navMotion),
@@ -319,7 +320,7 @@ export default function AdminShell({ content }: AdminShellProps) {
             px: { xs: 1.5, md: 3 },
             pt: { xs: 2, md: 3 },
             pb: {
-              xs: "max(16px, env(safe-area-inset-bottom))",
+              xs: "max(16px, var(--safe-area-bottom))",
               md: 3,
             },
           }}
