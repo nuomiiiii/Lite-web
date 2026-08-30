@@ -1,5 +1,6 @@
 import React, { lazy, StrictMode, Suspense, useCallback, useLayoutEffect, useMemo } from "react";
 import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 import "./global.css";
 import {
   ThemeContext,
@@ -30,6 +31,10 @@ import {
 } from "./utils/adminPreload";
 import { prefetchAdminDashboard } from "./utils/dashboardPrefetch";
 import MuiAppProvider from "./theme/MuiAppProvider";
+import {
+  applyAppearanceChrome,
+  releaseAppearanceInstant,
+} from "./theme/appearanceChrome";
 import { clientCookieSuffix, isSafeTempKey } from "./utils/security";
 
 const RadixThemeRoot = lazy(() => import("./theme/RadixThemeRoot"));
@@ -132,13 +137,10 @@ const App = () => {
 
   const resolvedAppearance = useSystemTheme(appearance);
 
-  const applyDocumentAppearance = useCallback((isDark: boolean) => {
-    document.documentElement.classList.toggle("dark", isDark);
-  }, []);
-
   useLayoutEffect(() => {
-    applyDocumentAppearance(resolvedAppearance === "dark");
-  }, [applyDocumentAppearance, resolvedAppearance]);
+    applyAppearanceChrome(resolvedAppearance === "dark");
+    releaseAppearanceInstant();
+  }, [resolvedAppearance]);
 
   const setAppearanceSynced = useCallback(
     (value: Appearance) => {
@@ -148,10 +150,13 @@ const App = () => {
             ? "dark"
             : "light"
           : value;
-      applyDocumentAppearance(resolved === "dark");
-      setAppearance(value);
+      applyAppearanceChrome(resolved === "dark");
+      flushSync(() => {
+        setAppearance(value);
+      });
+      releaseAppearanceInstant();
     },
-    [applyDocumentAppearance, setAppearance],
+    [setAppearance],
   );
 
   const themeContextValue = useMemo(

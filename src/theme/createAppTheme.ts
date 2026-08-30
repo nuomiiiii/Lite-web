@@ -157,8 +157,7 @@ export function createAppTheme(mode: "light" | "dark") {
           root: {
             borderRadius: 8,
             backgroundColor: isLight ? INPUT_FILL : INPUT_FILL_DARK,
-            transition:
-              "background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease",
+            transition: "border-color 180ms ease, box-shadow 180ms ease",
             "& .MuiOutlinedInput-notchedOutline": {
               borderColor: alpha(GREY[500], isLight ? 0.2 : 0.32),
               transition: "border-color 180ms ease, border-width 180ms ease",

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="shortcut icon" href="/favicon.png?v=lite-icon-mark1" type="image/png" />
+    <link rel="shortcut icon" href="/favicon.png?v=lite-icon-tab1" type="image/png" />
     <meta name="description" content="All your servers, one simple view." />
     <meta
       name="keywords"
@@ -10,6 +10,7 @@
     />
     <meta name="author" content="Nomi" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#FFFFFF" />
     <script>
       (() => {
         const parseAppearance = (value) => {
@@ -27,6 +28,8 @@
           const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
           const isDark = appearance === "dark" || (appearance !== "light" && prefersDark);
           document.documentElement.classList.toggle("dark", isDark);
+          const themeColor = isDark ? "#161C24" : "#FFFFFF";
+          document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColor);
         } catch {
           document.documentElement.classList.remove("dark");
         }
@@ -61,13 +64,12 @@
     
     <!-- PWA Configuration -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#0E86DD" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Lite" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=lite-icon-mark1" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/favicon.png?v=lite-icon-mark1" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=lite-icon-pwa1" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon.png?v=lite-icon-tab1" />
     
     <meta property="og:title" content="Lite" />
     <meta property="og:description" content="All your servers, one simple view." />

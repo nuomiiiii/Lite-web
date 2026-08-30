@@ -33,6 +33,11 @@ html.lite-standalone {
   }
 }
 
+html.lite-appearance-instant,
+html.lite-appearance-instant * {
+  transition: none !important;
+}
+
 @theme inline {
   --color-accent-1: var(--accent-1);
   --color-accent-2: var(--accent-2);

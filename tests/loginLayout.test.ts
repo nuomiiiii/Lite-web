@@ -101,6 +101,7 @@ test("login and admin chrome adapt to compact viewports", () => {
   assert.match(html, /viewport-fit=cover/);
   assert.match(mainSource, /useLayoutEffect/);
   assert.match(mainSource, /setAppearanceSynced/);
+  assert.match(mainSource, /flushSync/);
   assert.match(html, /lite-standalone/);
   assert.match(html, /apple-mobile-web-app-status-bar-style" content="black-translucent"/);
   assert.match(html, /rel="apple-touch-icon" href="\/apple-touch-icon\.png/);

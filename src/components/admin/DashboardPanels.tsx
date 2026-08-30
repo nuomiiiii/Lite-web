@@ -87,7 +87,7 @@ export function SummaryPanel({
   tone?: "accent" | "green" | "orange" | "muted";
 }) {
   return (
-    <section className="min-h-[112px] h-full km-admin-surface p-3 transition-colors group-hover:border-[var(--accent-a7)]">
+    <section className="min-h-[112px] h-full km-admin-surface p-3 transition-[border-color] group-hover:border-[var(--accent-a7)]">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-muted-foreground">{label}</span>
         <Box
@@ -469,7 +469,7 @@ export function ReturnRouteStatusPanel({ data, locale }: { data: DashboardData; 
       to="/admin/return-route"
       className="group block h-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-8)]"
     >
-      <section className="h-full min-h-[286px] km-admin-surface p-3 transition-colors group-hover:border-[var(--accent-a7)]">
+      <section className="h-full min-h-[286px] km-admin-surface p-3 transition-[border-color] group-hover:border-[var(--accent-a7)]">
         <PanelHeader
           title={t("admin_dashboard.return_route_status")}
           description={t("admin_dashboard.return_route_status_hint")}

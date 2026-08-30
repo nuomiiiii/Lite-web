@@ -108,6 +108,6 @@ test("load alert configuration and current-alert requests own separate states", 
 
 test("deep routes use an origin-root favicon before backend rewriting", () => {
   const html = readFileSync("index.html", "utf8");
-  assert.match(html, /rel="shortcut icon" href="\/favicon\.png\?v=lite-icon-mark1"/);
+  assert.match(html, /rel="shortcut icon" href="\/favicon\.png\?v=lite-icon-tab1"/);
   assert.doesNotMatch(html, /href="favicon\.ico"/);
 });
