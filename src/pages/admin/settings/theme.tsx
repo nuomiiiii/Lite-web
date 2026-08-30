@@ -32,7 +32,10 @@ import { useNavigate } from "react-router-dom";
 import { usePublicInfo } from "@/contexts/PublicInfoContext";
 import { useSettings } from "@/lib/api";
 import ThemePreviewImage from "@/components/ThemePreviewImage";
-import { themePreviewSrc } from "@/utils/themePreviewImage";
+import {
+  installedThemePreviewPath,
+  themePreviewSrc,
+} from "@/utils/themePreviewImage";
 import UploadDialog from "@/components/UploadDialog";
 import {
   getThemeConfigurationType,
@@ -539,12 +542,10 @@ const ThemePage = () => {
                 className="aspect-video bg-gradient-to-br rounded-t-lg overflow-hidden relative "
               >
                 <ThemePreviewImage
-                  src={themePreviewSrc(
-                    theme.preview
-                      ? `/themes/${theme.short}/${theme.preview}`
-                      : undefined,
-                    { card: true, version: theme.version },
-                  )}
+                  src={themePreviewSrc(installedThemePreviewPath(theme), {
+                    card: true,
+                    version: theme.version,
+                  })}
                   alt={displayText(theme.name)}
                   loading="eager"
                   fetchPriority={index < 8 ? "high" : "low"}
@@ -648,12 +649,9 @@ const ThemePage = () => {
           <Box className="space-y-4 mt-4">
             <Box className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative">
               <ThemePreviewImage
-                src={themePreviewSrc(
-                  selectedTheme?.preview
-                    ? `/themes/${selectedTheme.short}/${selectedTheme.preview}`
-                    : undefined,
-                  { version: selectedTheme?.version },
-                )}
+                src={themePreviewSrc(installedThemePreviewPath(selectedTheme), {
+                  version: selectedTheme?.version,
+                })}
                 alt={displayText(selectedTheme?.name)}
                 loading="eager"
                 containerClassName="w-full h-full"

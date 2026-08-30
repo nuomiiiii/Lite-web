@@ -1,5 +1,8 @@
 import { sameOriginFetchInit } from "@/utils/security";
-import { themePreviewSrc } from "@/utils/themePreviewImage";
+import {
+  installedThemePreviewPath,
+  themePreviewSrc,
+} from "@/utils/themePreviewImage";
 import type { I18nText } from "@/utils/i18nText";
 
 export interface InstalledThemeDetails {
@@ -36,8 +39,11 @@ export function rememberInstalledThemes(
   return list;
 }
 
-function warmupThemePreview(src?: string): Promise<void> {
-  const url = themePreviewSrc(src, { card: true });
+function warmupThemePreview(theme: InstalledThemeDetails): Promise<void> {
+  const url = themePreviewSrc(installedThemePreviewPath(theme), {
+    card: true,
+    version: theme.version,
+  });
   if (!url || typeof Image === "undefined") return Promise.resolve();
   return new Promise((resolve) => {
     const image = new Image();
@@ -52,7 +58,7 @@ async function warmupFirstScreenPreviews(themes: InstalledThemeDetails[]) {
     Promise.all(
       themes
         .slice(0, FIRST_SCREEN_PREVIEW_COUNT)
-        .map((theme) => warmupThemePreview(theme.preview)),
+        .map((theme) => warmupThemePreview(theme)),
     ),
     new Promise<void>((resolve) => {
       globalThis.setTimeout(resolve, PREVIEW_WARMUP_MS);

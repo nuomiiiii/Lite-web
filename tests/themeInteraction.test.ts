@@ -39,8 +39,17 @@ test("theme pages share preview-image loading treatment", () => {
   assert.match(marketSource, /ThemePreviewImage/);
   assert.match(themeSettingsSource, /key=\{theme\.short\}/);
   assert.doesNotMatch(themeSettingsSource, /key=\{theme\.id\}/);
+  assert.match(themeSettingsSource, /installedThemePreviewPath\(/);
   assert.match(themeSettingsSource, /themePreviewSrc\(/);
   assert.match(marketSource, /themePreviewSrc\(/);
+  assert.match(
+    readFileSync("src/lib/themeList.ts", "utf8"),
+    /installedThemePreviewPath\(theme\)/,
+  );
+  assert.doesNotMatch(
+    readFileSync("src/lib/themeList.ts", "utf8"),
+    /warmupThemePreview\(theme\.preview\)/,
+  );
   assert.match(themeSettingsSource, /loading="eager"/);
   assert.match(marketSource, /loading="eager"/);
   assert.doesNotMatch(themeSettingsSource, /style\.display = "none"/);
