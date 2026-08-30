@@ -38,11 +38,7 @@ export default function SiteSettings() {
     document.querySelectorAll<HTMLLinkElement>('link[rel*="icon"]').forEach((link) => {
       const href = link.getAttribute("href") || "/favicon.ico";
       const url = new URL(href, window.location.origin);
-      if (
-        url.pathname.endsWith("/favicon.ico") ||
-        url.pathname.endsWith("/favicon.png") ||
-        url.pathname.endsWith("/apple-touch-icon.png")
-      ) {
+      if (url.pathname.endsWith("/favicon.ico")) {
         url.searchParams.set("v", String(revision));
         link.href = `${url.pathname}${url.search}${url.hash}`;
       }

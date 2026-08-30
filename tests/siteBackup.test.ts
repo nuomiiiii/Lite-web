@@ -114,9 +114,9 @@ test("backup restore dialog uses staged progress instead of a fake 95 percent fi
   assert.doesNotMatch(source, /setRestoreProgress/);
 });
 
-test("favicon upload refreshes png and apple-touch icon links", () => {
+test("favicon upload refreshes the current icon link", () => {
   assert.match(source, /pathname.endsWith\("\/favicon.ico"\)/);
-  assert.match(source, /pathname.endsWith\("\/favicon.png"\)/);
-  assert.match(source, /pathname.endsWith\("\/apple-touch-icon.png"\)/);
+  assert.doesNotMatch(source, /pathname.endsWith\("\/favicon.png"\)/);
+  assert.doesNotMatch(source, /pathname.endsWith\("\/apple-touch-icon.png"\)/);
 });
 

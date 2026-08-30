@@ -31,10 +31,7 @@ import {
 } from "./utils/adminPreload";
 import { prefetchAdminDashboard } from "./utils/dashboardPrefetch";
 import MuiAppProvider from "./theme/MuiAppProvider";
-import {
-  applyAppearanceChrome,
-  releaseAppearanceInstant,
-} from "./theme/appearanceChrome";
+import { applyAppearanceChrome } from "./theme/appearanceChrome";
 import { clientCookieSuffix, isSafeTempKey } from "./utils/security";
 
 const RadixThemeRoot = lazy(() => import("./theme/RadixThemeRoot"));
@@ -139,7 +136,6 @@ const App = () => {
 
   useLayoutEffect(() => {
     applyAppearanceChrome(resolvedAppearance === "dark");
-    releaseAppearanceInstant();
   }, [resolvedAppearance]);
 
   const setAppearanceSynced = useCallback(
@@ -154,7 +150,6 @@ const App = () => {
       flushSync(() => {
         setAppearance(value);
       });
-      releaseAppearanceInstant();
     },
     [setAppearance],
   );
