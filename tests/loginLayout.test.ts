@@ -99,8 +99,12 @@ test("login and admin chrome adapt to compact viewports", () => {
     /min\(280px, calc\(100vw - 48px\)\)/,
   );
   assert.match(html, /viewport-fit=cover/);
+  assert.match(html, /lite-standalone/);
   assert.match(html, /apple-mobile-web-app-status-bar-style" content="black-translucent"/);
   assert.match(html, /rel="apple-touch-icon" href="\/apple-touch-icon\.png/);
+  assert.match(globalStyles, /--safe-area-top: 0px/);
+  assert.match(globalStyles, /display-mode: standalone/);
+  assert.match(globalStyles, /html\.lite-standalone/);
   assert.match(globalStyles, /--safe-area-top: env\(safe-area-inset-top, 0px\)/);
 });
 

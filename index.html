@@ -30,6 +30,11 @@
         } catch {
           document.documentElement.classList.remove("dark");
         }
+        const standalone =
+          window.matchMedia?.("(display-mode: standalone)").matches ||
+          window.matchMedia?.("(display-mode: fullscreen)").matches ||
+          window.navigator.standalone === true;
+        document.documentElement.classList.toggle("lite-standalone", Boolean(standalone));
       })();
     </script>
     <style>
