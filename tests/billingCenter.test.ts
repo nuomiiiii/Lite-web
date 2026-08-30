@@ -6,6 +6,7 @@ import {
   BILLING_CURRENCY_STORAGE_KEY,
   billingQuery,
   formatBillingMoney,
+  isLongTermExpiry,
 } from "../src/utils/billing.ts";
 
 const pageSource = readFileSync("src/pages/admin/billing.tsx", "utf8");
@@ -18,6 +19,16 @@ const multiSelectSource = readFileSync(
   "src/components/admin/AdminMultiSelect.tsx",
   "utf8",
 );
+
+test("treats stored long-term expiry as long term in the server list", () => {
+  assert.equal(isLongTermExpiry("2226-05-14T00:00:00.000Z"), true);
+  assert.equal(isLongTermExpiry("0001-01-01T00:00:00.000Z"), true);
+  assert.equal(isLongTermExpiry(null), true);
+  assert.equal(isLongTermExpiry("2027-05-14T00:00:00.000Z"), false);
+  assert.equal(formatBillingMoney(null, "CNY"), "--");
+  assert.match(pageSource, /isLongTermExpiry\(expiredAt\)/);
+  assert.match(pageSource, /common\.long_term/);
+});
 
 test("registers and preloads the billing center after the server menu", () => {
   const menu = JSON.parse(menuSource) as {

@@ -256,6 +256,14 @@ export function billingQuery(
   return query ? `${path}?${query}` : path;
 }
 
+export function isLongTermExpiry(value?: string | null): boolean {
+  if (!value) return true;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  const year = date.getUTCFullYear();
+  return year < 2 || year > 2200;
+}
+
 export function formatBillingMoney(
   amount: string | null | undefined,
   currency: string,

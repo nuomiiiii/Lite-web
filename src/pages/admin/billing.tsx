@@ -72,6 +72,7 @@ import {
   billingQuery,
   billingRequest,
   getBillingSnapshot,
+  isLongTermExpiry,
   readStoredBillingCurrency,
   requestBillingCached,
   formatBillingMoney,
@@ -555,6 +556,33 @@ function ServerStatus({ server }: { server: BillingServer }) {
   return null;
 }
 
+function billingExpiryPrimary(t: TFunction, expiredAt?: string | null) {
+  if (isLongTermExpiry(expiredAt)) return t("common.long_term");
+  return billingDate(expiredAt);
+}
+
+function billingExpiryCaption(t: TFunction, server: BillingServer) {
+  if (isLongTermExpiry(server.expired_at)) return null;
+  if (server.remaining_days == null) return t("billing.status.noExpiry");
+  if (server.remaining_days <= 0) return t("billing.status.expired");
+  return t("billing.status.remainingDays", { count: server.remaining_days });
+}
+
+function ExpiryCell({ server }: { server: BillingServer }) {
+  const { t } = useTranslation();
+  const caption = billingExpiryCaption(t, server);
+  return (
+    <TableCell>
+      <Typography sx={{ fontSize: 13 }}>{billingExpiryPrimary(t, server.expired_at)}</Typography>
+      {caption ? (
+        <Typography color={server.remaining_days != null && server.remaining_days <= 30 ? "warning.main" : "text.secondary"} sx={{ fontSize: 11.5 }}>
+          {caption}
+        </Typography>
+      ) : null}
+    </TableCell>
+  );
+}
+
 function ServerList({
   data,
   loading,
@@ -599,7 +627,7 @@ function ServerList({
             </TableCell>
             <TableCell><Typography sx={{ fontWeight: 400 }}>{formatBillingMoney(server.month_extra, currency)}</Typography></TableCell>
             <TableCell><Typography sx={{ fontWeight: 400 }}>{formatBillingMoney(server.month_total, currency)}</Typography><Typography color="text.secondary" sx={{ fontSize: 11.5 }}>{t("billing.types.base")} {formatBillingMoney(server.month_base, currency)}</Typography></TableCell>
-            <TableCell><Typography sx={{ fontSize: 13 }}>{billingDate(server.expired_at)}</Typography><Typography color={server.remaining_days != null && server.remaining_days <= 30 ? "warning.main" : "text.secondary"} sx={{ fontSize: 11.5 }}>{server.remaining_days == null ? t("billing.status.noExpiry") : server.remaining_days <= 0 ? t("billing.status.expired") : t("billing.status.remainingDays", { count: server.remaining_days })}</Typography></TableCell>
+            <ExpiryCell server={server} />
             <TableCell><Typography sx={{ fontWeight: 400 }}>{formatBillingMoney(server.remaining_value, currency)}</Typography></TableCell>
             <BillingActionCell><DetailsButton onClick={() => onDetails(server)} /></BillingActionCell>
           </TableRow>)}</TableBody>
@@ -608,7 +636,7 @@ function ServerList({
       <Stack spacing={1.25} sx={{ display: { xs: "flex", md: "none" }, p: 1.25 }}>
         {data.items.map((server) => <Paper key={server.client} variant="outlined" sx={{ borderRadius: "8px", overflow: "hidden", borderColor: "divider" }}>
           <Stack direction="row" spacing={1.25} sx={{ p: 1.5, alignItems: "center", bgcolor: "action.hover" }}><Box sx={{ minWidth: 0, flex: 1 }}><BillingServerIdentity server={server} groupFallback={t("billing.status.noGroup")} /></Box><DetailsButton onClick={() => onDetails(server)} /></Stack>
-          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>{[[t("billing.table.nativePrice"), server.billing_status === "recurring" ? formatBillingMoney(server.original_amount, server.original_currency) : server.billing_status === "free" ? t("billing.status.free") : server.billing_status === "one_time" ? t("billing.status.oneTime") : t("billing.status.unconfigured")], [t("billing.common.monthlyAverage"), formatBillingMoney(server.monthly_average, currency)], [t("billing.table.monthExtra"), formatBillingMoney(server.month_extra, currency)], [t("billing.table.monthTotal"), formatBillingMoney(server.month_total, currency)], [t("billing.table.expiry"), billingDate(server.expired_at)], [t("billing.table.remainingValue"), formatBillingMoney(server.remaining_value, currency)]].map(([label, value]) => <Box key={label} sx={{ p: 1.35, borderTop: 1, borderRight: 1, borderColor: "divider", "&:nth-of-type(2n)": { borderRight: 0 } }}><Typography color="text.secondary" sx={{ mb: 0.4, fontSize: 11.5 }}>{label}</Typography><Typography sx={{ fontSize: 13.5, fontWeight: 400 }}>{value}</Typography></Box>)}</Box>
+          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>{[[t("billing.table.nativePrice"), server.billing_status === "recurring" ? formatBillingMoney(server.original_amount, server.original_currency) : server.billing_status === "free" ? t("billing.status.free") : server.billing_status === "one_time" ? t("billing.status.oneTime") : t("billing.status.unconfigured")], [t("billing.common.monthlyAverage"), formatBillingMoney(server.monthly_average, currency)], [t("billing.table.monthExtra"), formatBillingMoney(server.month_extra, currency)], [t("billing.table.monthTotal"), formatBillingMoney(server.month_total, currency)], [t("billing.table.expiry"), billingExpiryPrimary(t, server.expired_at)], [t("billing.table.remainingValue"), formatBillingMoney(server.remaining_value, currency)]].map(([label, value]) => <Box key={label} sx={{ p: 1.35, borderTop: 1, borderRight: 1, borderColor: "divider", "&:nth-of-type(2n)": { borderRight: 0 } }}><Typography color="text.secondary" sx={{ mb: 0.4, fontSize: 11.5 }}>{label}</Typography><Typography sx={{ fontSize: 13.5, fontWeight: 400 }}>{value}</Typography></Box>)}</Box>
         </Paper>)}
       </Stack>
       <AdminPagination page={page} total={data.pagination.total} pageSize={pageSize} onPageChange={onPage} onPageSizeChange={onPageSize} showSummary={false} />
