@@ -407,6 +407,7 @@ function reachabilityEvidenceText(item?: Reachability) {
 }
 
 function stateBadge(task: Task, status?: Status, reachability?: Reachability) {
+  const overlay = task.mainland_reachability_enabled ? reachability : undefined;
   if (status?.state === "observing" || status?.state === "switched") {
     const rebasing = status.state === "switched" && task.mainland_reachability_enabled && !status.baseline_ready;
     return (
@@ -416,21 +417,21 @@ function stateBadge(task: Task, status?: Status, reachability?: Reachability) {
       </div>
     );
   }
-  if (reachability?.display === "suspected_blocked") {
-    const carriers = (reachability.failed_carriers || []).map((carrier) => carrierLabel(carrier)).filter(Boolean);
-    const evidence = reachabilityEvidenceText(reachability);
+  if (overlay?.display === "suspected_blocked") {
+    const carriers = (overlay.failed_carriers || []).map((carrier) => carrierLabel(carrier)).filter(Boolean);
+    const evidence = reachabilityEvidenceText(overlay);
     return (
       <div className="min-w-0">
         <Tooltip content={<span className="whitespace-pre-line">{evidence || "同一节点至少两个运营商持续异常，且 Agent 在线。"}</span>}>
-          <Badge color="red">{reachability.high_confidence ? "高置信度疑似被墙" : "疑似被墙"}</Badge>
+          <Badge color="red">{overlay.high_confidence ? "高置信度疑似被墙" : "疑似被墙"}</Badge>
         </Tooltip>
         {carriers.length ? <div className="mt-1 max-w-[14rem] text-xs leading-5 text-red-600">{carriers.join(" / ")}</div> : null}
       </div>
     );
   }
-  if (reachability?.display === "single_carrier") {
-    const carrier = reachability.failed_carriers?.[0];
-    const evidence = reachability.evidence?.find((row) => row.carrier === carrier);
+  if (overlay?.display === "single_carrier") {
+    const carrier = overlay.failed_carriers?.[0];
+    const evidence = overlay.evidence?.find((row) => row.carrier === carrier);
     const rate = evidence ? Math.round((evidence.fail_rate || 0) * 100) : 0;
     return (
       <div className="min-w-0">
@@ -441,7 +442,7 @@ function stateBadge(task: Task, status?: Status, reachability?: Reachability) {
       </div>
     );
   }
-  if (reachability?.display === "insufficient") {
+  if (overlay?.display === "insufficient") {
     return (
       <div className="min-w-0">
         <Badge color="gray">判定条件不足</Badge>
@@ -452,10 +453,7 @@ function stateBadge(task: Task, status?: Status, reachability?: Reachability) {
   if (task.mainland_reachability_enabled && status && !status.baseline_ready && (status.state === "healthy" || status.state === "pending")) {
     return <Badge color="gray">采集判定基线</Badge>;
   }
-  if (reachability?.display === "collecting") {
-    return <Badge color="gray">采集判定基线</Badge>;
-  }
-  if (reachability?.display === "undetermined") {
+  if (overlay?.display === "undetermined") {
     return <Badge color="gray">无法判定</Badge>;
   }
   if (!status) return <Badge color="gray">等待首次探测</Badge>;

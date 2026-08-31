@@ -121,11 +121,14 @@ test("状态筛选和徽标优先显示切线再显示疑似被墙", () => {
   assert.match(source, /single_carrier: "单线路异常"/);
   assert.match(source, /insufficient: "判定条件不足"/);
   assert.match(source, /function stateBadge\(task: Task, status\?: Status, reachability\?: Reachability\)/);
+  assert.match(source, /const overlay = task.mainland_reachability_enabled \? reachability : undefined;/);
   assert.match(source, /status\?\.state === "observing" \|\| status\?\.state === "switched"/);
   assert.match(source, /切线确认中/);
   assert.match(source, /switched: "已切线"/);
   assert.match(source, /切线 \/ 重新采集基线/);
-  assert.match(source, /reachability\?\.display === "suspected_blocked"/);
+  assert.match(source, /overlay\?\.display === "suspected_blocked"/);
+  assert.match(source, /task.mainland_reachability_enabled && status && !status.baseline_ready/);
+  assert.doesNotMatch(source, /overlay\?\.display === "collecting"/);
   assert.match(source, /疑似被墙 \$\{summary.suspected_blocked\}/);
 });
 
