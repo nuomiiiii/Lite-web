@@ -37,8 +37,27 @@ test("held tabs keep the previous sheet until the next one has data", () => {
 test("full-page loading holds the previous admin route; in-page spinners do not", () => {
   assert.match(loadingSource, /inline = false/);
   assert.match(loadingSource, /data-admin-route-pending=\{inline \? undefined : "true"\}/);
-  assert.match(signOnSource, /if \(loading \|\| !hydrated\)/);
+  assert.match(signOnSource, /if \(loading\) \{\s*return <SettingsPageSkeleton \/>/);
+  assert.match(
+    signOnSource,
+    /data-admin-route-pending=\{hydrated \? undefined : "true"\}/,
+  );
+  assert.doesNotMatch(signOnSource, /if \(loading \|\| !hydrated\)/);
   assert.doesNotMatch(signOnSource, /Loading inline/);
+  const notificationSource = readFileSync(
+    "src/pages/admin/settings/notification.tsx",
+    "utf8",
+  );
+  assert.match(
+    notificationSource,
+    /if \(loading\) \{\s*return <SettingsPageSkeleton \/>/,
+  );
+  assert.match(
+    notificationSource,
+    /data-admin-route-pending=\{hydrated \? undefined : "true"\}/,
+  );
+  assert.doesNotMatch(notificationSource, /if \(loading \|\| !hydrated\)/);
+  assert.doesNotMatch(notificationSource, /Loading inline/);
   assert.match(loadSource, /<Loading inline \/>/);
 });
 

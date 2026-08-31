@@ -97,18 +97,18 @@ export default function SignOnSettings() {
 
   // 渲染 provider 的输入项已抽象到 utils/renderProviders.tsx 中
 
+  if (loading) {
+    return <SettingsPageSkeleton />;
+  }
   if (error) {
     return <Text color="red">{error}</Text>;
   }
   if (providerError) {
     return <Text color="red">{providerError}</Text>;
   }
-  if (loading || !hydrated) {
-    return <SettingsPageSkeleton />;
-  }
 
   return (
-    <>
+    <div data-admin-route-pending={hydrated ? undefined : "true"}>
       <AdminSectionTitle>{t("settings.sign_on.title")}</AdminSectionTitle>
       <SettingCardSwitch
         title={t("settings.sign_on.disable_password")}
@@ -151,7 +151,7 @@ export default function SignOnSettings() {
       })}
       <SettingCardLabel>API</SettingCardLabel>
       <ApiCard />
-    </>
+    </div>
   );
 }
 

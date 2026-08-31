@@ -96,18 +96,18 @@ const NotificationSettings = () => {
       toast.error(error instanceof Error ? error.message : String(error));
     }
   };
+  if (loading) {
+    return <SettingsPageSkeleton />;
+  }
   if (error) {
     return <Text color="red">{error}</Text>;
   }
   if (messageError) {
     return <Text color="red">{messageError}</Text>;
   }
-  if (loading || !hydrated) {
-    return <SettingsPageSkeleton />;
-  }
 
   return (
-    <>
+    <div data-admin-route-pending={hydrated ? undefined : "true"}>
       <AdminPageTitle
         description={t(
           "settings.notification.page_description",
@@ -194,7 +194,7 @@ const NotificationSettings = () => {
           <SquareArrowOutUpRight size={16} />
         </Link>
       </label>
-    </>
+    </div>
   );
 };
 
