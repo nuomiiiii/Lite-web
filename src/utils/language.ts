@@ -10,6 +10,8 @@ export const ADMIN_UI_LANGUAGES = [
   { code: "ja-JP", name: "日本語" },
 ] as const;
 
+export type AdminUiLanguage = (typeof ADMIN_UI_LANGUAGES)[number]["code"];
+
 const LANGUAGE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 const parseStoredString = (value: string) => {
@@ -41,6 +43,20 @@ export const readStoredLanguage = () => {
   if (typeof window === "undefined") return "";
   return normalizeLanguage(window.localStorage.getItem(LANGUAGE_STORAGE_KEY));
 };
+
+export function resolveUiLanguage(language?: string | null): AdminUiLanguage {
+  const normalized = normalizeLanguage(language);
+  if (!normalized) return "en-US";
+  const lower = normalized.toLowerCase();
+  if (lower === "ja" || lower.startsWith("ja-")) return "ja-JP";
+  if (lower === "zh" || lower.startsWith("zh-")) {
+    return /(?:^|-)(?:tw|hk|mo|hant)(?:-|$)/i.test(normalized)
+      ? "zh-TW"
+      : "zh-CN";
+  }
+  if (lower === "en" || lower.startsWith("en-")) return "en-US";
+  return "en-US";
+}
 
 export const writeLanguageCookie = (language?: string | null) => {
   if (typeof document === "undefined") return;

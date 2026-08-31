@@ -1,11 +1,11 @@
 import React from "react";
 import { useAccount } from "@/contexts/AccountContext";
-import i18n from "@/i18n/config";
+import i18n, { changeUiLanguage } from "@/i18n/config";
 import {
   normalizeAccountPreferenceLanguage,
   type AccountPreferences,
 } from "@/utils/adminAuth";
-import { readStoredLanguage, writeLanguageCookie } from "@/utils/language";
+import { readStoredLanguage } from "@/utils/language";
 
 const AccountPreferenceSync = () => {
   const { account, updatePreferences } = useAccount();
@@ -27,8 +27,7 @@ const AccountPreferenceSync = () => {
       "en-US";
 
     if (savedLanguage) {
-      void i18n.changeLanguage(savedLanguage);
-      writeLanguageCookie(savedLanguage);
+      void changeUiLanguage(savedLanguage);
     } else {
       const initialPreferences: AccountPreferences = { language: localLanguage };
       void updatePreferences(initialPreferences).catch((error) => {

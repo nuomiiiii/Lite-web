@@ -11,7 +11,7 @@ import { useLocalStorage } from "./hooks/useLocalStorage";
 import { useSystemTheme } from "./hooks/useSystemTheme";
 import { BrowserRouter, useRoutes } from "react-router-dom";
 // Ensure i18n is initialized before any component renders
-import "./i18n/config";
+import { i18nReady } from "./i18n/config";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { preloadAdminEntry, preloadAdminRoute, routes } from "./routes";
 import Loading from "./components/loading";
@@ -214,10 +214,12 @@ const App = () => {
   );
 };
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </StrictMode>,
-);
+void i18nReady.then(() => {
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </StrictMode>,
+  );
+});

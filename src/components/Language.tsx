@@ -1,7 +1,7 @@
 import { DropdownMenu, IconButton } from "@radix-ui/themes";
 import { type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
-import { writeLanguageCookie, ADMIN_UI_LANGUAGES } from "@/utils/language";
+import { changeUiLanguage, preloadUiLocales } from "@/i18n/config";
+import { ADMIN_UI_LANGUAGES } from "@/utils/language";
 import { useOptionalAccount } from "@/contexts/AccountContext";
 interface LanguageSwitch {
   icon?: ReactNode;
@@ -23,18 +23,20 @@ const LanguageSwitch = ({
     </IconButton>
   ),
 }: LanguageSwitch = {}) => {
-  const { i18n } = useTranslation();
   const accountContext = useOptionalAccount();
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root
+      onOpenChange={(open) => {
+        if (open) void preloadUiLocales();
+      }}
+    >
       <DropdownMenu.Trigger>{icon}</DropdownMenu.Trigger>
       <DropdownMenu.Content>
         {languages.map((lang) => (
           <DropdownMenu.Item
             key={lang.code}
             onClick={() => {
-              void i18n.changeLanguage(lang.code);
-              writeLanguageCookie(lang.code);
+              void changeUiLanguage(lang.code);
               if (accountContext?.account?.logged_in) {
                 void accountContext
                   .updatePreferences({ language: lang.code })

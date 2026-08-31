@@ -10,7 +10,8 @@ import { useTranslation } from "react-i18next";
 
 import { useOptionalAccount } from "@/contexts/AccountContext";
 import { ThemeContext } from "@/contexts/ThemeContext";
-import { writeLanguageCookie, ADMIN_UI_LANGUAGES } from "@/utils/language";
+import { changeUiLanguage, preloadUiLocales } from "@/i18n/config";
+import { ADMIN_UI_LANGUAGES } from "@/utils/language";
 
 const languages = ADMIN_UI_LANGUAGES;
 
@@ -123,7 +124,10 @@ export function LanguageMenu() {
     <>
       <ChromeIconButton
         label={t("navigation.language", "Language")}
-        onClick={(event) => setAnchor(event.currentTarget)}
+        onClick={(event) => {
+          void preloadUiLocales();
+          setAnchor(event.currentTarget);
+        }}
       >
         <Translate />
       </ChromeIconButton>
@@ -133,8 +137,7 @@ export function LanguageMenu() {
             key={lang.code}
             selected={i18n.language === lang.code}
             onClick={() => {
-              void i18n.changeLanguage(lang.code);
-              writeLanguageCookie(lang.code);
+              void changeUiLanguage(lang.code);
               if (accountContext?.account?.logged_in) {
                 void accountContext
                   .updatePreferences({ language: lang.code })

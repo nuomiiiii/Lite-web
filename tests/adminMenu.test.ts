@@ -441,7 +441,9 @@ test("prewarms admin routes and reuses shared monitoring data", () => {
     nodeDetailsSource,
     /if \(accountLoading \|\| !account\?\.logged_in \|\| !accountKey\)/,
   );
-  assert.match(pingTaskContextSource, /React\.useState<boolean>\(true\)/);
+  assert.match(mainSource, /preloadAdminRoute\("\/admin\/settings\/dashboard"\)/);
+  assert.match(pingTaskContextSource, /ensureLoaded/);
+  assert.match(pingTaskContextSource, /if \(!requested\) return;/);
   assert.match(pingTaskContextSource, /const inherited = React\.useContext\(PingTaskContext\)/);
   assert.doesNotMatch(pingTaskContextSource, /refresh\(\);\s*setIsLoading\(false\)/);
   assert.doesNotMatch(pingTaskPageSource, /<PingTaskProvider>/);
