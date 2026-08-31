@@ -217,6 +217,8 @@
     "retention_period": "Retention period",
     "return_route_abnormal": "Probe errors",
     "return_route_abnormal_tasks": "{{count}} tasks have probe errors",
+    "return_route_blocked": "Suspected block",
+    "return_route_blocked_nodes": "{{count}} nodes may be blocked from mainland China",
     "return_route_all_normal": "All active routes are healthy",
     "return_route_changed": "Route changes",
     "return_route_changed_tasks": "Route changes detected for {{count}} tasks",

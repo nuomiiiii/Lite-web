@@ -103,3 +103,35 @@ test("桌面回程任务行把线路状态和操作左对齐", async () => {
   assert.match(source, /data-label="操作" className="p-3 text-left align-middle"/);
   assert.match(css, /justify-content: flex-start !important;/);
 });
+
+test("回程表单和批量修改支持疑似被墙判定开关", () => {
+  assert.match(source, /mainland_reachability_enabled: false/);
+  assert.match(source, /参与疑似被墙判定（实验室功能）/);
+  assert.match(source, /function SwitchField\(/);
+  assert.match(source, /<Text size="2" weight="medium">\{label\}<\/Text>/);
+  assert.match(source, /发送疑似被墙通知/);
+  assert.match(source, /发送可达性恢复通知/);
+  assert.match(source, /至少两个不同运营商任务同时开启/);
+  assert.match(source, /mainland_reachability_enabled: form.mainland_reachability_enabled/);
+  assert.match(source, /request\("\/edit\/batch", \{ ids, \.\.\.toTaskBatchPayload\(form\) \}\)/);
+});
+
+test("状态筛选和徽标优先显示切线再显示疑似被墙", () => {
+  assert.match(source, /suspected_blocked: "疑似被墙"/);
+  assert.match(source, /single_carrier: "单线路异常"/);
+  assert.match(source, /insufficient: "判定条件不足"/);
+  assert.match(source, /function stateBadge\(task: Task, status\?: Status, reachability\?: Reachability\)/);
+  assert.match(source, /status\?\.state === "observing" \|\| status\?\.state === "switched"/);
+  assert.match(source, /切线确认中/);
+  assert.match(source, /switched: "已切线"/);
+  assert.match(source, /切线 \/ 重新采集基线/);
+  assert.match(source, /reachability\?\.display === "suspected_blocked"/);
+  assert.match(source, /疑似被墙 \$\{summary.suspected_blocked\}/);
+});
+
+test("监测记录支持可达性事件类型", () => {
+  assert.match(source, /mainland_blocked: "疑似被墙"/);
+  assert.match(source, /mainland_repeat: "持续异常"/);
+  assert.match(source, /mainland_recovery: "可达性恢复"/);
+  assert.match(source, /event.kind.startsWith\("mainland_"\)/);
+});

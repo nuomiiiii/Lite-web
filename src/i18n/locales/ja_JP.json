@@ -210,6 +210,8 @@
     "retention_period": "保存期間",
     "return_route_abnormal": "プローブ異常",
     "return_route_abnormal_tasks": "{{count}} 件のタスクでプローブ異常があります",
+    "return_route_blocked": "遮断の疑い",
+    "return_route_blocked_nodes": "{{count}} 台のノードで中国本土方向の遮断が疑われます",
     "return_route_all_normal": "実行中の経路はすべて正常です",
     "return_route_changed": "経路変更",
     "return_route_changed_tasks": "{{count}} 件のタスクで経路変更を検出しました",

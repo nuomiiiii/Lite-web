@@ -32,6 +32,7 @@ import {
   Tabs,
   Text,
   TextField,
+  Tooltip,
 } from "@/components/admin/ui";
 import { Checkbox } from "@/components/ui/checkbox";
 import MuiButton from "@mui/material/Button";
@@ -89,6 +90,9 @@ type Task = {
   cooldown: number;
   notify: boolean;
   notify_recovery: boolean;
+  mainland_reachability_enabled: boolean;
+  mainland_reachability_notify: boolean;
+  mainland_reachability_recovery_notify: boolean;
   enabled: boolean;
 };
 
@@ -113,6 +117,9 @@ type TaskBatchForm = Pick<
   | "cooldown"
   | "notify"
   | "notify_recovery"
+  | "mainland_reachability_enabled"
+  | "mainland_reachability_notify"
+  | "mainland_reachability_recovery_notify"
   | "enabled"
 >;
 
@@ -127,18 +134,39 @@ type Status = {
   candidate_count?: number;
   last_error?: string;
   last_checked_at?: string;
+  baseline_ready?: boolean;
+  baseline_line?: string;
+};
+
+type Reachability = {
+  client: string;
+  ip_version: number;
+  state: string;
+  display: string;
+  failed_carriers?: string[];
+  high_confidence?: boolean;
+  abnormal_started_at?: string;
+  last_lines?: Record<string, string>;
+  evidence?: Array<{
+    carrier: string;
+    valid: number;
+    failures: number;
+    fail_rate: number;
+    last_line?: string;
+  }>;
 };
 
 type RouteEvent = {
   id: number;
   task_id: number;
   client: string;
-  kind: "switch" | "recovery";
+  kind: "switch" | "recovery" | "mainland_blocked" | "mainland_repeat" | "mainland_recovery";
   from_line: string;
   to_line: string;
   confidence: number;
   asn_path?: string[];
   route_path?: string[];
+  detail?: string;
   occurred_at: string;
   task_name?: string;
   node_name?: string;
@@ -149,9 +177,9 @@ type RouteEvent = {
   expected_line?: string;
 };
 
-type TaskPage = { tasks: Task[]; statuses: Status[]; probing_task_ids: number[]; total: number; page: number; page_size: number };
+type TaskPage = { tasks: Task[]; statuses: Status[]; reachability: Reachability[]; probing_task_ids: number[]; total: number; page: number; page_size: number };
 type RecordPage = { events: RouteEvent[]; total: number; page: number; page_size: number };
-type SummaryData = { tasks: number; healthy: number; switched: number; recent_events: number };
+type SummaryData = { tasks: number; healthy: number; switched: number; recent_events: number; suspected_blocked?: number };
 type TaskFilterQuery = {
   page: number;
   page_size: number;
@@ -232,6 +260,9 @@ const defaults: Task = {
   cooldown: 1800,
   notify: true,
   notify_recovery: true,
+  mainland_reachability_enabled: false,
+  mainland_reachability_notify: true,
+  mainland_reachability_recovery_notify: true,
   enabled: true,
 };
 
@@ -271,6 +302,9 @@ function toTaskBatchForm(task: Task): TaskBatchForm {
     cooldown: form.cooldown,
     notify: form.notify,
     notify_recovery: form.notify_recovery,
+    mainland_reachability_enabled: form.mainland_reachability_enabled,
+    mainland_reachability_notify: form.mainland_reachability_notify,
+    mainland_reachability_recovery_notify: form.mainland_reachability_recovery_notify,
     enabled: form.enabled,
   };
 }
@@ -317,9 +351,12 @@ const carrierNames: Record<Task["carrier"], string> = {
 };
 
 const TASK_STATE_LABELS: Record<string, string> = {
+  suspected_blocked: "疑似被墙",
+  single_carrier: "单线路异常",
+  insufficient: "判定条件不足",
   healthy: "线路正常",
   probing: "探测中",
-  observing: "确认中",
+  observing: "切线确认中",
   switched: "已切线",
   unknown: "无法识别",
   pending: "等待探测",
@@ -329,6 +366,9 @@ const TASK_STATE_LABELS: Record<string, string> = {
 const RECORD_KIND_LABELS: Record<string, string> = {
   switch: "切线",
   recovery: "恢复",
+  mainland_blocked: "疑似被墙",
+  mainland_repeat: "持续异常",
+  mainland_recovery: "可达性恢复",
 };
 
 async function request(path: string, body?: unknown) {
@@ -344,11 +384,87 @@ async function request(path: string, body?: unknown) {
   return payload?.data ?? payload;
 }
 
-function stateBadge(status?: Status) {
+function carrierLabel(carrier?: string) {
+  return carrierNames[(carrier || "") as Task["carrier"]] || carrier || "";
+}
+
+function reachabilityEvidenceText(item?: Reachability) {
+  if (!item) return "";
+  const carriers = (item.failed_carriers || []).map((carrier) => carrierLabel(carrier)).filter(Boolean);
+  const rates = (item.evidence || [])
+    .filter((row) => (item.failed_carriers || []).includes(row.carrier))
+    .map((row) => `${carrierLabel(row.carrier)} ${Math.round((row.fail_rate || 0) * 100)}%`);
+  const lastLines = Object.entries(item.last_lines || {})
+    .map(([carrier, line]) => `${carrierLabel(carrier).replace(/^中国/, "")} ${line}`)
+    .filter((value) => value.trim());
+  const lines = [
+    carriers.length ? `异常运营商：${carriers.join(" / ")}` : "",
+    rates.length ? `异常率：${rates.join("；")}` : "",
+    lastLines.length ? `最后正常线路：${lastLines.join("；")}` : "",
+    item.high_confidence ? "置信度：高置信度（三网同时异常）" : "",
+  ].filter(Boolean);
+  return lines.join("\n");
+}
+
+function stateBadge(task: Task, status?: Status, reachability?: Reachability) {
+  if (status?.state === "observing" || status?.state === "switched") {
+    const rebasing = status.state === "switched" && task.mainland_reachability_enabled && !status.baseline_ready;
+    return (
+      <div className="min-w-0">
+        <Badge color={status.state === "observing" ? "amber" : "red"}>{status.state === "observing" ? "切线确认中" : "已切线"}</Badge>
+        {rebasing ? <div className="mt-1 max-w-[14rem] text-xs leading-5 text-amber-700">切线 / 重新采集基线</div> : null}
+      </div>
+    );
+  }
+  if (reachability?.display === "suspected_blocked") {
+    const carriers = (reachability.failed_carriers || []).map((carrier) => carrierLabel(carrier)).filter(Boolean);
+    const evidence = reachabilityEvidenceText(reachability);
+    return (
+      <div className="min-w-0">
+        <Tooltip content={<span className="whitespace-pre-line">{evidence || "同一节点至少两个运营商持续异常，且 Agent 在线。"}</span>}>
+          <Badge color="red">{reachability.high_confidence ? "高置信度疑似被墙" : "疑似被墙"}</Badge>
+        </Tooltip>
+        {carriers.length ? <div className="mt-1 max-w-[14rem] text-xs leading-5 text-red-600">{carriers.join(" / ")}</div> : null}
+      </div>
+    );
+  }
+  if (reachability?.display === "single_carrier") {
+    const carrier = reachability.failed_carriers?.[0];
+    const evidence = reachability.evidence?.find((row) => row.carrier === carrier);
+    const rate = evidence ? Math.round((evidence.fail_rate || 0) * 100) : 0;
+    return (
+      <div className="min-w-0">
+        <Badge color="orange">单线路异常</Badge>
+        <div className="mt-1 max-w-[14rem] text-xs leading-5 text-amber-700">
+          {carrierLabel(carrier)}{evidence ? ` · 异常率 ${rate}%` : ""}
+        </div>
+      </div>
+    );
+  }
+  if (reachability?.display === "insufficient") {
+    return (
+      <div className="min-w-0">
+        <Badge color="gray">判定条件不足</Badge>
+        <div className="mt-1 max-w-[14rem] text-xs leading-5 text-gray-500">至少需要两个运营商</div>
+      </div>
+    );
+  }
+  if (task.mainland_reachability_enabled && status && !status.baseline_ready && (status.state === "healthy" || status.state === "pending")) {
+    return <Badge color="gray">采集判定基线</Badge>;
+  }
+  if (reachability?.display === "collecting") {
+    return <Badge color="gray">采集判定基线</Badge>;
+  }
+  if (reachability?.display === "undetermined") {
+    return <Badge color="gray">无法判定</Badge>;
+  }
   if (!status) return <Badge color="gray">等待首次探测</Badge>;
+  if (status.last_error || status.state === "unknown") {
+    return <Badge color="gray">{status.last_error ? "探测异常" : "暂时无法识别"}</Badge>;
+  }
   const states = {
     pending: { color: "gray" as const, text: "等待首次探测" },
-    observing: { color: "amber" as const, text: "确认中" },
+    observing: { color: "amber" as const, text: "切线确认中" },
     healthy: { color: "green" as const, text: "线路正常" },
     switched: { color: "red" as const, text: "已切线" },
     unknown: { color: "gray" as const, text: "暂时无法识别" },
@@ -549,6 +665,13 @@ function RouteTaskDialog({
             <Field label="恢复确认次数">
               <TextField.Root required type="number" min="1" max="20" step="1" value={form.recovery_confirm} onChange={(e) => setForm({ ...form, recovery_confirm: e.target.value })} />
             </Field>
+            <SwitchField
+              className="sm:col-span-2"
+              label="参与疑似被墙判定（实验室功能）"
+              hint="需要同一节点、同一地址类型下至少两个不同运营商任务同时开启。"
+              checked={form.mainland_reachability_enabled}
+              onCheckedChange={(mainland_reachability_enabled) => setForm({ ...form, mainland_reachability_enabled })}
+            />
           </FormSection>
 
           <FormSection title="通知与状态">
@@ -556,9 +679,15 @@ function RouteTaskDialog({
               <TextField.Root required type="number" min="0" max="604800" step="1" value={form.cooldown} onChange={(e) => setForm({ ...form, cooldown: e.target.value })} />
             </Field>
             <div className="flex flex-col justify-end gap-3 pb-1">
-              <label className="flex items-center justify-between gap-3 text-sm"><span>发送切线通知</span><Switch checked={form.notify} onCheckedChange={(notify) => setForm({ ...form, notify })} /></label>
-              <label className="flex items-center justify-between gap-3 text-sm"><span>发送恢复通知</span><Switch checked={form.notify_recovery} onCheckedChange={(notify_recovery) => setForm({ ...form, notify_recovery })} /></label>
-              <label className="flex items-center justify-between gap-3 text-sm"><span>启用任务</span><Switch checked={form.enabled} onCheckedChange={(enabled) => setForm({ ...form, enabled })} /></label>
+              <SwitchField label="发送切线通知" checked={form.notify} onCheckedChange={(notify) => setForm({ ...form, notify })} />
+              <SwitchField label="发送恢复通知" checked={form.notify_recovery} onCheckedChange={(notify_recovery) => setForm({ ...form, notify_recovery })} />
+              {form.mainland_reachability_enabled ? (
+                <>
+                  <SwitchField label="发送疑似被墙通知" checked={form.mainland_reachability_notify} onCheckedChange={(mainland_reachability_notify) => setForm({ ...form, mainland_reachability_notify })} />
+                  <SwitchField label="发送可达性恢复通知" checked={form.mainland_reachability_recovery_notify} onCheckedChange={(mainland_reachability_recovery_notify) => setForm({ ...form, mainland_reachability_recovery_notify })} />
+                </>
+              ) : null}
+              <SwitchField label="启用任务" checked={form.enabled} onCheckedChange={(enabled) => setForm({ ...form, enabled })} />
             </div>
           </FormSection>
           <Flex justify="end" gap="3" mt="6">
@@ -675,6 +804,13 @@ function RouteTaskBatchDialog({
             <Field label="恢复确认次数">
               <TextField.Root required type="number" min="1" max="20" step="1" value={form.recovery_confirm} onChange={(event) => setForm({ ...form, recovery_confirm: event.target.value })} />
             </Field>
+            <SwitchField
+              className="sm:col-span-2"
+              label="参与疑似被墙判定（实验室功能）"
+              hint="需要同一节点、同一地址类型下至少两个不同运营商任务同时开启。"
+              checked={form.mainland_reachability_enabled}
+              onCheckedChange={(mainland_reachability_enabled) => setForm({ ...form, mainland_reachability_enabled })}
+            />
           </FormSection>
 
           <FormSection title="通知与状态">
@@ -682,9 +818,15 @@ function RouteTaskBatchDialog({
               <TextField.Root required type="number" min="0" max="604800" step="1" value={form.cooldown} onChange={(event) => setForm({ ...form, cooldown: event.target.value })} />
             </Field>
             <div className="flex flex-col justify-end gap-3 pb-1">
-              <label className="flex items-center justify-between gap-3 text-sm"><span>发送切线通知</span><Switch checked={form.notify} onCheckedChange={(notify) => setForm({ ...form, notify })} /></label>
-              <label className="flex items-center justify-between gap-3 text-sm"><span>发送恢复通知</span><Switch checked={form.notify_recovery} onCheckedChange={(notify_recovery) => setForm({ ...form, notify_recovery })} /></label>
-              <label className="flex items-center justify-between gap-3 text-sm"><span>启用任务</span><Switch checked={form.enabled} onCheckedChange={(enabled) => setForm({ ...form, enabled })} /></label>
+              <SwitchField label="发送切线通知" checked={form.notify} onCheckedChange={(notify) => setForm({ ...form, notify })} />
+              <SwitchField label="发送恢复通知" checked={form.notify_recovery} onCheckedChange={(notify_recovery) => setForm({ ...form, notify_recovery })} />
+              {form.mainland_reachability_enabled ? (
+                <>
+                  <SwitchField label="发送疑似被墙通知" checked={form.mainland_reachability_notify} onCheckedChange={(mainland_reachability_notify) => setForm({ ...form, mainland_reachability_notify })} />
+                  <SwitchField label="发送可达性恢复通知" checked={form.mainland_reachability_recovery_notify} onCheckedChange={(mainland_reachability_recovery_notify) => setForm({ ...form, mainland_reachability_recovery_notify })} />
+                </>
+              ) : null}
+              <SwitchField label="启用任务" checked={form.enabled} onCheckedChange={(enabled) => setForm({ ...form, enabled })} />
             </div>
           </FormSection>
           <Flex justify="end" gap="3" mt="6">
@@ -699,6 +841,30 @@ function RouteTaskBatchDialog({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="flex min-w-0 flex-col gap-1.5"><Text size="2" weight="medium">{label}</Text>{children}</label>;
+}
+
+function SwitchField({
+  label,
+  hint,
+  checked,
+  onCheckedChange,
+  className,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  className?: string;
+}) {
+  return (
+    <div className={`flex min-w-0 flex-col gap-1.5 ${className || ""}`}>
+      <label className="flex items-center justify-between gap-3">
+        <Text size="2" weight="medium">{label}</Text>
+        <Switch checked={checked} onCheckedChange={onCheckedChange} />
+      </label>
+      {hint ? <Text size="1" color="gray">{hint}</Text> : null}
+    </div>
+  );
 }
 
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -743,10 +909,10 @@ function ReturnRouteContent() {
     expectedLines: [],
     actualLines: [],
   });
-  const [taskData, setTaskData] = useState<TaskPage>(() => initialTaskSnapshot || { tasks: [], statuses: [], probing_task_ids: [], total: 0, page: 1, page_size: defaultPageSize });
+  const [taskData, setTaskData] = useState<TaskPage>(() => initialTaskSnapshot || { tasks: [], statuses: [], reachability: [], probing_task_ids: [], total: 0, page: 1, page_size: defaultPageSize });
   const [recordData, setRecordData] = useState<RecordPage>({ events: [], total: 0, page: 1, page_size: defaultPageSize });
   const initialSummarySnapshot = returnRouteSummarySnapshots.get(accountKey);
-  const [summary, setSummary] = useState<SummaryData>(() => initialSummarySnapshot || { tasks: 0, healthy: 0, switched: 0, recent_events: 0 });
+  const [summary, setSummary] = useState<SummaryData>(() => initialSummarySnapshot || { tasks: 0, healthy: 0, switched: 0, recent_events: 0, suspected_blocked: 0 });
   const [summaryLoading, setSummaryLoading] = useState(() => !initialSummarySnapshot);
   const [taskLoading, setTaskLoading] = useState(() => !initialTaskSnapshot);
   const hasRenderedTaskData = useRef(Boolean(initialTaskSnapshot));
@@ -786,7 +952,7 @@ function ReturnRouteContent() {
         task_id: routeTask || undefined,
       });
       const probingTaskIDs = data?.probing_task_ids || [];
-      const next = { tasks: data?.tasks || [], statuses: data?.statuses || [], probing_task_ids: probingTaskIDs, total: data?.total || 0, page: data?.page || 1, page_size: data?.page_size || taskQuery.page_size };
+      const next = { tasks: data?.tasks || [], statuses: data?.statuses || [], reachability: data?.reachability || [], probing_task_ids: probingTaskIDs, total: data?.total || 0, page: data?.page || 1, page_size: data?.page_size || taskQuery.page_size };
       returnRouteTaskSnapshots.set(taskSnapshotKey, next);
       hasRenderedTaskData.current = true;
       setTaskData(next);
@@ -877,6 +1043,13 @@ function ReturnRouteContent() {
   }, [activeTab, loadRecords, loadRules, loadSummary, loadTasks]);
 
   const statuses = useMemo(() => new Map(taskData.statuses.map((item) => [item.task_id, item])), [taskData.statuses]);
+  const reachabilityByNode = useMemo(() => {
+    const map = new Map<string, Reachability>();
+    for (const item of taskData.reachability || []) {
+      map.set(`${item.client}:${item.ip_version}`, item);
+    }
+    return map;
+  }, [taskData.reachability]);
   const selectedTasks = useMemo(
     () => taskData.tasks.filter((task) => task.id && selectedTaskIDs.has(task.id)),
     [selectedTaskIDs, taskData.tasks],
@@ -1031,8 +1204,8 @@ function ReturnRouteContent() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Summary label="监测任务" value={summary.tasks} icon={<Route size={20} />} />
-        <Summary label="线路正常" value={summary.healthy} tone="green" icon={<CheckCircle2 size={20} />} />
-        <Summary label="已确认切线" value={summary.switched} tone="red" icon={<AlertTriangle size={20} />} />
+        <Summary label="线路正常" value={summary.healthy} tone="green" icon={<CheckCircle2 size={20} />} extra={summary.suspected_blocked ? `疑似被墙 ${summary.suspected_blocked}` : undefined} />
+        <Summary label="已切线" value={summary.switched} tone="red" icon={<AlertTriangle size={20} />} />
         <Summary label="最近事件" value={summary.recent_events} icon={<History size={20} />} />
       </div>
 
@@ -1168,6 +1341,7 @@ function ReturnRouteContent() {
                     <AdminMobileCardStack>
                       {taskData.tasks.map((task) => {
                         const status = statuses.get(task.id || 0);
+                        const reachability = reachabilityByNode.get(`${task.client}:${task.ip_version}`);
                         const probing = probingTasks.has(task.id || 0);
                         const selected = Boolean(task.id && selectedTaskIDs.has(task.id));
                         return (
@@ -1175,6 +1349,7 @@ function ReturnRouteContent() {
                             key={task.id}
                             task={task}
                             status={status}
+                            reachability={reachability}
                             probing={probing}
                             selected={selected}
                             asCard
@@ -1205,6 +1380,7 @@ function ReturnRouteContent() {
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                         {taskData.tasks.map((task) => {
                           const status = statuses.get(task.id || 0);
+                          const reachability = reachabilityByNode.get(`${task.client}:${task.ip_version}`);
                           const probing = probingTasks.has(task.id || 0);
                           const selected = Boolean(task.id && selectedTaskIDs.has(task.id));
                           return (
@@ -1212,6 +1388,7 @@ function ReturnRouteContent() {
                               key={task.id}
                               task={task}
                               status={status}
+                              reachability={reachability}
                               probing={probing}
                               selected={selected}
                               nodes={nodes}
@@ -1493,9 +1670,18 @@ function recordRangeStart(range: string) {
   return hours ? new Date(Date.now() - hours * 60 * 60 * 1000).toISOString() : undefined;
 }
 
-function Summary({ label, value, icon, tone = "gray" }: { label: string; value: number; icon: React.ReactNode; tone?: "gray" | "green" | "red" }) {
+function Summary({ label, value, icon, tone = "gray", extra }: { label: string; value: number; icon: React.ReactNode; tone?: "gray" | "green" | "red"; extra?: string }) {
   const color = tone === "green" ? "text-green-600" : tone === "red" ? "text-red-600" : "text-gray-500";
-  return <div className="flex min-h-24 items-center justify-between rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)] px-5 py-4"><div><div className="text-sm text-gray-500">{label}</div><div className="mt-1 text-2xl font-semibold">{value}</div></div><span className={color}>{icon}</span></div>;
+  return (
+    <div className="flex min-h-24 items-center justify-between rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)] px-5 py-4">
+      <div>
+        <div className="text-sm text-gray-500">{label}</div>
+        <div className="mt-1 text-2xl font-semibold">{value}</div>
+        {extra ? <div className="mt-1 text-xs font-medium text-red-600">{extra}</div> : null}
+      </div>
+      <span className={color}>{icon}</span>
+    </div>
+  );
 }
 
 function RuleStat({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
@@ -1505,6 +1691,7 @@ function RuleStat({ label, value, mono = false }: { label: string; value: string
 function ReturnRouteTaskRow({
   task,
   status,
+  reachability,
   probing,
   selected,
   asCard = false,
@@ -1516,6 +1703,7 @@ function ReturnRouteTaskRow({
 }: {
   task: Task;
   status?: Status;
+  reachability?: Reachability;
   probing: boolean;
   selected: boolean;
   asCard?: boolean;
@@ -1547,7 +1735,7 @@ function ReturnRouteTaskRow({
   );
   const statusValue = (
     <div className="return-route-cell-content">
-      {!task.enabled ? <Badge color="gray">已暂停</Badge> : probing ? <Badge color="blue">探测中</Badge> : stateBadge(status)}
+      {!task.enabled ? <Badge color="gray">已暂停</Badge> : probing ? <Badge color="blue">探测中</Badge> : stateBadge(task, status, reachability)}
       {status?.candidate_line && (
         <div className="mt-1 text-xs text-amber-600">
           {status.candidate_line}
@@ -1621,7 +1809,7 @@ function ReturnRouteTaskRow({
       <td data-label="任务 / 节点" className="p-3 align-middle"><div className="return-route-cell-pair"><div className="font-medium">{task.name}</div><div className="mt-1 text-xs text-gray-500">{task.client_info?.name || task.client}</div></div></td>
       <td data-label="运营商 / 地区" className="p-3 align-middle"><div className="return-route-cell-pair"><div>{carrierNames[task.carrier]}</div><div className="mt-1 text-xs text-gray-500">{task.region || "未标记"} · IPv{task.ip_version}</div></div></td>
       <td data-label="线路" className="p-3 text-left align-middle"><div className="return-route-cell-pair"><div><span className="text-gray-500">当前 </span><strong>{status?.current_line || "-"}</strong></div><div className="mt-1 text-xs text-gray-500">预期 {task.expected_line}</div></div></td>
-      <td data-label="状态" className="p-3 text-left align-middle"><div className="return-route-cell-content">{!task.enabled ? <Badge color="gray">已暂停</Badge> : probing ? <Badge color="blue">探测中</Badge> : stateBadge(status)}{status?.candidate_line && <div className="mt-1 text-xs text-amber-600">{status.candidate_line}{pendingLineOptions.has(status.candidate_line) ? null : <> {status.candidate_count}/{needed}</>}</div>}{(status?.confidence ?? 0) > 0 && <div className="mt-1 text-xs text-gray-500">置信度 {((status?.confidence ?? 0) * 100).toFixed(0)}%</div>}</div></td>
+      <td data-label="状态" className="p-3 text-left align-middle"><div className="return-route-cell-content">{!task.enabled ? <Badge color="gray">已暂停</Badge> : probing ? <Badge color="blue">探测中</Badge> : stateBadge(task, status, reachability)}{status?.candidate_line && <div className="mt-1 text-xs text-amber-600">{status.candidate_line}{pendingLineOptions.has(status.candidate_line) ? null : <> {status.candidate_count}/{needed}</>}</div>}{(status?.confidence ?? 0) > 0 && <div className="mt-1 text-xs text-gray-500">置信度 {((status?.confidence ?? 0) * 100).toFixed(0)}%</div>}</div></td>
       <td data-label="关键 ASN" className="max-w-[320px] p-3 text-left align-middle">{asnValue}</td>
       <td data-label="最后探测" className="p-3 text-left align-middle text-gray-600"><div className="return-route-cell-pair"><span>{formatTime(status?.last_checked_at)}</span><div className="mt-1 text-xs text-gray-400">每 {Math.round(task.interval / 60)} 分钟</div></div></td>
       <td data-label="操作" className="p-3 text-left align-middle">{actionButtons}</td>
@@ -1636,9 +1824,10 @@ function ReturnRouteRecordRow({
   event: RouteEvent;
   asCard?: boolean;
 }) {
+  const mainland = event.kind.startsWith("mainland_");
   const kindBadge = (
-    <Badge color={event.kind === "recovery" ? "green" : "red"}>
-      {event.kind === "recovery" ? "恢复" : "切线"}
+    <Badge color={event.kind === "mainland_recovery" || event.kind === "recovery" ? "green" : "red"}>
+      {RECORD_KIND_LABELS[event.kind] || event.kind}
     </Badge>
   );
   const taskValue = (
@@ -1655,7 +1844,11 @@ function ReturnRouteRecordRow({
       </div>
     </>
   );
-  const changeValue = (
+  const changeValue = mainland ? (
+    <div className="max-w-[18rem] text-sm leading-5">
+      {event.kind === "mainland_recovery" ? "大陆方向可达性已恢复" : event.kind === "mainland_repeat" ? "仍疑似被墙" : "疑似被墙"}
+    </div>
+  ) : (
     <>
       <span>{event.from_line || "-"}</span>
       <span className="px-2 text-gray-400">→</span>

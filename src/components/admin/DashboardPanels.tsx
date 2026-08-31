@@ -458,11 +458,14 @@ export function ReturnRouteStatusPanel({ data, locale }: { data: DashboardData; 
   const abnormalEnd = total > 0 ? ((healthy + switched + abnormal) / total) * 360 : 0;
   const latest = status.latest_event;
   const latestName = [latest?.node_name, latest?.task_name].filter(Boolean).join(" · ");
-  const statusMessage = switched > 0
-    ? t("admin_dashboard.return_route_changed_tasks", { count: switched })
-    : abnormal > 0
-      ? t("admin_dashboard.return_route_abnormal_tasks", { count: abnormal })
-      : t("admin_dashboard.return_route_all_normal");
+  const blocked = Math.max(0, status.suspected_blocked ?? 0);
+  const statusMessage = blocked > 0
+    ? t("admin_dashboard.return_route_blocked_nodes", { count: blocked })
+    : switched > 0
+      ? t("admin_dashboard.return_route_changed_tasks", { count: switched })
+      : abnormal > 0
+        ? t("admin_dashboard.return_route_abnormal_tasks", { count: abnormal })
+        : t("admin_dashboard.return_route_all_normal");
 
   return (
     <Link
@@ -506,6 +509,7 @@ export function ReturnRouteStatusPanel({ data, locale }: { data: DashboardData; 
                   [t("admin_dashboard.return_route_normal"), healthy, "bg-[var(--green-9)]"],
                   [t("admin_dashboard.return_route_changed"), switched, "bg-[var(--orange-9)]"],
                   [t("admin_dashboard.return_route_abnormal"), abnormal, "bg-[var(--red-9)]"],
+                  [t("admin_dashboard.return_route_blocked"), blocked, "bg-[var(--red-11)]"],
                   [t("admin_dashboard.return_route_recent_events"), status.recent_events, "bg-[var(--gray-8)]"],
                 ].map(([label, value, marker]) => (
                   <div key={String(label)} className="flex items-center justify-between gap-3">
