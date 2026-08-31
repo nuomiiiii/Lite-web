@@ -59,6 +59,14 @@ export class RPC2Client {
   }
 
   /**
+   * 登录后打开套接字时恢复自动连接/重连。
+   */
+  private enableSessionReconnect(): void {
+    this.options.autoConnect = true;
+    this.options.autoReconnect = true;
+  }
+
+  /**
    * 获取当前连接状态
    */
   get state(): RPC2ConnectionStateType {
@@ -80,6 +88,7 @@ export class RPC2Client {
    * 建立 WebSocket 连接
    */
   async connect(): Promise<void> {
+    this.enableSessionReconnect();
     if (this.connectionState === RPC2ConnectionState.CONNECTED ||
         this.connectionState === RPC2ConnectionState.CONNECTING) {
       return;
@@ -140,10 +149,23 @@ export class RPC2Client {
   }
 
   /**
+   * 暂停套接字（登录页 / 登出）：关掉连接，且不要立刻重连。
+   * 之后 connect() 会重新打开自动重连。
+   */
+  pause(): void {
+    this.options.autoConnect = false;
+    this.options.autoReconnect = false;
+    this.closeSocket();
+  }
+
+  /**
    * 断开 WebSocket 连接
    */
   disconnect(): void {
-    this.options.autoReconnect = false;
+    this.pause();
+  }
+
+  private closeSocket(): void {
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = undefined;

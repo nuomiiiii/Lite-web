@@ -6,6 +6,7 @@ import {
   isAdminNodeBootstrapLoading,
   planAdminSettingsFetch,
   resolveAdminAuthView,
+  shouldOpenRpc2Socket,
   submitPasswordLogin,
 } from "../src/utils/adminAuth.ts";
 
@@ -66,6 +67,11 @@ test("只有已登录才拉管理设置，未登录和核对中都丢弃", () =>
     }),
     "fetch",
   );
+});
+
+test("只有已登录才打开管理 RPC 套接字", () => {
+  assert.equal(shouldOpenRpc2Socket(false), false);
+  assert.equal(shouldOpenRpc2Socket(true), true);
 });
 
 test("已登录后才进入后台视图", () => {

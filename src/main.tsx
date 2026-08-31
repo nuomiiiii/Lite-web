@@ -19,7 +19,6 @@ import { PublicInfoProvider } from "./contexts/PublicInfoContext";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import { Toaster } from "./components/ui/sonner";
 import { RPC2Provider } from "./contexts/RPC2Context";
-import { NodeListProvider } from "./contexts/NodeListContext";
 import { AccountProvider } from "./contexts/AccountContext";
 import { useAccount } from "./contexts/AccountContext";
 import FullPageLoading from "./components/FullPageLoading";
@@ -177,15 +176,13 @@ const App = () => {
       <RPC2Provider>
         <PublicInfoProvider>
           <DocumentTitle />
-          <NodeListProvider>
-            <Toaster />
-            <OfflineIndicator />
-            <Suspense
-              fallback={isAdminRoute ? <FullPageLoading /> : <Loading fullscreen />}
-            >
-              {routing}
-            </Suspense>
-          </NodeListProvider>
+          <Toaster />
+          <OfflineIndicator />
+          <Suspense
+            fallback={isAdminRoute ? <FullPageLoading /> : <Loading fullscreen />}
+          >
+            {routing}
+          </Suspense>
         </PublicInfoProvider>
       </RPC2Provider>
     </AccountProvider>

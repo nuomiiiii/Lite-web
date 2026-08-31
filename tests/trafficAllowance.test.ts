@@ -6,7 +6,10 @@ import test from "node:test";
 import { getRegionCode } from "../src/utils/regionHelper.ts";
 
 const editSource = readFileSync(path.resolve("src/pages/admin/index.tsx"), "utf8");
-const listSource = readFileSync(path.resolve("src/contexts/NodeListContext.tsx"), "utf8");
+const adminNodesSource = readFileSync(
+  path.resolve("src/contexts/NodeDetailsContext.tsx"),
+  "utf8",
+);
 const selectSource = readFileSync(
   path.resolve("src/components/ui/select-or-input.tsx"),
   "utf8",
@@ -30,10 +33,10 @@ test("reset traffic requires a billing reset day and shows the effective quota",
 });
 
 test("system node data keeps the effective cycle quota", () => {
-  assert.match(listSource, /n\.effective_traffic_limit \?\? n\.traffic_limit \?\? 0/);
-  assert.match(listSource, /n\.effective_traffic_type \?\? n\.traffic_limit_type/);
-  assert.doesNotMatch(listSource, /effective_traffic_type \?\? n\.traffic_limit_type \?\? "sum"/);
-  assert.doesNotMatch(listSource, /traffic_limit_type \?\? "max"/);
+  assert.match(adminNodesSource, /effective_traffic_limit: number;/);
+  assert.match(adminNodesSource, /effective_traffic_type: "sum" \| "max" \| "min" \| "up" \| "down";/);
+  assert.match(adminNodesSource, /fetch\("\/api\/admin\/client\/list"/);
+  assert.doesNotMatch(adminNodesSource, /common:getNodes/);
 });
 
 test("new nodes default the edit form traffic accounting mode to sum", () => {

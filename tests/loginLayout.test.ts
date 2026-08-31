@@ -22,6 +22,10 @@ const rpc2Source = readFileSync(
   new URL("../src/lib/rpc2.ts", import.meta.url),
   "utf8",
 );
+const rpc2ContextSource = readFileSync(
+  new URL("../src/contexts/RPC2Context.tsx", import.meta.url),
+  "utf8",
+);
 
 test("admin login is a standalone MUI page, not a dialog overlay", () => {
   assert.match(loginSource, /data-testid="admin-login-page"/);
@@ -61,6 +65,19 @@ test("RPC2 follows the current page protocol and does not force HTTPS", () => {
     /window\.location\.protocol === "https:" \? "wss:" : "ws:"/,
   );
   assert.doesNotMatch(rpc2Source, /isSensitiveTransportAllowed/);
+});
+
+test("RPC2 waits for login before opening a socket, then reconnects after login", () => {
+  assert.match(
+    rpc2ContextSource,
+    /new RPC2Client\("\/api\/rpc2", \{ autoConnect: false \}\)/,
+  );
+  assert.match(rpc2ContextSource, /shouldOpenRpc2Socket\(loggedIn\)/);
+  assert.match(rpc2ContextSource, /client\.connect\(\)/);
+  assert.match(rpc2ContextSource, /client\.pause\(\)/);
+  assert.match(rpc2Source, /pause\(\): void/);
+  assert.match(rpc2Source, /enableSessionReconnect\(\): void/);
+  assert.match(rpc2Source, /private enableSessionReconnect/);
 });
 
 test("login chrome uses shared circular icon buttons and menus", () => {

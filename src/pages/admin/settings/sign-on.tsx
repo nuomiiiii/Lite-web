@@ -108,7 +108,10 @@ export default function SignOnSettings() {
   }
 
   return (
-    <div data-admin-route-pending={hydrated ? undefined : "true"}>
+    <>
+      {hydrated ? null : (
+        <div data-admin-route-pending="true" hidden />
+      )}
       <AdminSectionTitle>{t("settings.sign_on.title")}</AdminSectionTitle>
       <SettingCardSwitch
         title={t("settings.sign_on.disable_password")}
@@ -151,7 +154,7 @@ export default function SignOnSettings() {
       })}
       <SettingCardLabel>API</SettingCardLabel>
       <ApiCard />
-    </div>
+    </>
   );
 }
 

@@ -409,6 +409,9 @@ test("prewarms admin routes and reuses shared monitoring data", () => {
   assert.match(routesSource, /export const preloadAdminRoutes/);
   assert.match(mainSource, /scheduleIdleAdminWarmup/);
   assert.match(mainSource, /getIdleAdminWarmupTargets/);
+  assert.doesNotMatch(mainSource, /NodeListProvider/);
+  assert.doesNotMatch(mainSource, /common:getNodes/);
+  assert.match(mainSource, /<RPC2Provider>/);
   assert.match(adminLayoutSource, /<SettingsProvider>\s*<NodeDetailsProvider>/);
   assert.match(
     adminLayoutSource,

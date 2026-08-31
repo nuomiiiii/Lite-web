@@ -107,7 +107,10 @@ const NotificationSettings = () => {
   }
 
   return (
-    <div data-admin-route-pending={hydrated ? undefined : "true"}>
+    <>
+      {hydrated ? null : (
+        <div data-admin-route-pending="true" hidden />
+      )}
       <AdminPageTitle
         description={t(
           "settings.notification.page_description",
@@ -194,7 +197,7 @@ const NotificationSettings = () => {
           <SquareArrowOutUpRight size={16} />
         </Link>
       </label>
-    </div>
+    </>
   );
 };
 

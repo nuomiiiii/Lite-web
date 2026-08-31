@@ -84,6 +84,10 @@ export function planAdminSettingsFetch({
   return "reset";
 }
 
+export function shouldOpenRpc2Socket(loggedIn: boolean): boolean {
+  return loggedIn;
+}
+
 export function isAdminNodeBootstrapLoading(
   accountLoading: boolean,
   accountKey: string | null,

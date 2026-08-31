@@ -40,7 +40,7 @@ test("full-page loading holds the previous admin route; in-page spinners do not"
   assert.match(signOnSource, /if \(loading\) \{\s*return <SettingsPageSkeleton \/>/);
   assert.match(
     signOnSource,
-    /data-admin-route-pending=\{hydrated \? undefined : "true"\}/,
+    /hydrated \? null : \(\s*<div data-admin-route-pending="true" hidden \/>/,
   );
   assert.doesNotMatch(signOnSource, /if \(loading \|\| !hydrated\)/);
   assert.doesNotMatch(signOnSource, /Loading inline/);
@@ -54,7 +54,7 @@ test("full-page loading holds the previous admin route; in-page spinners do not"
   );
   assert.match(
     notificationSource,
-    /data-admin-route-pending=\{hydrated \? undefined : "true"\}/,
+    /hydrated \? null : \(\s*<div data-admin-route-pending="true" hidden \/>/,
   );
   assert.doesNotMatch(notificationSource, /if \(loading \|\| !hydrated\)/);
   assert.doesNotMatch(notificationSource, /Loading inline/);
