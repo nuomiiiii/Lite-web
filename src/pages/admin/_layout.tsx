@@ -1,7 +1,6 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -62,23 +61,12 @@ const AuthStatusScreen = ({
 };
 
 const AdminRouteLoading = () => (
-  <Box
-    data-admin-route-pending="true"
-    role="status"
-    aria-label="页面加载中"
-    sx={{
-      minHeight: "min(20rem, 55vh)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-  >
-    <CircularProgress />
-  </Box>
+  <div data-admin-route-pending="true" hidden />
 );
 
 const AdminAuthenticatedContent = () => {
   const outlet = useOutlet();
+  const [firstRouteReady, setFirstRouteReady] = useState(false);
   const { settings, loading, error, setSettings } = useSettings();
   const lang = readStoredLanguage() || "en";
   const [open, setOpen] = useState(false);
@@ -130,14 +118,31 @@ const AdminAuthenticatedContent = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      <AdminShell
-        content={
-          <AdminRouteViewport
-            fallback={<AdminRouteLoading />}
-            outlet={outlet}
-          />
-        }
-      />
+      {!firstRouteReady ? (
+        <Box
+          sx={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2000,
+          }}
+        >
+          <FullPageLoading />
+        </Box>
+      ) : null}
+      <Box
+        aria-hidden={firstRouteReady ? undefined : true}
+        sx={{ visibility: firstRouteReady ? "visible" : "hidden" }}
+      >
+        <AdminShell
+          content={
+            <AdminRouteViewport
+              fallback={<AdminRouteLoading />}
+              outlet={outlet}
+              onFirstReady={() => setFirstRouteReady(true)}
+            />
+          }
+        />
+      </Box>
     </>
   );
 };

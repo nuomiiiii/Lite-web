@@ -47,6 +47,14 @@ test("admin warmup respects reduced-data connections", () => {
     layout,
     /<AdminRouteViewport\s+fallback=\{<AdminRouteLoading \/>\}\s+outlet=\{outlet\}/,
   );
+  assert.match(layout, /onFirstReady=\{\(\) => setFirstRouteReady\(true\)\}/);
+  assert.match(layout, /\{!firstRouteReady \? \(/);
+  assert.match(layout, /<FullPageLoading \/>/);
+  assert.match(
+    layout,
+    /const AdminRouteLoading = \(\) => \(\s*<div data-admin-route-pending="true" hidden \/>\s*\);/,
+  );
+  assert.match(layout, /visibility: firstRouteReady \? "visible" : "hidden"/);
   assert.match(viewport, /data-admin-route-active=\{active \? "true" : "false"\}/);
   assert.match(
     viewport,
@@ -54,6 +62,7 @@ test("admin warmup respects reduced-data connections", () => {
   );
   assert.match(viewport, /isRouteViewReady\(element\)/);
   assert.match(viewport, /if \(isRouteViewReady\(element\)\) promote\(\)/);
+  assert.match(viewport, /onFirstReadyRef\.current\?\.\(\)/);
   assert.doesNotMatch(viewport, /readyFrames/);
   assert.doesNotMatch(viewport, /characterData: true/);
   assert.match(loading, /data-admin-route-pending=\{inline \? undefined : "true"\}/);

@@ -22,13 +22,18 @@ const isRouteViewReady = (element: HTMLElement) =>
 const AdminRouteViewport = ({
   fallback,
   outlet,
+  onFirstReady,
 }: {
   fallback: React.ReactNode;
   outlet: React.ReactNode;
+  onFirstReady?: () => void;
 }) => {
   const location = useLocation();
   const incomingKey = getAdminRouteViewKey(location);
   const viewElements = React.useRef(new Map<string, HTMLDivElement>());
+  const firstReadyRef = React.useRef(false);
+  const onFirstReadyRef = React.useRef(onFirstReady);
+  onFirstReadyRef.current = onFirstReady;
   const [progressState, setProgressState] = React.useState<"hidden" | "visible" | "leaving">("hidden");
   const progressVisibleAt = React.useRef<number | null>(null);
   const [state, setState] = React.useState<RouteViewportState<React.ReactNode>>(() => ({
@@ -105,6 +110,34 @@ const AdminRouteViewport = ({
       observer.disconnect();
     };
   }, [state.pendingKey]);
+
+  React.useLayoutEffect(() => {
+    if (firstReadyRef.current) return;
+    const watchKey = state.pendingKey ?? state.activeKey;
+    const element = viewElements.current.get(watchKey);
+    if (!element) return;
+
+    let stopped = false;
+    const check = () => {
+      if (stopped || firstReadyRef.current) return;
+      if (!isRouteViewReady(element)) return;
+      firstReadyRef.current = true;
+      onFirstReadyRef.current?.();
+    };
+    const observer = new MutationObserver(check);
+    observer.observe(element, {
+      attributes: true,
+      attributeFilter: ["data-admin-route-pending"],
+      childList: true,
+      subtree: true,
+    });
+    check();
+
+    return () => {
+      stopped = true;
+      observer.disconnect();
+    };
+  }, [state.activeKey, state.pendingKey]);
 
   return (
     <div className="admin-route-viewport">
