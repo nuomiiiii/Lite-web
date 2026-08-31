@@ -148,39 +148,37 @@ const AdminAuthenticatedContent = () => {
 };
 
 const AdminAuthenticatedLayout = () => (
-  <SettingsProvider>
-    <NodeDetailsProvider>
-      <PingTaskProvider>
-        <AdminNodeLiveDataProvider>
-          <AdminAuthenticatedContent />
-        </AdminNodeLiveDataProvider>
-      </PingTaskProvider>
-    </NodeDetailsProvider>
-  </SettingsProvider>
+  <PingTaskProvider>
+    <AdminNodeLiveDataProvider>
+      <AdminAuthenticatedContent />
+    </AdminNodeLiveDataProvider>
+  </PingTaskProvider>
 );
 
 const AdminGuard = () => {
   const accountState = useAccount();
   const view = resolveAdminAuthView(accountState);
 
-  if (view === "loading") {
-    return <FullPageLoading />;
-  }
-  if (view === "error") {
-    return (
-      <AuthStatusScreen
-        failed
-        onRetry={() => {
-          void accountState.refresh();
-        }}
-      />
-    );
-  }
-  if (view === "login") {
-    return <AdminLoginPage />;
-  }
-
-  return <AdminAuthenticatedLayout />;
+  return (
+    <SettingsProvider>
+      <NodeDetailsProvider>
+        {view === "loading" ? (
+          <FullPageLoading />
+        ) : view === "error" ? (
+          <AuthStatusScreen
+            failed
+            onRetry={() => {
+              void accountState.refresh();
+            }}
+          />
+        ) : view === "login" ? (
+          <AdminLoginPage />
+        ) : (
+          <AdminAuthenticatedLayout />
+        )}
+      </NodeDetailsProvider>
+    </SettingsProvider>
+  );
 };
 
 const AdminLayout = () => <AdminGuard />;

@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   fetchAccount,
   isAdminNodeBootstrapLoading,
+  planAdminSettingsFetch,
   resolveAdminAuthView,
   submitPasswordLogin,
 } from "../src/utils/adminAuth.ts";
@@ -29,6 +30,41 @@ test("未登录时只进入登录视图", () => {
       error: null,
     }),
     "login",
+  );
+});
+
+test("只有已登录才拉管理设置，未登录和核对中都丢弃", () => {
+  assert.equal(
+    planAdminSettingsFetch({
+      hasAccountContext: false,
+      accountLoading: false,
+      loggedIn: false,
+    }),
+    "fetch",
+  );
+  assert.equal(
+    planAdminSettingsFetch({
+      hasAccountContext: true,
+      accountLoading: true,
+      loggedIn: false,
+    }),
+    "reset",
+  );
+  assert.equal(
+    planAdminSettingsFetch({
+      hasAccountContext: true,
+      accountLoading: false,
+      loggedIn: false,
+    }),
+    "reset",
+  );
+  assert.equal(
+    planAdminSettingsFetch({
+      hasAccountContext: true,
+      accountLoading: false,
+      loggedIn: true,
+    }),
+    "fetch",
   );
 });
 

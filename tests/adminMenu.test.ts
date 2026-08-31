@@ -409,9 +409,34 @@ test("prewarms admin routes and reuses shared monitoring data", () => {
   assert.match(routesSource, /export const preloadAdminRoutes/);
   assert.match(mainSource, /scheduleIdleAdminWarmup/);
   assert.match(mainSource, /getIdleAdminWarmupTargets/);
+  assert.match(adminLayoutSource, /<SettingsProvider>\s*<NodeDetailsProvider>/);
   assert.match(
     adminLayoutSource,
-    /<NodeDetailsProvider>\s*<PingTaskProvider>\s*<AdminNodeLiveDataProvider>\s*<AdminAuthenticatedContent \/>/,
+    /view === "loading" \? \(\s*<FullPageLoading \/>/,
+  );
+  assert.match(
+    adminLayoutSource,
+    /view === "login" \? \(\s*<AdminLoginPage \/>/,
+  );
+  assert.match(
+    adminLayoutSource,
+    /<PingTaskProvider>\s*<AdminNodeLiveDataProvider>\s*<AdminAuthenticatedContent \/>/,
+  );
+  assert.doesNotMatch(
+    adminLayoutSource,
+    /<SettingsProvider>\s*<NodeDetailsProvider>\s*<PingTaskProvider>/,
+  );
+  assert.match(settingsAPISource, /planAdminSettingsFetch/);
+  assert.match(settingsAPISource, /plan === "reset"/);
+  assert.match(settingsAPISource, /setSettings\(createDefaultSettings\(\)\)/);
+  const nodeDetailsSource = readFileSync(
+    new URL("../src/contexts/NodeDetailsContext.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(nodeDetailsSource, /load\(PREAUTHENTICATED_NODE_DATA\)/);
+  assert.match(
+    nodeDetailsSource,
+    /if \(accountLoading \|\| !account\?\.logged_in \|\| !accountKey\)/,
   );
   assert.match(pingTaskContextSource, /React\.useState<boolean>\(true\)/);
   assert.match(pingTaskContextSource, /const inherited = React\.useContext\(PingTaskContext\)/);

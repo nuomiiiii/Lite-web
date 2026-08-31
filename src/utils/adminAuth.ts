@@ -68,6 +68,22 @@ export function resolveAdminAuthView({
   return account.logged_in ? "admin" : "login";
 }
 
+export type AdminSettingsFetchPlan = "fetch" | "reset";
+
+export function planAdminSettingsFetch({
+  hasAccountContext,
+  accountLoading,
+  loggedIn,
+}: {
+  hasAccountContext: boolean;
+  accountLoading: boolean;
+  loggedIn: boolean;
+}): AdminSettingsFetchPlan {
+  if (loggedIn) return "fetch";
+  if (!hasAccountContext && !accountLoading) return "fetch";
+  return "reset";
+}
+
 export function isAdminNodeBootstrapLoading(
   accountLoading: boolean,
   accountKey: string | null,
