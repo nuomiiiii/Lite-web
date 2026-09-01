@@ -1828,13 +1828,14 @@ function InstallPlatformToggle({
   onChange: (value: Platform) => void;
   className?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <ToggleButtonGroup
       className={className}
       exclusive
       size="small"
       value={value}
-      aria-label="部署平台"
+      aria-label={t("admin.nodeTable.deployPlatform", "部署平台")}
       onChange={(_event, next: Platform | null) => next && onChange(next)}
       sx={{
         "& .MuiToggleButton-root.Mui-selected": {

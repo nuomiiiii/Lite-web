@@ -1,8 +1,11 @@
+import { useTranslation } from "react-i18next";
 import { Box, Flex, Skeleton } from "@/components/admin/ui";
 
-const SettingsPageSkeleton = () => (
+const SettingsPageSkeleton = () => {
+  const { t } = useTranslation();
+  return (
   <Flex
-    aria-label="设置加载中"
+    aria-label={t("common.loading", "加载中...")}
     data-admin-route-pending="true"
     direction="column"
     gap="3"
@@ -23,6 +26,7 @@ const SettingsPageSkeleton = () => (
       </Box>
     ))}
   </Flex>
-);
+  );
+};
 
 export default SettingsPageSkeleton;

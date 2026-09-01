@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import {
   ADMIN_ROUTE_PROGRESS_EXIT_MS,
@@ -28,6 +29,7 @@ const AdminRouteViewport = ({
   outlet: React.ReactNode;
   onFirstReady?: () => void;
 }) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const incomingKey = getAdminRouteViewKey(location);
   const viewElements = React.useRef(new Map<string, HTMLDivElement>());
@@ -143,7 +145,7 @@ const AdminRouteViewport = ({
     <div className="admin-route-viewport">
       {progressState !== "hidden" ? (
         <div
-          aria-label="页面载入中"
+          aria-label={t("common.loading", "加载中...")}
           className="admin-route-progress-track"
           data-progress-state={progressState}
           role="status"
