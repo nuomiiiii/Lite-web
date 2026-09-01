@@ -1010,9 +1010,9 @@ function ReturnRouteContent() {
   useEffect(() => {
     if (!routeState && !routeTask) return;
     if (searchParams.get("tab")) return;
-    setActiveTab("tasks");
-    setTaskQuery((current) => ({ ...current, page: 1 }));
-  }, [routeState, routeTask, searchParams, setActiveTab]);
+    if (activeTab !== "tasks") setActiveTab("tasks");
+    setTaskQuery((current) => (current.page === 1 ? current : { ...current, page: 1 }));
+  }, [activeTab, routeState, routeTask, searchParams, setActiveTab]);
 
   useEffect(() => {
     if (activeTab !== "tasks") return;

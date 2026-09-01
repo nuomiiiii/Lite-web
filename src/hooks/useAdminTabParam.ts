@@ -1,9 +1,11 @@
+import { useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import {
   nextAdminTabSearchParams,
   readAdminTabRaw,
   resolveAdminTabParam,
+  shouldWriteAdminTabParam,
 } from "@/utils/adminTabParam";
 
 const EMPTY_ALIASES: readonly string[] = [];
@@ -22,24 +24,16 @@ export function useAdminTabParam<T extends string>(
     fallback,
   );
 
-  const setTab = (nextValue: string) => {
+  const setTab = useCallback((nextValue: string) => {
     const next = resolveAdminTabParam(nextValue, tabs, fallback);
+    if (!shouldWriteAdminTabParam(searchParams, next, tabs, fallback, param, aliases)) {
+      return;
+    }
     setSearchParams(
-      (current) => {
-        const currentTab = resolveAdminTabParam(
-          readAdminTabRaw(current, param, aliases),
-          tabs,
-          fallback,
-        );
-        const hasAlias = aliases.some((key) => current.has(key));
-        const matchesFallback =
-          next === fallback ? !current.get(param) : current.get(param) === next;
-        if (next === currentTab && !hasAlias && matchesFallback) return current;
-        return nextAdminTabSearchParams(current, next, fallback, param, aliases);
-      },
+      (current) => nextAdminTabSearchParams(current, next, fallback, param, aliases),
       { replace: true },
     );
-  };
+  }, [aliases, fallback, param, searchParams, setSearchParams, tabs]);
 
   return [tab, setTab];
 }

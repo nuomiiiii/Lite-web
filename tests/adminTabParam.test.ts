@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
   nextAdminTabSearchParams,
   readAdminTabRaw,
   resolveAdminTabParam,
+  shouldWriteAdminTabParam,
 } from "../src/utils/adminTabParam.ts";
 
 const TABS = ["tasks", "records", "rules"] as const;
@@ -45,3 +47,29 @@ test("writes the tab into the query and drops aliases and the default value", ()
   assert.equal(migrated.get("tab"), "current");
   assert.equal(migrated.get("view"), null);
 });
+
+test("does not rewrite the URL when the resolved tab is already represented", () => {
+  assert.equal(
+    shouldWriteAdminTabParam(new URLSearchParams("state=switched"), "tasks", TABS, "tasks"),
+    false,
+  );
+  assert.equal(
+    shouldWriteAdminTabParam(new URLSearchParams("tab=records&state=switched"), "records", TABS, "tasks"),
+    false,
+  );
+  assert.equal(
+    shouldWriteAdminTabParam(new URLSearchParams("state=switched"), "records", TABS, "tasks"),
+    true,
+  );
+  assert.equal(
+    shouldWriteAdminTabParam(new URLSearchParams("view=current"), "current", ["current", "configuration"] as const, "configuration", "tab", ["view"]),
+    true,
+  );
+});
+
+test("tab hook skips history.replaceState when the query already matches", () => {
+  const source = readFileSync(new URL("../src/hooks/useAdminTabParam.ts", import.meta.url), "utf8");
+  assert.match(source, /if \(!shouldWriteAdminTabParam\(/);
+  assert.match(source, /useCallback/);
+});
+

@@ -33,3 +33,22 @@ export function nextAdminTabSearchParams(
   for (const alias of aliases) params.delete(alias);
   return params;
 }
+
+export function shouldWriteAdminTabParam<T extends string>(
+  current: URLSearchParams,
+  next: T,
+  tabs: readonly T[],
+  fallback: T,
+  param = "tab",
+  aliases: readonly string[] = [],
+): boolean {
+  const currentTab = resolveAdminTabParam(
+    readAdminTabRaw(current, param, aliases),
+    tabs,
+    fallback,
+  );
+  const hasAlias = aliases.some((key) => current.has(key));
+  const matchesFallback =
+    next === fallback ? !current.get(param) : current.get(param) === next;
+  return next !== currentTab || hasAlias || !matchesFallback;
+}

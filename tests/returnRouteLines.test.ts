@@ -52,7 +52,8 @@ test("任务列表提供明确勾选和后端批量修改入口", () => {
 test("刷新后仍停留在当前监测页签，告警深链未指定页签时才回到任务", () => {
   assert.match(source, /useAdminTabParam\(\s*RETURN_ROUTE_TABS,\s*"tasks"/);
   assert.match(source, /if \(searchParams.get\("tab"\)\) return;/);
-  assert.match(source, /setActiveTab\("tasks"\)/);
+  assert.match(source, /if \(activeTab !== "tasks"\) setActiveTab\("tasks"\)/);
+  assert.match(source, /setTaskQuery\(\(current\) => \(current\.page === 1 \? current : \{ \.\.\.current, page: 1 \}\)\)/);
   assert.match(source, /useHeldTab\(activeTab, tabReady\)/);
   assert.match(source, /value=\{displayTab\}/);
 });
