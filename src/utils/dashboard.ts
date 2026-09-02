@@ -249,6 +249,6 @@ export function dashboardTrafficAxisWidth(values: readonly number[]): number {
     const label = formatBytes(Math.max(0, value)).replace(" ", "");
     return Math.max(longest, label.length);
   }, 0);
-  return Math.min(104, Math.max(68, longestLabel * 8 + 16));
+  return Math.min(112, Math.max(72, longestLabel * 8 + 24));
 }
 import { formatBytes } from "./unitHelper.ts";
