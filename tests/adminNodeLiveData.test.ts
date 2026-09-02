@@ -199,7 +199,7 @@ test("server details open an overview billing metrics page", () => {
   assert.match(usageSource, /data-testid="admin-node-usage-stats"/);
   assert.match(usageSource, /dashboardTrafficAxisWidth\(dailyTrafficAxisValues\(daily\)\)/);
   assert.doesNotMatch(usageSource, /longest \* 7/);
-  assert.match(usageSource, /margin=\{\{ top: 8, right: 8, left: 12, bottom: 0 \}\}/);
+  assert.match(usageSource, /margin=\{\{ top: 8, right: 8, left: 0, bottom: 0 \}\}/);
   assert.match(usageSource, /formatTrafficResetRangeLabel\(node\.traffic_reset_day\)/);
   assert.match(usageSource, /data-testid="admin-node-network-range"/);
   assert.doesNotMatch(usageSource, /points\[0\]\.time/);

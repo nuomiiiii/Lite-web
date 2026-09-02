@@ -846,13 +846,14 @@ export default function NodeUsageStats({
           config={{ down: { label: "In", color: "#FF5630" }, up: { label: "Out", color: LITE_BLUE } }}
           className="h-[200px] w-full aspect-auto [&_.recharts-wrapper]:overflow-visible [&_.recharts-surface]:overflow-visible"
         >
-          <BarChart data={daily} margin={{ top: 8, right: 8, left: 12, bottom: 0 }}>
+          <BarChart data={daily} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis dataKey="label" tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} />
             <YAxis
               tickLine={false}
               axisLine={false}
               width={dailyAxisWidth}
+              tickMargin={4}
               tick={{ fontSize: 11 }}
               tickFormatter={(value) => formatBytes(Number(value)).replace(" ", "")}
             />

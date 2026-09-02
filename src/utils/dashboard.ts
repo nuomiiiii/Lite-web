@@ -249,6 +249,7 @@ export function dashboardTrafficAxisWidth(values: readonly number[]): number {
     const label = formatBytes(Math.max(0, value)).replace(" ", "");
     return Math.max(longest, label.length);
   }, 0);
-  return Math.min(112, Math.max(72, longestLabel * 8 + 24));
+  // Right-aligned ticks: extra width becomes a blank column to the left of the labels.
+  return Math.min(76, Math.max(56, longestLabel * 7 + 12));
 }
 import { formatBytes } from "./unitHelper.ts";

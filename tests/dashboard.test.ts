@@ -93,10 +93,10 @@ test("reserves enough chart space for complete traffic labels on desktop and mob
   const sixDigitGigabytes = 1001.55 * 1024 ** 3;
   const twoDecimalGigabytes = 90_000_000_000;
   assert.ok(dashboardTrafficAxisWidth([value]) > 58);
-  assert.equal(dashboardTrafficAxisWidth([]), 72);
-  assert.ok(dashboardTrafficAxisWidth([sixDigitGigabytes]) >= 88);
-  assert.ok(dashboardTrafficAxisWidth([twoDecimalGigabytes]) >= 80);
-  assert.ok(dashboardTrafficAxisWidth([Number.MAX_VALUE]) <= 112);
+  assert.equal(dashboardTrafficAxisWidth([]), 56);
+  assert.ok(dashboardTrafficAxisWidth([sixDigitGigabytes]) >= 72);
+  assert.ok(dashboardTrafficAxisWidth([twoDecimalGigabytes]) >= 60);
+  assert.ok(dashboardTrafficAxisWidth([Number.MAX_VALUE]) <= 76);
 });
 
 test("dashboard alert links reuse existing destination filters", () => {
