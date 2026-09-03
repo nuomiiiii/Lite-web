@@ -417,7 +417,7 @@ export default function AdminDashboard() {
           <Link to="/admin/billing" className="group block h-full min-w-0 text-inherit no-underline">
             <SummaryPanel
               icon={<PaymentsOutlined />}
-              label={t("billing.metrics.today")}
+              label={t("admin_dashboard.cost_this_month")}
               value={billing ? formatBillingMoney(billing.summary.month.total, billingCurrency) : "-"}
               tone="accent"
             >

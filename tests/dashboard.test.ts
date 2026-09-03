@@ -183,12 +183,12 @@ test("summary footers in the same visual row share a wrap decision", () => {
   assert.deepEqual(groups.map((group) => group.map((item) => item.id)), [["server", "traffic"], ["alerts"]]);
 });
 
-test("cost center uses the today-cost title and banknote badge without an overlapping aside", () => {
+test("cost center uses the this-month-cost title and banknote badge without an overlapping aside", () => {
   const source = readFileSync(new URL("../src/pages/admin/dashboard.tsx", import.meta.url), "utf8");
   const block = source.match(/case "cost_center":[\s\S]*?case "resource_ranking":/);
   assert.ok(block);
   assert.match(block[0], /summary\.month\.total/);
-  assert.match(block[0], /label=\{t\("billing\.metrics\.today"\)\}/);
+  assert.match(block[0], /label=\{t\("admin_dashboard\.cost_this_month"\)\}/);
   assert.match(block[0], /icon=\{<PaymentsOutlined/);
   assert.doesNotMatch(block[0], /valueAside/);
   assert.match(block[0], /admin_dashboard\.cost_year/);
