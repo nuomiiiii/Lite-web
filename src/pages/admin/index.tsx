@@ -2383,12 +2383,13 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
   }, [dialogTab, node.uuid, open]);
 
   React.useEffect(() => {
-    if (!tokenState.twoFactorInvalid) return;
-    const field = otpFieldRef.current;
-    if (!field) return;
-    field.focus();
-    field.select();
-  }, [tokenState.submitting, tokenState.twoFactorInvalid]);
+    if (!needTwoFactor || otpSubmitting) return;
+    const timer = window.setTimeout(() => {
+      otpFieldRef.current?.focus();
+      if (tokenState.twoFactorInvalid) otpFieldRef.current?.select();
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [needTwoFactor, otpSubmitting, tokenState.twoFactorInvalid]);
 
   React.useEffect(() => {
     if (installToken) setOtpInput("");
@@ -2821,6 +2822,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
   return (
     <Dialog.Root
       open={open}
+      disableEnforceFocus={needTwoFactor}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
         if (nextOpen) {
@@ -3536,8 +3538,10 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
         </div>
         </Tabs.Root>
       </AppDialogContent>
+      {needTwoFactor ? (
       <Dialog.Root
-        open={needTwoFactor}
+        open
+        zIndex={1400}
         onOpenChange={(nextOpen) => {
           if (nextOpen) return;
           if (tokenSessionRef.current?.getSnapshot().twoFactorOpen) {
@@ -3552,50 +3556,58 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
           <Dialog.Description>
             {t("admin.nodeTable.identityAuthDescription", "请输入身份验证器中的 6 位动态口令")}
           </Dialog.Description>
-          <TextField.Root
-            ref={otpFieldRef}
-            type="text"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            autoFocus
-            color={tokenState.twoFactorInvalid ? "red" : undefined}
-            disabled={otpSubmitting}
-            value={otpInput}
-            onChange={(event) =>
-              setOtpInput(event.target.value.replace(/\D/g, "").slice(0, 6))
-            }
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && otpInput.length === 6 && !otpSubmitting) {
+          <form
+            autoComplete="on"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (otpInput.length === 6 && !otpSubmitting) {
                 void tokenSessionRef.current?.submitTwoFactor(node.uuid, otpInput);
               }
             }}
-            placeholder={t("admin.nodeTable.identityAuthInput", "6 位动态口令")}
-            aria-label={t("admin.nodeTable.identityAuthInput", "6 位动态口令")}
-          />
-          {tokenState.twoFactorInvalid ? (
-            <Text size="2" color="red" className="mt-2" role="alert">
-              {t("admin.nodeTable.twoFactorInvalid", "验证码错误")}
-            </Text>
-          ) : null}
-          <Flex justify="end" gap="2" mt="4">
-            <Button
-              variant="soft"
+          >
+            <TextField.Root
+              ref={otpFieldRef}
+              id="admin-node-deploy-otp"
+              name="one-time-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              maxLength={6}
+              color={tokenState.twoFactorInvalid ? "red" : undefined}
               disabled={otpSubmitting}
-              onClick={cancelDeployTwoFactor}
-            >
-              {t("admin.nodeTable.cancel")}
-            </Button>
-            <Button
-              disabled={otpInput.length !== 6 || otpSubmitting}
-              onClick={() => {
-                void tokenSessionRef.current?.submitTwoFactor(node.uuid, otpInput);
-              }}
-            >
-              {t("common.confirm", "确认")}
-            </Button>
-          </Flex>
+              value={otpInput}
+              onChange={(event) =>
+                setOtpInput(event.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              placeholder={t("admin.nodeTable.identityAuthInput", "6 位动态口令")}
+              aria-label={t("admin.nodeTable.identityAuthInput", "6 位动态口令")}
+            />
+            {tokenState.twoFactorInvalid ? (
+              <Text size="2" color="red" className="mt-2" role="alert">
+                {t("admin.nodeTable.twoFactorInvalid", "验证码错误")}
+              </Text>
+            ) : null}
+            <Flex justify="end" gap="2" mt="4">
+              <Button
+                type="button"
+                variant="soft"
+                disabled={otpSubmitting}
+                onClick={cancelDeployTwoFactor}
+              >
+                {t("admin.nodeTable.cancel")}
+              </Button>
+              <Button
+                type="submit"
+                disabled={otpInput.length !== 6 || otpSubmitting}
+              >
+                {t("common.confirm", "确认")}
+              </Button>
+            </Flex>
+          </form>
         </AppDialogContent>
       </Dialog.Root>
+      ) : null}
     </Dialog.Root>
   );
 }

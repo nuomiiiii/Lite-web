@@ -68,7 +68,12 @@ test("login shows two-factor only after the server asks for it", () => {
   assert.match(loginSource, /if \(result\.requiresTwoFactor\)/);
   assert.match(loginSource, /needTwoFactor \? \(/);
   assert.match(loginSource, /id="admin-login-2fa"/);
+  assert.match(loginSource, /autoComplete="username"/);
+  assert.match(loginSource, /autoComplete="current-password"/);
+  assert.match(loginSource, /autoComplete="one-time-code"/);
   assert.match(adminAuthSource, /loginTwoFactorRequiredMessage = "2FA code is required"/);
+  assert.match(loginSource, /WebkitBoxShadow: `0 0 0 100px \$\{fill\} inset`/);
+  assert.doesNotMatch(loginSource, /autoComplete="off"/);
 });
 
 test("login and RPC stay on the current origin and keep session cookies", () => {
@@ -126,6 +131,8 @@ test("login and admin chrome adapt to compact viewports", () => {
   );
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const globalStyles = readFileSync(new URL("../src/global.css", import.meta.url), "utf8");
+  assert.match(authPageSource, /alignItems: "center"/);
+  assert.doesNotMatch(authPageSource, /alignItems: \{ xs: "flex-start"/);
   assert.match(authPageSource, /max-width:599\.95px/);
   assert.match(authPageSource, /100dvh/);
   assert.match(authPageSource, /var\(--safe-area-top\)/);

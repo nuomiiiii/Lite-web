@@ -127,6 +127,17 @@ test("deploy command 2FA uses dedicated identity keys and six digits", () => {
   assert.doesNotMatch(installDialogSource, /admin\.nodeTable\.twoFactorCode/);
 });
 
+test("deploy command 2FA only mounts while verifying and keeps password-manager attributes", () => {
+  assert.match(installDialogSource, /disableEnforceFocus=\{needTwoFactor\}/);
+  assert.match(installDialogSource, /zIndex=\{1400\}/);
+  assert.match(installDialogSource, /id="admin-node-deploy-otp"/);
+  assert.match(installDialogSource, /name="one-time-code"/);
+  assert.match(installDialogSource, /autoComplete="one-time-code"/);
+  assert.match(installDialogSource, /\{needTwoFactor \? \(/);
+  assert.match(installDialogSource, /otpFieldRef\.current\?\.focus\(\)/);
+  assert.doesNotMatch(installDialogSource, /<>\s*<Dialog.Root\s+open=\{open\}/);
+});
+
 test("admin RPC2 mounts only after login", () => {
   assert.match(mainSource, /const AccountScopedRPC2/);
   assert.match(mainSource, /if \(!account\?\.logged_in\)/);

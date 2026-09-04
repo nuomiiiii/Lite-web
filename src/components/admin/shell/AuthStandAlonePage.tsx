@@ -127,12 +127,12 @@ export default function AuthStandAlonePage({
         sx={{
           flex: 1,
           display: "flex",
-          alignItems: { xs: "flex-start", sm: "center" },
+          alignItems: "center",
           justifyContent: "center",
           px: { xs: 1.5, sm: 3 },
-          pt: { xs: 1.5, sm: 4 },
+          pt: { xs: 3, sm: 4 },
           pb: {
-            xs: "max(32px, var(--safe-area-bottom))",
+            xs: "max(40px, var(--safe-area-bottom))",
             sm: 6,
           },
           position: "relative",
