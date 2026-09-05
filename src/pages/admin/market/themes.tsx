@@ -46,6 +46,7 @@ import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import ThemePreviewImage from "@/components/ThemePreviewImage";
 import { themePreviewSrc } from "@/utils/themePreviewImage";
 import { localizeThemeMarketMessage } from "@/utils/themeMarketI18n";
+import { invalidateInstalledThemes } from "@/lib/themeList";
 import {
   AdminPagination,
   useAdminPagination,
@@ -163,6 +164,7 @@ export default function ThemeMarketPage() {
         body: JSON.stringify({ source_id: theme.source_id, short: theme.short }),
       });
       toast.success(t("market.install_success"));
+      invalidateInstalledThemes();
       await loadCatalog();
     } catch (error) {
       toast.error(localizeThemeMarketMessage(error instanceof Error ? error.message : String(error), t));
@@ -192,6 +194,7 @@ export default function ThemeMarketPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ short: theme.short }),
       });
+      invalidateInstalledThemes();
       await Promise.all([loadCatalog(), refetchSettings()]);
       setSelectedTheme(null);
       toast.success(t("market.uninstall_success", "Theme uninstalled"));
