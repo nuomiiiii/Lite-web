@@ -3,9 +3,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
-import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import useMediaQuery from "@mui/material/useMediaQuery";
 import {
   createContext,
   useCallback,
@@ -15,12 +13,9 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import SettingsPageSkeleton from "@/components/admin/SettingsPageSkeleton";
-import AuthStandAlonePage, {
-  authPrimaryButtonSx,
-} from "@/components/admin/shell/AuthStandAlonePage";
 import { useSettings } from "@/lib/api";
 import {
   ALLOW_REMOTE_MANAGEMENT_SETTING_PATH,
@@ -50,57 +45,40 @@ export function useRemoteManagementGate(): GateValue {
   return context;
 }
 
-function RemoteManagementRequiredCopy() {
-  const { t } = useTranslation();
-  return (
-    <Typography sx={{ fontSize: 15, lineHeight: 1.6 }}>
-      {t("settings.general.allow_remote_management_required_description")}
-    </Typography>
-  );
-}
-
-export function RemoteManagementRequiredPanel({
+function RemoteManagementRequiredDialog({
+  open,
   onGoEnable,
   onDismiss,
-  overlay,
 }: {
+  open: boolean;
   onGoEnable: () => void;
   onDismiss?: () => void;
-  overlay?: boolean;
 }) {
   const { t } = useTranslation();
-  const location = useLocation();
-  const coverAdmin = overlay ?? location.pathname.startsWith("/admin");
   return (
-    <AuthStandAlonePage
-      testId="remote-management-required-page"
-      cardTestId="remote-management-required-card"
-      overlay={coverAdmin}
-      title={t("settings.general.allow_remote_management_required_title")}
-      description={t("settings.general.allow_remote_management_required_description")}
+    <Dialog
+      open={open}
+      onClose={onDismiss}
+      maxWidth="sm"
+      fullWidth
     >
-      <Stack spacing={1.25}>
-        <Button
-          variant="contained"
-          size="large"
-          fullWidth
-          onClick={onGoEnable}
-          sx={authPrimaryButtonSx}
-        >
+      <DialogTitle>
+        {t("settings.general.allow_remote_management_required_title")}
+      </DialogTitle>
+      <DialogContent>
+        <Typography sx={{ fontSize: 15, lineHeight: 1.6 }}>
+          {t("settings.general.allow_remote_management_required_description")}
+        </Typography>
+      </DialogContent>
+      <DialogActions>
+        {onDismiss ? (
+          <Button onClick={onDismiss}>{t("common.cancel")}</Button>
+        ) : null}
+        <Button variant="contained" onClick={onGoEnable}>
           {t("settings.general.allow_remote_management_go_enable")}
         </Button>
-        {onDismiss ? (
-          <Button
-            variant="text"
-            fullWidth
-            onClick={onDismiss}
-            sx={{ minHeight: 44, color: "text.secondary", touchAction: "manipulation" }}
-          >
-            {t("common.cancel")}
-          </Button>
-        ) : null}
-      </Stack>
-    </AuthStandAlonePage>
+      </DialogActions>
+    </Dialog>
   );
 }
 
@@ -112,7 +90,6 @@ export function RemoteManagementGateProvider({
   const { settings, loading } = useSettings();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const { t } = useTranslation();
   const enabled = isAllowRemoteManagementEnabled(settings);
 
   const ensureEnabled = useCallback(() => {
@@ -126,7 +103,6 @@ export function RemoteManagementGateProvider({
     [enabled, loading, ensureEnabled],
   );
 
-  const compact = useMediaQuery("(max-width:599.95px)");
   const goEnable = useCallback(() => {
     setOpen(false);
     navigate(ALLOW_REMOTE_MANAGEMENT_SETTING_PATH);
@@ -135,41 +111,11 @@ export function RemoteManagementGateProvider({
   return (
     <RemoteManagementGateContext.Provider value={value}>
       {children}
-      <Dialog
+      <RemoteManagementRequiredDialog
         open={open}
-        onClose={() => setOpen(false)}
-        fullScreen={compact}
-        maxWidth="sm"
-        fullWidth
-        slotProps={{
-          paper: compact
-            ? { elevation: 0, sx: { bgcolor: "transparent", backgroundImage: "none" } }
-            : undefined,
-        }}
-      >
-        {compact ? (
-          <RemoteManagementRequiredPanel
-            overlay={false}
-            onGoEnable={goEnable}
-            onDismiss={() => setOpen(false)}
-          />
-        ) : (
-          <>
-            <DialogTitle>
-              {t("settings.general.allow_remote_management_required_title")}
-            </DialogTitle>
-            <DialogContent>
-              <RemoteManagementRequiredCopy />
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setOpen(false)}>{t("common.cancel")}</Button>
-              <Button variant="contained" onClick={goEnable}>
-                {t("settings.general.allow_remote_management_go_enable")}
-              </Button>
-            </DialogActions>
-          </>
-        )}
-      </Dialog>
+        onGoEnable={goEnable}
+        onDismiss={() => setOpen(false)}
+      />
     </RemoteManagementGateContext.Provider>
   );
 }
@@ -197,8 +143,12 @@ export function RequireAllowRemoteManagement({
   if (loading) return <>{loadingFallback ?? <SettingsPageSkeleton />}</>;
   if (isAllowRemoteManagementEnabled(settings)) return <>{children}</>;
   return (
-    <RemoteManagementRequiredPanel
-      onGoEnable={() => navigate(ALLOW_REMOTE_MANAGEMENT_SETTING_PATH)}
-    />
+    <>
+      {loadingFallback ?? <SettingsPageSkeleton />}
+      <RemoteManagementRequiredDialog
+        open
+        onGoEnable={() => navigate(ALLOW_REMOTE_MANAGEMENT_SETTING_PATH)}
+      />
+    </>
   );
 }

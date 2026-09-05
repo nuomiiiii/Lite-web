@@ -62,14 +62,14 @@ test("remote management pages and launchers require the site switch", () => {
   assert.match(gateSource, /ALLOW_REMOTE_MANAGEMENT_SETTING_PATH/);
 });
 
-test("the remote-management required page reuses the login page shell", () => {
-  assert.match(gateSource, /AuthStandAlonePage/);
-  assert.match(gateSource, /authPrimaryButtonSx/);
-  assert.match(gateSource, /remote-management-required-page/);
-  assert.match(gateSource, /remote-management-required-card/);
-  assert.match(gateSource, /fullScreen=\{compact\}/);
-  assert.match(gateSource, /max-width:599\.95px/);
+test("the remote-management required prompt is a dialog on every screen size", () => {
+  assert.match(gateSource, /<Dialog/);
+  assert.match(gateSource, /maxWidth="sm"/);
   assert.match(gateSource, /onDismiss/);
+  assert.match(gateSource, /settings\.general\.allow_remote_management_go_enable/);
+  assert.doesNotMatch(gateSource, /AuthStandAlonePage/);
+  assert.doesNotMatch(gateSource, /fullScreen/);
+  assert.doesNotMatch(gateSource, /createPortal/);
   assert.doesNotMatch(gateSource, /sx=\{\{ py: 6, maxWidth: 560 \}\}/);
 });
 
