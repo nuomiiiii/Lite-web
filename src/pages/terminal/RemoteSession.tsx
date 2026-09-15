@@ -206,7 +206,7 @@ export default function RemoteSession({ tabId, node, live, online, active, compa
   const [terminalReady, setTerminalReady] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
   const [connectionError, setConnectionError] = useState("");
-  const [sidePanel, setSidePanel] = useState<SidePanel>(() => window.innerWidth > 900 ? "files" : null);
+  const [sidePanel, setSidePanel] = useState<SidePanel>(null);
   const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null);
   const [sideWidth, setSideWidth] = useState(400);
   const [reconnectKey, setReconnectKey] = useState(0);

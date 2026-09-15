@@ -43,6 +43,7 @@ test("file manager reuses the shared table header and keeps multi-select rows", 
   assert.match(source, /common\.select_all/);
   assert.match(source, /hour12: false/);
   assert.match(source, /file\.upload\.cancel/);
+  assert.match(source, /offset: sent/);
   assert.match(source, /className="remote-transfer-cancel"/);
   assert.match(source, /\{uploading && \(/);
   assert.match(source, /terminal\.files\.upload_cancelled/);

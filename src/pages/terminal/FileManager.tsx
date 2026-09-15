@@ -564,6 +564,7 @@ const FileManager = forwardRef<FileManagerHandle, Props>(({ send, connected }, r
           const buffer = await file.slice(sent, sent + uploadChunkSize).arrayBuffer();
           await request("file.upload.chunk", {
             upload_id: uploadID,
+            offset: sent,
             data: toBase64(buffer),
           });
           sent += buffer.byteLength;

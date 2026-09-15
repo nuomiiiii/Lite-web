@@ -179,6 +179,11 @@ test("file chrome shares one left inset for path, toolbar, and options", () => {
   assert.match(terminalCss, /\.remote-file-toolbar \.MuiButton-root svg \{[\s\S]*display: block !important;/);
 });
 
+test("desktop remote sessions keep the file sidebar closed until opened", () => {
+  assert.match(terminalSource, /useState<SidePanel>\(null\)/);
+  assert.doesNotMatch(terminalSource, /innerWidth > 900 \? "files"/);
+});
+
 test("remote session no longer treats the Lite host as a protected node", () => {
   assert.doesNotMatch(terminalSource, /remote_control_protected/);
   assert.doesNotMatch(terminalSource, /local_address_blocked/);
