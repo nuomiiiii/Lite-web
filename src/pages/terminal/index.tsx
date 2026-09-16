@@ -1103,7 +1103,6 @@ function TerminalWorkspaceInner() {
       <Dialog
         {...remoteConfirmDialogProps}
         open={reauthOpen}
-        disableEscapeKeyDown
         onClose={(_event, reason) => {
           if (reason === "backdropClick" || reason === "escapeKeyDown") return;
           setReauthOpen(false);

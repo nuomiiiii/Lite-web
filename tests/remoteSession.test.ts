@@ -292,8 +292,8 @@ test("remote reauth is a standalone page until the workspace is entered", () => 
   assert.match(workspace, /className="remote-workspace"/);
   assert.match(workspace, /open=\{reauthOpen\}/);
   assert.match(workspace, /data-testid="remote-auth-dialog"/);
-  assert.match(workspace, /disableEscapeKeyDown/);
   assert.match(workspace, /reason === "backdropClick"/);
+  assert.match(workspace, /reason === "escapeKeyDown"/);
   assert.match(workspace, /cancelAsText=\{workspaceEntered\}/);
   assert.match(workspace, /width: "auto"/);
   assert.doesNotMatch(workspace, /if \(!authorized\)/);
