@@ -765,6 +765,7 @@
     "export": "导出",
     "free": "免费",
     "generate": "生成",
+    "generate_key": "生成",
     "go_home": "返回首页",
     "group": "分组",
     "have_been_omitted": "{{count}}已省略",
