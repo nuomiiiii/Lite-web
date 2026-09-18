@@ -67,16 +67,20 @@ import {
   LinkIcon,
   LockKeyhole,
   Network,
-  Plus,
   Search,
   Shield,
   Terminal,
+  Trash2,
   X,
 } from "@/components/admin/muiIcons";
 import Flag from "@/components/Flag";
 import { useAccount } from "@/contexts/AccountContext";
 import { useNodeDetails } from "@/contexts/NodeDetailsContext";
-import { nodeOnlineState, useAdminNodeLiveData } from "@/hooks/use-admin-node-live-data";
+import {
+  AdminNodeLiveDataProvider,
+  nodeOnlineState,
+  useAdminNodeLiveData,
+} from "@/hooks/use-admin-node-live-data";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAdminTabParam } from "@/hooks/useAdminTabParam";
 import {
@@ -146,9 +150,10 @@ type MCPOperation = {
   created_at: string;
 };
 
-const MCP_HISTORY_DAYS = 7;
+const MCP_HISTORY_DAYS = 3;
 const MCP_LEASES_PAGE_SIZE = 5;
 const MCP_LIVE_POLL_MS = 4000;
+const MCP_USER_MANUAL_URL = "https://nuomiiiii.github.io/Lite-document/remote/mcp";
 
 const CARD_SX = {
   border: "1px solid",
@@ -257,7 +262,9 @@ export default function MCPPage() {
   return (
     <RequireAllowRemoteManagement>
       <RequireAllowMCP>
-        <MCPPageBody />
+        <AdminNodeLiveDataProvider>
+          <MCPPageBody />
+        </AdminNodeLiveDataProvider>
       </RequireAllowMCP>
     </RequireAllowRemoteManagement>
   );
@@ -272,8 +279,8 @@ function MCPPageBody() {
   const [leases, setLeases] = useState<MCPLease[]>([]);
   const [operations, setOperations] = useState<MCPOperation[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [configOpen, setConfigOpen] = useState(false);
   const [authorizedOpen, setAuthorizedOpen] = useState(false);
+  const [authorizedRedirectURI, setAuthorizedRedirectURI] = useState("");
   const authorizeID = params.get("authorize")?.trim() || "";
   const prefillNodes = useMemo(
     () =>
@@ -340,7 +347,6 @@ function MCPPageBody() {
         </AdminPageTitle>
         <Button
           variant="contained"
-          startIcon={<Plus size={16} />}
           className="shrink-0"
           sx={{
             ...ADMIN_LIST_ACTION_SX,
@@ -421,7 +427,6 @@ function MCPPageBody() {
           settings={settings}
           leases={activeLeases}
           onOpenLeases={() => setTab("leases")}
-          onOpenConfig={() => setConfigOpen(true)}
           onSettingsSaved={(next) =>
             setSettings((current) => (current ? { ...current, ...next } : current))
           }
@@ -445,28 +450,15 @@ function MCPPageBody() {
         />
       ) : null}
       {tab === "operations" ? (
-        <MCPOperationsTab operations={operations} leases={leases} />
+        <MCPOperationsTab operations={operations} leases={leases} onReload={load} />
       ) : null}
 
-      <MCPClientConfigDialog
-        open={configOpen}
-        endpoint={settings?.endpoint || ""}
-        onClose={() => setConfigOpen(false)}
-      />
-
-      {settings ? (
+      {settings && authorizeID ? (
         <MCPAuthorizeDialog
-          open={Boolean(authorizeID)}
+          open
           requestID={authorizeID === "new" ? "" : authorizeID}
           prefillNodes={prefillNodes}
           settings={settings}
-          onSelectRequest={(id) => {
-            setParams((current) => {
-              const next = new URLSearchParams(current);
-              next.set("authorize", id);
-              return next;
-            });
-          }}
           onClose={() => {
             setParams((current) => {
               const next = new URLSearchParams(current);
@@ -478,13 +470,22 @@ function MCPPageBody() {
           }}
           onApproved={load}
           onConnected={(redirectURI) => {
-            deliverOAuthCallback(redirectURI);
+            const uri = redirectURI.trim();
+            deliverOAuthCallback(uri);
+            setAuthorizedRedirectURI(uri);
             setAuthorizedOpen(true);
           }}
         />
       ) : null}
 
-      <MCPAuthorizedDialog open={authorizedOpen} onClose={() => setAuthorizedOpen(false)} />
+      <MCPAuthorizedDialog
+        open={authorizedOpen}
+        redirectURI={authorizedRedirectURI}
+        onClose={() => {
+          setAuthorizedOpen(false);
+          setAuthorizedRedirectURI("");
+        }}
+      />
     </Stack>
   );
 }
@@ -493,14 +494,12 @@ function MCPSettingsTab({
   settings,
   leases,
   onOpenLeases,
-  onOpenConfig,
   onSettingsSaved,
   onReloadLeases,
 }: {
   settings: MCPSettings | null;
   leases: MCPLease[];
   onOpenLeases: () => void;
-  onOpenConfig: () => void;
   onSettingsSaved: (next: Partial<MCPSettings>) => void;
   onReloadLeases: () => Promise<void>;
 }) {
@@ -649,19 +648,22 @@ function MCPSettingsTab({
               {t("mcp.copy_endpoint")}
             </Button>
             <Button
-              onClick={onOpenConfig}
+              href={MCP_USER_MANUAL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               endIcon={<ChevronRight size={16} />}
               sx={{
                 textTransform: "none",
                 fontWeight: 500,
                 fontSize: 12,
-                color: "primary.main",
+                color: "error.main",
                 px: 0,
                 minWidth: 0,
                 minHeight: 20,
                 py: 0,
                 width: "100%",
                 justifyContent: "center",
+                "&:hover": { color: "error.dark", bgcolor: "transparent" },
               }}
             >
               {t("mcp.view_guide")}
@@ -1114,9 +1116,10 @@ function CompactLeaseRow({
       >
         <Clock size={16} />
         <Box component="span" sx={{ fontVariantNumeric: "tabular-nums" }}>
-          {t("mcp.remaining", { time: formatRemaining(lease.expires_at, now) })}
+          {t("mcp.remaining", { time: leaseRemainingText(lease, now) })}
         </Box>
       </Stack>
+      {lease.status === "active" ? (
       <Button
         color="error"
         onClick={async () => {
@@ -1134,6 +1137,11 @@ function CompactLeaseRow({
       >
         {t("mcp.revoke_authorization")}
       </Button>
+      ) : (
+        <Badge color={leaseStatusColor(lease.status, 0)}>
+          {leaseStatusLabel(lease.status, 0, t)}
+        </Badge>
+      )}
     </Box>
   );
 }
@@ -1181,18 +1189,28 @@ function leaseStatusLabel(status: string, running: number, t: Translate) {
   if (status === "active") return t("mcp.waiting");
   if (status === "revoked") return t("mcp.status_revoked");
   if (status === "expired") return t("mcp.status_expired");
+  if (status === "denied") return t("mcp.status_denied");
   return t(`mcp.status_${status}`, { defaultValue: status });
 }
 
 function leaseStatusColor(status: string, running: number) {
   if (running > 0 || status === "active") return "green";
-  if (status === "revoked" || status === "expired") return "red";
+  if (status === "revoked" || status === "expired" || status === "denied") return "red";
   return "gray";
+}
+
+function leaseRemainingText(lease: MCPLease, now: number) {
+  if (lease.status !== "active") return "—";
+  return formatRemaining(lease.expires_at, now);
+}
+
+function leaseIsPurgeable(lease: MCPLease) {
+  return lease.status === "denied" || lease.status === "expired" || lease.status === "revoked";
 }
 
 function operationResultColor(kind: string) {
   if (kind === "success") return "green";
-  if (kind === "failed") return "red";
+  if (kind === "failed" || kind === "denied") return "red";
   return "blue";
 }
 
@@ -1296,7 +1314,7 @@ function operationActionLabel(op: MCPOperation, t: Translate) {
   return op.tool_name;
 }
 
-function operationResultKind(state: string): "success" | "failed" | "running" | "authorized" {
+function operationResultKind(state: string): "success" | "failed" | "running" | "authorized" | "denied" {
   return operationResultKey(state);
 }
 
@@ -1325,6 +1343,8 @@ function MCPLeasesTab({
   const [selectedID, setSelectedID] = useState("");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
+  const [revokeAllOpen, setRevokeAllOpen] = useState(false);
+  const [revokingAll, setRevokingAll] = useState(false);
   const nodes = useMemo(() => nodeLookup(nodeDetail), [nodeDetail]);
 
   useEffect(() => {
@@ -1385,6 +1405,20 @@ function MCPLeasesTab({
     await onReload();
   };
 
+  const revokeAll = async () => {
+    setRevokingAll(true);
+    try {
+      await mcpFetch("/api/admin/mcp/leases/revoke-all", { method: "POST" });
+      toast.success(t("mcp.revoked"));
+      setRevokeAllOpen(false);
+      await onReload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRevokingAll(false);
+    }
+  };
+
   return (
     <Stack spacing={2}>
       <Stack
@@ -1398,19 +1432,46 @@ function MCPLeasesTab({
           </Typography>
         </Box>
         {active.length ? (
-          <Button
-            color="error"
-            onClick={async () => {
-              await mcpFetch("/api/admin/mcp/leases/revoke-all", { method: "POST" });
-              toast.success(t("mcp.revoked"));
-              await onReload();
-            }}
-            sx={{ textTransform: "none", fontWeight: 600, alignSelf: isMobile ? "flex-end" : "auto", flexShrink: 0 }}
-          >
-            {t("mcp.revoke_all")}
-          </Button>
+        <Button
+          color="error"
+          variant="outlined"
+          onClick={() => setRevokeAllOpen(true)}
+          disabled={revokingAll}
+          sx={{
+            ...ADMIN_LIST_ACTION_SX,
+            bgcolor: "background.paper",
+            alignSelf: isMobile ? "stretch" : "auto",
+            flexShrink: 0,
+            width: isMobile ? "100%" : "auto",
+          }}
+        >
+          {t("mcp.revoke_all")}
+        </Button>
         ) : null}
       </Stack>
+      <Dialog
+        open={revokeAllOpen}
+        onClose={() => {
+          if (!revokingAll) setRevokeAllOpen(false);
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>{t("mcp.revoke_all_title")}</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: 14, lineHeight: 1.6, color: "text.secondary" }}>
+            {t("mcp.revoke_all_confirm")}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button disabled={revokingAll} onClick={() => setRevokeAllOpen(false)}>
+            {t("common.cancel")}
+          </Button>
+          <Button color="error" variant="contained" disabled={revokingAll} onClick={() => void revokeAll()}>
+            {t("common.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <AdminListShell>
         <AdminListFiltersBar>
           <Stack
@@ -1432,6 +1493,7 @@ function MCPLeasesTab({
               <MenuItem value="waiting">{t("mcp.waiting")}</MenuItem>
               <MenuItem value="revoked">{t("mcp.status_revoked")}</MenuItem>
               <MenuItem value="expired">{t("mcp.status_expired")}</MenuItem>
+              <MenuItem value="denied">{t("mcp.status_denied")}</MenuItem>
             </AdminListSelect>
             <AdminListSearch
               value={query}
@@ -1488,7 +1550,7 @@ function MCPLeasesTab({
                     cells={[
                       [t("mcp.col_servers"), nodeNames(lease.target_uuids, nodes)],
                       [t("mcp.col_mode"), <Badge key="mode" color="blue">{t("mcp.full_mode_short")}</Badge>],
-                      [t("mcp.col_remaining"), formatRemaining(lease.expires_at, now)],
+                      [t("mcp.col_remaining"), leaseRemainingText(lease, now)],
                       [
                         t("mcp.col_status"),
                         <Badge key="status" color={leaseStatusColor(lease.status, running)}>
@@ -1574,7 +1636,7 @@ function MCPLeasesTab({
                         </TableCell>
                         <TableCell data-label={t("mcp.col_remaining")}>
                           <Typography sx={{ fontVariantNumeric: "tabular-nums" }}>
-                            {formatRemaining(lease.expires_at, now)}
+                            {leaseRemainingText(lease, now)}
                           </Typography>
                         </TableCell>
                         <TableCell data-label={t("mcp.col_status")}>
@@ -1871,15 +1933,19 @@ function LeaseDetailItem({ label, value }: { label: string; value: string }) {
 function MCPOperationsTab({
   operations,
   leases,
+  onReload,
 }: {
   operations: MCPOperation[];
   leases: MCPLease[];
+  onReload: () => Promise<void>;
 }) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const { nodeDetail } = useNodeDetails();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
+  const [purgeOpen, setPurgeOpen] = useState(false);
+  const [purging, setPurging] = useState(false);
   const leaseByID = useMemo(() => {
     const map = new Map<string, MCPLease>();
     for (const lease of leases) map.set(lease.id, lease);
@@ -1945,6 +2011,22 @@ function MCPOperationsTab({
     URL.revokeObjectURL(url);
   };
 
+  const canPurge = leases.some(leaseIsPurgeable);
+
+  const purgeHistory = async () => {
+    setPurging(true);
+    try {
+      await mcpFetch("/api/admin/mcp/history/purge", { method: "POST" });
+      toast.success(t("common.deleted_successfully"));
+      setPurgeOpen(false);
+      await onReload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPurging(false);
+    }
+  };
+
   return (
     <Stack spacing={2}>
       <Stack
@@ -1960,23 +2042,74 @@ function MCPOperationsTab({
             {t("mcp.operations_description", { days: MCP_HISTORY_DAYS })}
           </Typography>
         </Box>
-        <Button
-          variant="outlined"
-          startIcon={<Download size={16} />}
-          onClick={exportRows}
-          disabled={!filtered.length}
+        {canPurge || rows.length ? (
+        <Stack
+          direction="row"
+          spacing={1.5}
           sx={{
-            ...ADMIN_LIST_ACTION_SX,
-            bgcolor: "background.paper",
+            width: isMobile ? "100%" : "auto",
             flexShrink: 0,
             ml: isMobile ? 0 : "auto",
-            alignSelf: isMobile ? "stretch" : "auto",
-            width: isMobile ? "100%" : "auto",
           }}
         >
-          {t("mcp.export_log")}
-        </Button>
+          {canPurge ? (
+          <Button
+            color="error"
+            variant="outlined"
+            startIcon={<Trash2 size={16} />}
+            onClick={() => setPurgeOpen(true)}
+            disabled={purging}
+            sx={{
+              ...ADMIN_LIST_ACTION_SX,
+              bgcolor: "background.paper",
+              flex: isMobile ? 1 : undefined,
+              minWidth: 0,
+            }}
+          >
+            {t("mcp.delete_history")}
+          </Button>
+          ) : null}
+          {rows.length ? (
+          <Button
+            variant="outlined"
+            startIcon={<Download size={16} />}
+            onClick={exportRows}
+            sx={{
+              ...ADMIN_LIST_ACTION_SX,
+              bgcolor: "background.paper",
+              flex: isMobile ? 1 : undefined,
+              minWidth: 0,
+            }}
+          >
+            {t("mcp.export_log")}
+          </Button>
+          ) : null}
+        </Stack>
+        ) : null}
       </Stack>
+      <Dialog
+        open={purgeOpen}
+        onClose={() => {
+          if (!purging) setPurgeOpen(false);
+        }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>{t("common.confirm_delete")}</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: 14, lineHeight: 1.6, color: "text.secondary" }}>
+            {t("mcp.delete_history_confirm")}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button disabled={purging} onClick={() => setPurgeOpen(false)}>
+            {t("common.cancel")}
+          </Button>
+          <Button color="error" variant="contained" disabled={purging} onClick={() => void purgeHistory()}>
+            {t("common.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <AdminListShell>
       <AdminListFiltersBar>
         <Stack
@@ -2134,16 +2267,17 @@ function MCPOperationsTab({
   );
 }
 
-function MCPClientConfigDialog({
+function MCPAuthorizedDialog({
   open,
-  endpoint,
+  redirectURI,
   onClose,
 }: {
   open: boolean;
-  endpoint: string;
+  redirectURI: string;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const callbackURL = redirectURI.trim();
   return (
     <Dialog
       open={open}
@@ -2153,69 +2287,6 @@ function MCPClientConfigDialog({
       slotProps={{
         paper: {
           sx: { width: 600, maxWidth: "calc(100% - 64px)", borderRadius: "12px" },
-        },
-      }}
-    >
-      <DialogTitle>
-        {t("mcp.client_config_title")}
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontWeight: 400 }}>
-          {t("mcp.client_config_help")}
-        </Typography>
-      </DialogTitle>
-      <DialogContent>
-        <Typography sx={{ fontSize: 13, mb: 1 }}>{t("mcp.endpoint")}</Typography>
-        <Box
-          sx={{
-            p: 2,
-            bgcolor: "action.hover",
-            borderRadius: "8px",
-            fontFamily: "Consolas, SFMono-Regular, monospace",
-            fontSize: 13,
-            lineHeight: 1.7,
-            overflowWrap: "anywhere",
-          }}
-        >
-          {endpoint || "—"}
-        </Box>
-        <Typography sx={{ mt: 2.25, mb: 1.25 }}>{t("mcp.client_config_body")}</Typography>
-        <Typography sx={{ fontSize: 12, color: "text.secondary", lineHeight: 1.6 }}>
-          {t("mcp.client_config_hint")}
-        </Typography>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider" }}>
-        <Button onClick={onClose}>{t("common.close", "关闭")}</Button>
-        <Button
-          variant="contained"
-          disabled={!endpoint}
-          onClick={async () => {
-            await navigator.clipboard?.writeText(endpoint);
-            toast.success(t("copy_success"));
-          }}
-        >
-          {t("mcp.copy_endpoint")}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
-function MCPAuthorizedDialog({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="xs"
-      fullWidth
-      slotProps={{
-        paper: {
-          sx: { width: 420, maxWidth: "calc(100% - 32px)", borderRadius: "12px" },
         },
       }}
     >
@@ -2242,6 +2313,39 @@ function MCPAuthorizedDialog({
             {t("mcp.authorized_body")}
           </Typography>
         </Stack>
+        <Typography sx={{ mt: 1.5, fontSize: 13, lineHeight: 1.6, color: "text.secondary" }}>
+          {t("mcp.authorized_ttl")}
+        </Typography>
+        {callbackURL ? (
+          <Box sx={{ mt: 2.25 }}>
+            <Typography sx={{ fontSize: 13, mb: 1 }}>{t("mcp.redirect_uri")}</Typography>
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: "action.hover",
+                borderRadius: "8px",
+                fontFamily: "Consolas, SFMono-Regular, monospace",
+                fontSize: 13,
+                lineHeight: 1.7,
+                overflowWrap: "anywhere",
+              }}
+            >
+              {callbackURL}
+            </Box>
+            <Button
+              variant="outlined"
+              startIcon={<Copy size={16} />}
+              disabled={!callbackURL}
+              onClick={async () => {
+                await navigator.clipboard?.writeText(callbackURL);
+                toast.success(t("copy_success"));
+              }}
+              sx={{ mt: 1.5, ...ADMIN_LIST_ACTION_SX }}
+            >
+              {t("mcp.copy_callback")}
+            </Button>
+          </Box>
+        ) : null}
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2, borderTop: "1px solid", borderColor: "divider" }}>
         <Button variant="contained" onClick={onClose}>
@@ -2260,7 +2364,6 @@ function MCPAuthorizeDialog({
   onClose,
   onApproved,
   onConnected,
-  onSelectRequest,
 }: {
   open: boolean;
   requestID: string;
@@ -2269,7 +2372,6 @@ function MCPAuthorizeDialog({
   onClose: () => void;
   onApproved: () => Promise<void>;
   onConnected: (redirectURI: string) => void;
-  onSelectRequest: (id: string) => void;
 }) {
   const { t } = useTranslation();
   const compact = useMediaQuery("(max-width:599.95px)", { noSsr: true });
@@ -2282,7 +2384,7 @@ function MCPAuthorizeDialog({
   const [clientID, setClientID] = useState("");
   const [redirectURI, setRedirectURI] = useState("");
   const [pendingRequests, setPendingRequests] = useState<
-    { id: string; client_name?: string; client_id?: string; redirect_uri?: string }[]
+    { id: string; client_name?: string; client_id?: string; redirect_uri?: string; ready?: boolean }[]
   >([]);
   const [selected, setSelected] = useState<string[]>(prefillNodes);
   const [preset, setPreset] = useState<number | "custom">(settings.mcp_default_duration_minutes);
@@ -2292,7 +2394,9 @@ function MCPAuthorizeDialog({
   const [secret, setSecret] = useState("");
   const [query, setQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [denyingID, setDenyingID] = useState("");
   const [missingClient, setMissingClient] = useState(!requestID);
+  const [requestReady, setRequestReady] = useState(false);
 
   useEffect(() => {
     setSelected(prefillNodes);
@@ -2304,20 +2408,40 @@ function MCPAuthorizeDialog({
       setClientName("");
       setClientID("");
       setRedirectURI("");
+      setRequestReady(false);
       return;
     }
-    mcpFetch<{ client_name: string; status: string; client_id?: string; redirect_uri?: string }>(
-      `/api/admin/mcp/authorization-requests/${requestID}`,
-    )
-      .then((data) => {
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const data = await mcpFetch<{
+          client_name: string;
+          status: string;
+          client_id?: string;
+          redirect_uri?: string;
+          ready?: boolean;
+        }>(`/api/admin/mcp/authorization-requests/${requestID}`);
+        if (cancelled) return;
         setClientName(data.client_name || requestID);
         setClientID(data.client_id || "");
         setRedirectURI(data.redirect_uri || "");
+        setRequestReady(data.ready !== false);
         setMissingClient(false);
-      })
-      .catch(() => {
-        setMissingClient(true);
-      });
+      } catch {
+        if (!cancelled) {
+          setMissingClient(true);
+          setRequestReady(false);
+        }
+      }
+    };
+    const timer = window.setInterval(() => {
+      void tick();
+    }, 2000);
+    void tick();
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, [open, requestID]);
 
   useEffect(() => {
@@ -2329,7 +2453,7 @@ function MCPAuthorizeDialog({
     const tick = async () => {
       try {
         const data = await mcpFetch<{
-          requests: { id: string; client_name?: string; client_id?: string; redirect_uri?: string }[];
+          requests: { id: string; client_name?: string; client_id?: string; redirect_uri?: string; ready?: boolean }[];
         }>("/api/admin/mcp/authorization-requests");
         if (!cancelled) setPendingRequests(data.requests || []);
       } catch {
@@ -2382,8 +2506,147 @@ function MCPAuthorizeDialog({
     : durationMinutes != null && durationMinutes > settings.mcp_max_duration_minutes
       ? "range"
       : null;
-  const formatted = durationMinutes ? formatDurationLabel(durationMinutes) : null;
-  const canSubmit = Boolean(requestID && !missingClient && selected.length && durationMinutes && secret && !durationError && !submitting);
+  const canSubmit = Boolean(requestID && !missingClient && requestReady && selected.length && durationMinutes && secret && !durationError && !submitting && !denyingID);
+
+  const denyRequest = async (id: string, closeAfter: boolean) => {
+    if (!id || denyingID) return;
+    setDenyingID(id);
+    try {
+      const result = await mcpFetch<{ redirect_uri?: string }>(
+        `/api/admin/mcp/authorization-requests/${id}/deny`,
+        { method: "POST" },
+      );
+      deliverOAuthCallback(result.redirect_uri || "");
+      toast.success(t("mcp.status_denied"));
+      setPendingRequests((current) => current.filter((req) => req.id !== id));
+      await onApproved();
+      if (closeAfter) onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDenyingID("");
+    }
+  };
+
+  const dialogPaperSx = {
+    width: compact ? "100%" : 600,
+    maxWidth: compact ? "100%" : "calc(100% - 64px)",
+    height: compact ? "100%" : undefined,
+    maxHeight: compact ? "100%" : undefined,
+    display: "flex",
+    flexDirection: "column",
+    overflow: compact ? "hidden" : undefined,
+    borderRadius: compact ? 0 : "12px",
+  } as const;
+
+  if (!requestID) {
+    return (
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullScreen={compact}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{ paper: { sx: dialogPaperSx } }}
+      >
+        <DialogTitle
+          sx={{
+            flexShrink: 0,
+            px: { xs: 2, sm: 3 },
+            pt: { xs: 2.25, sm: 3 },
+            pb: 2,
+            pr: 6,
+            fontSize: 20,
+            fontWeight: 700,
+            lineHeight: "28px",
+          }}
+        >
+          {t("mcp.new_authorization")}
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.625, fontWeight: 400 }}>
+            {t("mcp.view_requests_subtitle")}
+          </Typography>
+          <IconButton onClick={onClose} sx={{ position: "absolute", right: 12, top: 12 }} aria-label={t("common.close")}>
+            <X size={18} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            px: { xs: 2, sm: 3 },
+            pb: 2.75,
+          }}
+        >
+          <Alert
+            severity="info"
+            sx={{ mb: 2.5, "& .MuiAlert-message": { width: "100%", minWidth: 0 } }}
+          >
+            <Typography sx={{ fontSize: 14, lineHeight: 1.6 }}>
+              {t("mcp.connect_from_client", { endpoint: settings.endpoint })}
+            </Typography>
+          </Alert>
+          {pendingRequests.length > 0 ? (
+            <Stack spacing={1}>
+              <Typography sx={{ fontSize: 13 }}>{t("mcp.pick_request")}</Typography>
+              {pendingRequests.map((req) => (
+                <Stack
+                  key={req.id}
+                  direction="row"
+                  spacing={1.25}
+                  sx={{
+                    p: "12px 14px",
+                    borderRadius: "8px",
+                    border: "1px solid",
+                    borderColor: "divider",
+                    alignItems: "center",
+                  }}
+                >
+                  <Box sx={{ minWidth: 0, flex: 1, textAlign: "left" }}>
+                    <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                      {req.client_name || t("mcp.unknown_client")}
+                    </Typography>
+                    <Typography sx={{ fontSize: 12, color: "text.secondary", mt: "3px" }} noWrap>
+                      {req.redirect_uri || req.client_id || req.id}
+                    </Typography>
+                  </Box>
+                  <Button
+                    color="error"
+                    variant="outlined"
+                    disabled={Boolean(denyingID)}
+                    onClick={() => void denyRequest(req.id, false)}
+                    sx={{
+                      ...ADMIN_LIST_ACTION_SX,
+                      flexShrink: 0,
+                      bgcolor: "background.paper",
+                    }}
+                  >
+                    {t("mcp.deny")}
+                  </Button>
+                </Stack>
+              ))}
+            </Stack>
+          ) : (
+            <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+              {t("mcp.no_pending_requests")}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions
+          sx={{
+            flexShrink: 0,
+            px: { xs: 2, sm: 3 },
+            py: 2,
+            justifyContent: "flex-end",
+            borderTop: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <Button onClick={onClose}>{t("common.close")}</Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog
@@ -2392,20 +2655,7 @@ function MCPAuthorizeDialog({
       fullScreen={compact}
       maxWidth="sm"
       fullWidth
-      slotProps={{
-        paper: {
-          sx: {
-            width: compact ? "100%" : 600,
-            maxWidth: compact ? "100%" : "calc(100% - 64px)",
-            height: compact ? "100%" : undefined,
-            maxHeight: compact ? "100%" : undefined,
-            display: "flex",
-            flexDirection: "column",
-            overflow: compact ? "hidden" : undefined,
-            borderRadius: compact ? 0 : "12px",
-          },
-        },
-      }}
+      slotProps={{ paper: { sx: dialogPaperSx } }}
     >
       <DialogTitle
         sx={{
@@ -2436,49 +2686,7 @@ function MCPAuthorizeDialog({
           pb: 2.75,
         }}
       >
-        {missingClient ? (
-          <>
-            <Alert
-              severity="info"
-              sx={{ mb: 2.5, "& .MuiAlert-message": { width: "100%", minWidth: 0 } }}
-            >
-              <Typography sx={{ fontSize: 14, lineHeight: 1.6 }}>
-                {t("mcp.connect_from_client", { endpoint: settings.endpoint })}
-              </Typography>
-            </Alert>
-            {pendingRequests.length > 0 ? (
-              <Stack spacing={1} sx={{ mb: 2.5 }}>
-                <Typography sx={{ fontSize: 13 }}>{t("mcp.pick_request")}</Typography>
-                {pendingRequests.map((req) => (
-                  <Box
-                    key={req.id}
-                    onClick={() => onSelectRequest(req.id)}
-                    sx={{
-                      p: "12px 14px",
-                      borderRadius: "8px",
-                      border: "1px solid",
-                      borderColor: "divider",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      "&:hover": { bgcolor: "action.hover" },
-                    }}
-                  >
-                    <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                      {req.client_name || t("mcp.unknown_client")}
-                    </Typography>
-                    <Typography sx={{ fontSize: 12, color: "text.secondary", mt: "3px" }} noWrap>
-                      {req.redirect_uri || req.client_id || req.id}
-                    </Typography>
-                  </Box>
-                ))}
-              </Stack>
-            ) : (
-              <Typography sx={{ fontSize: 12, color: "text.secondary", mb: 2.5 }}>
-                {t("mcp.no_pending_requests")}
-              </Typography>
-            )}
-          </>
-        ) : (
+        {missingClient ? null : (
           <Stack
             direction={isMobile ? "column" : "row"}
             spacing={1.5}
@@ -2503,7 +2711,7 @@ function MCPAuthorizeDialog({
                 <Typography sx={{ fontSize: 12, color: "text.secondary", mt: "3px" }}>{t("mcp.client_only")}</Typography>
               </Box>
             </Stack>
-            <Badge color="blue">{t("mcp.request_waiting")}</Badge>
+            <Badge color="blue">{requestReady ? t("mcp.request_waiting") : t("mcp.awaiting_authorize")}</Badge>
           </Stack>
         )}
         <Stack
@@ -2819,58 +3027,31 @@ function MCPAuthorizeDialog({
             />
           </Box>
         </Box>
-        <Stack
-          direction="row"
-          spacing={0.875}
-          sx={{ mt: 1, color: "text.secondary", alignItems: "center" }}
-        >
-          <Box
-            sx={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 14,
-              height: 20,
-              flexShrink: 0,
-              "& svg": { display: "block", fontSize: 14 },
-            }}
-          >
-            <Shield size={14} />
-          </Box>
-          <Typography sx={{ fontSize: 12, lineHeight: "20px", color: "text.secondary" }}>
-            {t("mcp.account_verify")}
-          </Typography>
-        </Stack>
       </DialogContent>
       <DialogActions
         sx={{
           flexShrink: 0,
           px: { xs: 2, sm: 3 },
           py: 2,
-          flexDirection: { xs: "column", sm: "row" },
-          alignItems: { xs: "stretch", sm: "center" },
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 1,
+          justifyContent: "flex-end",
           borderTop: "1px solid",
           borderColor: "divider",
           "& > :not(style) ~ :not(style)": { ml: 0 },
         }}
       >
-        <Typography variant="body2" color="text.secondary">
-          {missingClient
-            ? t("mcp.waiting_for_client")
-            : t("mcp.summary", {
-                count: selected.length,
-                duration: formatted ? (formatted.hours ? t("mcp.hours_minutes", { hours: formatted.hours, minutes: formatted.minutes }) : t("mcp.minutes_n", { count: formatted.minutes })) : "--",
-              })}
-        </Typography>
-        <Stack direction="row" spacing={1} sx={{ width: "100%", justifyContent: "flex-end" }}>
+        <Stack direction="row" spacing={1}>
           <Button onClick={onClose}>{t("common.cancel")}</Button>
+          <Button
+            color="error"
+            variant="outlined"
+            disabled={!requestID || missingClient || Boolean(denyingID) || submitting}
+            onClick={() => void denyRequest(requestID, true)}
+          >
+            {t("mcp.deny")}
+          </Button>
           <Button
             variant="contained"
             disabled={!canSubmit}
-            title={missingClient ? t("mcp.waiting_for_client") : undefined}
             startIcon={<Check size={16} />}
           onClick={async () => {
             setSubmitting(true);

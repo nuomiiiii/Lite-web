@@ -284,6 +284,36 @@ test("packet loss ranking requests only its fifteen-minute chart section", () =>
   assert.deepEqual(dashboardSummarySections(settings), []);
 });
 
+test("packet loss ranking lists every task instead of one row per server", () => {
+  const zhCN = JSON.parse(readFileSync("src/i18n/locales/zh_CN.json", "utf8"));
+  const en = JSON.parse(readFileSync("src/i18n/locales/en.json", "utf8"));
+  const zhTW = JSON.parse(readFileSync("src/i18n/locales/zh_TW.json", "utf8"));
+  const ja = JSON.parse(readFileSync("src/i18n/locales/ja_JP.json", "utf8"));
+  for (const pack of [zhCN, en, zhTW, ja]) {
+    assert.match(pack.admin_dashboard.packet_loss_ranking_hint, /./);
+    assert.match(pack.admin_dashboard.ranking_all, /./);
+    assert.doesNotMatch(pack.admin_dashboard.packet_loss_ranking_hint, /每台服务器取丢包率最高|Worst task per online server|每台伺服器取其掉包率最高|サーバーごとに損失率が最も高い/);
+  }
+});
+
+test("latency jitter ranking lists every task instead of one row per server", () => {
+  const zhCN = JSON.parse(readFileSync("src/i18n/locales/zh_CN.json", "utf8"));
+  const en = JSON.parse(readFileSync("src/i18n/locales/en.json", "utf8"));
+  const zhTW = JSON.parse(readFileSync("src/i18n/locales/zh_TW.json", "utf8"));
+  const ja = JSON.parse(readFileSync("src/i18n/locales/ja_JP.json", "utf8"));
+  for (const pack of [zhCN, en, zhTW, ja]) {
+    assert.match(pack.admin_dashboard.latency_jitter_ranking_hint, /探测任务|ping tasks|偵測任務|すべてのタスク/);
+  }
+  assert.match(
+    dashboardPanelsSource,
+    /function LatencyJitterRankingBody[\s\S]+?key=\{`\$\{item\.uuid\}:\$\{item\.task_id \?\? 0\}`\}/,
+  );
+  assert.match(
+    dashboardPanelsSource,
+    /function LatencyJitterRankingBody[\s\S]+?item\.task_name/,
+  );
+});
+
 test("packet loss normal state keeps its green confirmation icon and label together", () => {
   assert.match(
     dashboardPanelsSource,
@@ -304,10 +334,10 @@ test("ranking navigation uses one full-row link without nested row buttons", () 
 test("all historical ranking cards share one bounded responsive list layout", () => {
   assert.match(
     dashboardPanelsSource,
-    /function DashboardRankingGrid[\s\S]+?limit >= 15[\s\S]+?@min-\[34rem\]:grid-cols-2/,
+    /function DashboardRankingGrid[\s\S]+?count >= 11[\s\S]+?@min-\[34rem\]:grid-cols-2[\s\S]+?grid-auto-flow:column/,
   );
   assert.equal(
-    dashboardPanelsSource.match(/<DashboardRankingGrid limit=\{limit\}>/g)?.length,
+    dashboardPanelsSource.match(/<DashboardRankingGrid>/g)?.length,
     4,
   );
   assert.doesNotMatch(dashboardPanelsSource, /repeat\(auto-fit, minmax\(min\(100%, 13rem\), 1fr\)\)/);

@@ -101,9 +101,10 @@ export function operationToolKey(toolName: string): "exec" | "file_read" | "file
 export function operationResultKey(
   state: string,
   exitCode?: number,
-): "success" | "running" | "failed" | "authorized" {
+): "success" | "running" | "failed" | "authorized" | "denied" {
   const normalized = state.trim().toLowerCase();
   if (normalized === "authorized" || normalized === "granted") return "authorized";
+  if (normalized === "denied" || normalized === "rejected") return "denied";
   if (["running", "accepted", "cancel_requested"].includes(normalized)) return "running";
   if (["failed", "error", "expired", "cancelled", "canceled"].includes(normalized)) {
     return "failed";

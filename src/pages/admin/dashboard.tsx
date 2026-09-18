@@ -129,6 +129,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = React.useState(() => getDashboardSnapshot(summaryKey, accountKey) === null);
   const [error, setError] = React.useState<string | null>(null);
   const [chartsError, setChartsError] = React.useState<string | null>(null);
+  const rankingPrefetchReady = !loading
+    && (chartSections.length === 0 || charts !== null || chartsError !== null);
 
   const loadSummary = React.useCallback(async (silent = false) => {
     if (summarySections.length === 0) {
@@ -456,7 +458,14 @@ export default function AdminDashboard() {
         );
       case "resource_ranking":
         return data
-          ? <ResourceRankingPanel data={data} limit={settings.ranking_limit} />
+          ? (
+            <ResourceRankingPanel
+              data={data}
+              limit={settings.ranking_limit}
+              accountKey={accountKey}
+              allowPrefetch={rankingPrefetchReady}
+            />
+          )
           : <Skeleton className="h-[260px] w-full" />;
       case "daily_traffic_ranking":
         return (
@@ -464,6 +473,8 @@ export default function AdminDashboard() {
             charts={charts}
             error={chartsError}
             limit={settings.ranking_limit}
+            accountKey={accountKey}
+            allowPrefetch={rankingPrefetchReady}
           />
         );
       case "latency_ranking":
@@ -472,6 +483,8 @@ export default function AdminDashboard() {
             charts={charts}
             error={chartsError}
             limit={settings.ranking_limit}
+            accountKey={accountKey}
+            allowPrefetch={rankingPrefetchReady}
           />
         );
       case "latency_jitter_ranking":
@@ -480,6 +493,8 @@ export default function AdminDashboard() {
             charts={charts}
             error={chartsError}
             limit={settings.ranking_limit}
+            accountKey={accountKey}
+            allowPrefetch={rankingPrefetchReady}
           />
         );
       case "packet_loss_ranking":
@@ -488,6 +503,8 @@ export default function AdminDashboard() {
             charts={charts}
             error={chartsError}
             limit={settings.ranking_limit}
+            accountKey={accountKey}
+            allowPrefetch={rankingPrefetchReady}
           />
         );
       case "latency_trend":

@@ -197,8 +197,31 @@ body, * {
   scrollbar-color: rgba(80,80,80,0.4) transparent;
 }
 
-.admin-responsive-table-wrap {
-  background: var(--color-panel-solid);
+.admin-node-drag-overlay {
+  pointer-events: none;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+html.admin-node-dnd-dragging {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.admin-node-sortable-origin {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.admin-node-list-dnd-wrap {
+  overflow-y: hidden;
+}
+
+@supports (overflow: clip) {
+  .admin-node-list-dnd-wrap {
+    overflow-y: clip;
+  }
 }
 
 .admin-table-header {
@@ -335,6 +358,7 @@ html[data-admin-shell-active="true"] .km-dashboard-chip {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  border: 0;
   border-radius: 999px;
   padding: 4px 10px;
   background: var(--accent-a3);
@@ -342,6 +366,22 @@ html[data-admin-shell-active="true"] .km-dashboard-chip {
   font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
+  font-family: inherit;
+}
+
+button.km-dashboard-chip {
+  cursor: pointer;
+  appearance: none;
+}
+
+button.km-dashboard-chip:hover,
+button.km-dashboard-chip:focus-visible {
+  filter: brightness(0.97);
+}
+
+button.km-dashboard-chip:focus-visible {
+  outline: 2px solid var(--accent-8);
+  outline-offset: 2px;
 }
 
 [data-admin-shell] .km-dashboard-chip--orange {
@@ -1374,6 +1414,13 @@ html[data-admin-shell-active="true"] .km-admin-node-list {
   background: #fff;
 }
 
+@media (max-width: 1023px) {
+  .admin-mobile-card-stack {
+    gap: 8px;
+    padding: 8px;
+  }
+}
+
 .admin-mobile-card-stack > * {
   margin: 0;
 }
@@ -1387,6 +1434,13 @@ html[data-admin-shell-active="true"] .km-admin-node-list-filters {
   padding: 16px 16px 20px;
   background: #f4f6f8;
   border-bottom: 1px solid rgba(145, 158, 171, 0.16);
+}
+
+@media (max-width: 1023px) {
+  [data-admin-shell] .km-admin-node-list-filters,
+  html[data-admin-shell-active="true"] .km-admin-node-list-filters {
+    padding: 12px;
+  }
 }
 
 .km-search-before-content {

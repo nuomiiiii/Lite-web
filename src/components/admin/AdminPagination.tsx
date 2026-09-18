@@ -1,5 +1,5 @@
 import React from "react";
-import { useDroppable } from "@dnd-kit/core";
+import { useDroppable, useDndContext } from "@dnd-kit/core";
 import ChevronLeft from "@mui/icons-material/ChevronLeft";
 import ChevronRight from "@mui/icons-material/ChevronRight";
 import Menu from "@mui/material/Menu";
@@ -86,16 +86,18 @@ const PageDropButton = ({
   dragging,
   ...props
 }: PageButtonProps & { id: string; dragging: boolean }) => {
+  const { active } = useDndContext();
   const { isOver, setNodeRef } = useDroppable({
     id,
     disabled: props.disabled,
   });
+  const showDropTarget = (dragging || Boolean(active)) && !props.disabled;
   const Icon = props.direction === "previous" ? ChevronLeft : ChevronRight;
   return (
     <button
       ref={setNodeRef}
       type="button"
-      className={`admin-pagination-btn${dragging && !props.disabled ? " is-drop-target" : ""}${isOver ? " is-over" : ""}`}
+      className={`admin-pagination-btn${showDropTarget ? " is-drop-target" : ""}${isOver ? " is-over" : ""}`}
       disabled={props.disabled}
       title={props.label}
       aria-label={props.label}

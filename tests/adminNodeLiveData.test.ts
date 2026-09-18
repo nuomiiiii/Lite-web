@@ -3,6 +3,10 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { nodeOnlineState } from "../src/utils/adminNodeOnlineState.ts";
+import {
+  nodeListInsertAfter,
+  nodeListReorderIndex,
+} from "../src/utils/nodeListReorder.ts";
 
 const hookSource = readFileSync("src/hooks/use-admin-node-live-data.ts", "utf8");
 const layoutSource = readFileSync("src/pages/admin/_layout.tsx", "utf8");
@@ -30,6 +34,18 @@ const marketSource = readFileSync("src/pages/admin/market/themes.tsx", "utf8");
 const settingCardSource = readFileSync("src/components/admin/SettingCard.tsx", "utf8");
 const mobileCardSource = readFileSync("src/components/admin/AdminMobileListCard.tsx", "utf8");
 const remoteExecSource = readFileSync("src/components/remote/RemoteExecNodeSelector.tsx", "utf8");
+
+test("node list reorder inserts above or below the hovered row", () => {
+  assert.equal(nodeListInsertAfter(10, 0, 20), false);
+  assert.equal(nodeListInsertAfter(11, 0, 20), true);
+  assert.equal(nodeListReorderIndex(4, 6, false), 5);
+  assert.equal(nodeListReorderIndex(4, 6, true), 6);
+  assert.equal(nodeListReorderIndex(4, 5, false), 4);
+  assert.equal(nodeListReorderIndex(4, 5, true), 5);
+  assert.equal(nodeListReorderIndex(8, 3, false), 3);
+  assert.equal(nodeListReorderIndex(8, 3, true), 4);
+  assert.equal(nodeListReorderIndex(2, 2, false), 2);
+});
 
 test("unknown live status is not treated as offline", () => {
   const onlineSet = new Set(["node-a"]);
@@ -90,7 +106,8 @@ test("admin node table uses the global page size and saves the complete cross-pa
   assert.match(pageSource, /pageSize=\{pageSize\}/);
   assert.match(pageSource, /onPageSizeChange=/);
   assert.match(pageSource, /destinationPage \* pageSize - 1/);
-  assert.match(pageSource, /overflow-x-auto overflow-y-hidden/);
+  assert.match(pageSource, /overflow-x-auto/);
+  assert.match(pageSource, /admin-node-list-dnd-wrap/);
 });
 
 test("mobile dialogs and settings cards stay within the viewport", () => {
@@ -287,9 +304,14 @@ test("wide admin tables turn into labelled row cards on mobile", () => {
   assert.match(pageSource, /admin-responsive-table admin-node-table/);
   assert.match(pageSource, /SortableMobileCard/);
   assert.match(pageSource, /AdminMobileListCard/);
+  assert.match(mobileCardSource, /dense\?: boolean/);
+  assert.match(pageSource, /NODE_LIST_ORIGIN_STYLE/);
+  assert.match(globalCssSource, /\.admin-node-sortable-origin \{[\s\S]*opacity: 0\.4/);
+  assert.match(pageSource, /if \(node\.group\?\.trim\(\)\)/);
+  assert.match(pageSource, /if \(node\.remark\?\.trim\(\)\)/);
   assert.match(mobileCardSource, /gridTemplateColumns: "1fr 1fr"/);
   assert.doesNotMatch(pageSource, /join\(" \/ "\)/);
-  assert.match(pageSource, /<Flex gap="1" wrap="wrap">\s*<CustomTags tags=\{node\.tags \|\| ""\} \/>/);
+  assert.match(pageSource, /<Flex key="tags" gap="1" wrap="wrap">\s*<CustomTags tags=\{node\.tags \|\| ""\} \/>/);
   assert.match(pingTaskSource, /admin-responsive-table/);
   assert.match(pingServerSource, /admin-responsive-table/);
   assert.match(offlineSource, /admin-responsive-table admin-selection-table/);
@@ -365,7 +387,21 @@ test("desktop node table keeps readable name and network columns while resizing"
   assert.match(pageSource, /layoutShiftCompensation: false/);
   assert.match(pageSource, /data-admin-scroll-container/);
   assert.match(pageSource, /animateLayoutChanges: \(\) => false/);
+  assert.match(pageSource, /DragOverlay/);
+  assert.match(pageSource, /NodeListDragPreview/);
+  assert.match(pageSource, /admin-node-dnd-dragging/);
+  assert.match(pageSource, /admin-node-sortable-origin/);
+  assert.match(pageSource, /MeasuringStrategy.WhileDragging/);
+  assert.match(pageSource, /MeasuringFrequency.Optimized/);
+  assert.match(pageSource, /NODE_LIST_SORTING_STRATEGY/);
+  assert.match(pageSource, /nodeListCollisionDetection/);
+  assert.match(pageSource, /nodeListReorderIndex/);
+  assert.match(pageSource, /arrayMove\(localNodes, oldIndex, newIndex\)/);
+  assert.match(globalCssSource, /@supports \(overflow: clip\)/);
+  assert.doesNotMatch(pageSource, /setActiveDragId/);
   assert.doesNotMatch(pageSource, /autoScroll=\{false\}/);
+  assert.doesNotMatch(pageSource, /CSS\.Transform\.toString/);
+  assert.doesNotMatch(pageSource, /verticalListSortingStrategy/);
   assert.match(pageSource, /restrictToVerticalAxis/);
   assert.doesNotMatch(pageSource, /restrictToFirstScrollableAncestor/);
   assert.match(pageSource, /\["IPv4", node\.ipv4\?\.trim\(\)\][\s\S]{0,80}\["IPv6", node\.ipv6\?\.trim\(\)\]/);

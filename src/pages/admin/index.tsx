@@ -62,20 +62,27 @@ import { Trans, useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import {
   DndContext,
+  DragOverlay,
+  MeasuringFrequency,
+  MeasuringStrategy,
   closestCenter,
+  useDndContext,
   useSensor,
   useSensors,
   TouchSensor,
   MouseSensor,
   KeyboardSensor,
+  type Collision,
+  type CollisionDetection,
+  type DragEndEvent,
 } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   SortableContext,
+  arrayMove,
   useSortable,
-  verticalListSortingStrategy,
+  type SortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import {
   isClientTokenTwoFactorInvalid,
@@ -134,6 +141,10 @@ import {
   getSupportedRegions,
 } from "@/utils/regionHelper";
 import {
+  nodeListInsertAfter,
+  nodeListReorderIndex,
+} from "@/utils/nodeListReorder";
+import {
   dashboardAlertNodeUuidSet,
   getDashboardAlertItemsSnapshot,
   parseServerListAlertKind,
@@ -162,16 +173,67 @@ const NODE_LIST_AUTO_SCROLL = {
     element instanceof HTMLElement &&
     element.hasAttribute("data-admin-scroll-container"),
 };
+const NODE_LIST_MEASURING = {
+  droppable: {
+    strategy: MeasuringStrategy.WhileDragging,
+    frequency: MeasuringFrequency.Optimized,
+  },
+};
+const NODE_LIST_SORTING_STRATEGY: SortingStrategy = () => null;
+const NODE_LIST_ORIGIN_STYLE: React.CSSProperties = {
+  opacity: 0.4,
+  pointerEvents: "none",
+};
 
-function nodeListSortableStyle(
-  transform: Parameters<typeof CSS.Transform.toString>[0],
-  transition: string | undefined,
-  isDragging: boolean,
-) {
-  return {
-    transform: CSS.Transform.toString(transform),
-    transition: isDragging ? undefined : transition,
-  };
+const nodeListCollisionDetection: CollisionDetection = (args) => {
+  const pointerY = args.pointerCoordinates?.y
+    ?? args.collisionRect.top + args.collisionRect.height / 2;
+  const hits: Collision[] = [];
+  let nearest: Collision | null = null;
+  for (const container of args.droppableContainers) {
+    if (container.disabled) continue;
+    const rect = args.droppableRects.get(container.id);
+    if (!rect) continue;
+    const midpoint = rect.top + rect.height / 2;
+    if (pointerY >= rect.top && pointerY <= rect.bottom) {
+      hits.push({
+        id: container.id,
+        data: { droppableContainer: container, value: Math.abs(pointerY - midpoint) },
+      });
+      continue;
+    }
+    const distance =
+      pointerY < rect.top ? rect.top - pointerY : pointerY - rect.bottom;
+    if (!nearest || distance < (nearest.data?.value ?? Infinity)) {
+      nearest = {
+        id: container.id,
+        data: { droppableContainer: container, value: distance },
+      };
+    }
+  }
+  if (hits.length > 0) {
+    hits.sort((a, b) => (a.data?.value ?? 0) - (b.data?.value ?? 0));
+    return hits;
+  }
+  if (nearest) return [nearest];
+  return closestCenter(args);
+};
+
+function NodeListDragPreview({ nodes }: { nodes: readonly NodeDetail[] }) {
+  const { active } = useDndContext();
+  const isMobile = useIsMobile();
+  const node = active ? nodes.find((item) => item.uuid === active.id) : undefined;
+  if (!node) return null;
+  return (
+    <div
+      className={`admin-node-drag-overlay flex h-[52px] cursor-grabbing items-center gap-2 rounded-md border border-[var(--gray-a5)] bg-[var(--color-panel-solid)] px-3 shadow-md ${
+        isMobile ? "w-[min(360px,calc(100vw-2.5rem))]" : "w-[min(320px,80vw)]"
+      }`}
+    >
+      <GripVertical size={16} className="shrink-0 text-[var(--gray-9)]" />
+      <span className="truncate text-[15px] font-semibold leading-6">{node.name}</span>
+    </div>
+  );
 }
 
 function nodeSearchHaystack(node: NodeDetail) {
@@ -552,18 +614,48 @@ const SortableRow = React.memo(({
   online: boolean | null;
   reorderEnabled: boolean;
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({
-      id: node.uuid,
-      disabled: !reorderEnabled,
-      animateLayoutChanges: () => false,
-    });
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({
+    id: node.uuid,
+    disabled: !reorderEnabled,
+    animateLayoutChanges: () => false,
+  });
+  return (
+    <TableRow
+      ref={setNodeRef}
+      className={`text-sm hover:bg-[var(--accent-a2)] [&>td]:align-middle [&>td]:py-2.5${isDragging ? " admin-node-sortable-origin" : ""}`}
+      style={{ borderColor: "var(--gray-a5)" }}
+      data-node-status={online === null ? "pending" : online ? "online" : "offline"}
+    >
+      <SortableRowCells
+        node={node}
+        settings={settings}
+        online={online}
+        reorderEnabled={reorderEnabled}
+        attributes={attributes}
+        listeners={listeners}
+      />
+    </TableRow>
+  );
+});
+SortableRow.displayName = "SortableRow";
+
+const SortableRowCells = React.memo(function SortableRowCells({
+  node,
+  settings,
+  online,
+  reorderEnabled,
+  attributes,
+  listeners,
+}: {
+  node: NodeDetail;
+  settings: any;
+  online: boolean | null;
+  reorderEnabled: boolean;
+  attributes: React.HTMLAttributes<HTMLElement>;
+  listeners: Record<string, unknown> | undefined;
+}) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
-  const style = {
-    ...nodeListSortableStyle(transform, transition, isDragging),
-    borderColor: "var(--gray-a5)",
-  };
   async function copy(text: string) {
     try {
       await writeClipboardText(text);
@@ -578,12 +670,7 @@ const SortableRow = React.memo(({
     t,
   );
   return (
-    <TableRow
-      ref={setNodeRef}
-      style={style}
-      className="text-sm hover:bg-[var(--accent-a2)] [&>td]:align-middle [&>td]:py-2.5"
-      data-node-status={online === null ? "pending" : online ? "online" : "offline"}
-    >
+    <>
       <TableCell className="w-[44px] px-2 !align-middle" data-label={t("common.sort", "排序")}>
         <div className="flex items-center">
           <button
@@ -691,10 +778,9 @@ const SortableRow = React.memo(({
       <TableCell className="!align-middle" data-label={t("common.action", "操作")}>
         <ActionButtons node={node} settings={settings} />
       </TableCell>
-    </TableRow>
+    </>
   );
 });
-SortableRow.displayName = "SortableRow";
 
 const SortableMobileCard = React.memo(function SortableMobileCard({
   node,
@@ -707,12 +793,11 @@ const SortableMobileCard = React.memo(function SortableMobileCard({
   online: boolean | null;
   reorderEnabled: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({
-      id: node.uuid,
-      disabled: !reorderEnabled,
-      animateLayoutChanges: () => false,
-    });
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({
+    id: node.uuid,
+    disabled: !reorderEnabled,
+    animateLayoutChanges: () => false,
+  });
   const { t } = useTranslation();
   const networkAddresses = nodeNetworkAddresses(node);
   const deploymentStatusPresentation = nodeDeploymentStatusPresentation(
@@ -787,27 +872,30 @@ const SortableMobileCard = React.memo(function SortableMobileCard({
         ) : null}
       </Stack>,
     ],
-    [t("common.group", "分组"), node.group || "--"],
-    [t("common.remark", "备注"), node.remark || "--"],
-    [t("admin.nodeTable.billing"), billingValue],
-    [
-      t("admin.nodeTable.tags", "标签"),
-      (node.tags || "").trim() ? (
-        <Flex gap="1" wrap="wrap">
-          <CustomTags tags={node.tags || ""} />
-        </Flex>
-      ) : (
-        "--"
-      ),
-    ],
   ];
+  if (node.group?.trim()) {
+    cells.push([t("common.group", "分组"), node.group]);
+  }
+  if (node.remark?.trim()) {
+    cells.push([t("common.remark", "备注"), node.remark]);
+  }
+  if (Number(node.price) !== 0) {
+    cells.push([t("admin.nodeTable.billing"), billingValue]);
+  }
+  if ((node.tags || "").trim()) {
+    cells.push([
+      t("admin.nodeTable.tags", "标签"),
+      <Flex key="tags" gap="1" wrap="wrap">
+        <CustomTags tags={node.tags || ""} />
+      </Flex>,
+    ]);
+  }
 
   return (
     <AdminMobileListCard
       ref={setNodeRef}
-      sx={{
-        ...nodeListSortableStyle(transform, transition, isDragging),
-      }}
+      dense
+      style={isDragging ? NODE_LIST_ORIGIN_STYLE : undefined}
       title={<NodeNameLink node={node} online={online} />}
       headerExtra={
         <button
@@ -815,7 +903,7 @@ const SortableMobileCard = React.memo(function SortableMobileCard({
           {...attributes}
           {...listeners}
           disabled={!reorderEnabled}
-          className={`inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--gray-9)] ${
+          className={`inline-flex size-10 shrink-0 items-center justify-center rounded-md text-[var(--gray-9)] ${
             reorderEnabled
               ? "cursor-grab hover:bg-[var(--accent-a3)] hover:text-[var(--accent-11)] active:cursor-grabbing"
               : "cursor-not-allowed opacity-40"
@@ -870,7 +958,6 @@ const NodeTable = ({
   );
   // 添加 localNodes 状态，实现即时 UI 更新
   const [localNodes, setLocalNodes] = useState<NodeDetail[]>(nodes);
-  const [isDragging, setIsDragging] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const defaultPageSize = useAdminDefaultPageSize();
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -923,14 +1010,18 @@ const NodeTable = ({
   }, [defaultPageSize]);
   const handleDragStart = () => {
     if (!reorderEnabled) return;
-    setIsDragging(true);
+    document.documentElement.classList.add("admin-node-dnd-dragging");
     if ("vibrate" in navigator) {
       navigator.vibrate(50);
     }
   };
 
-  const handleDragEnd = async (event: any) => {
-    setIsDragging(false);
+  const stopNodeListDragging = () => {
+    document.documentElement.classList.remove("admin-node-dnd-dragging");
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    stopNodeListDragging();
     if (!reorderEnabled) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -946,12 +1037,20 @@ const NodeTable = ({
     } else if (over.id === NEXT_PAGE_DROP_ID && visiblePage < totalPages) {
       destinationPage = visiblePage + 1;
       newIndex = (destinationPage - 1) * pageSize;
+    } else if (newIndex >= 0) {
+      const translated = active.rect.current.translated;
+      const pointerY = translated
+        ? translated.top + translated.height / 2
+        : over.rect.top + over.rect.height / 2;
+      newIndex = nodeListReorderIndex(
+        oldIndex,
+        newIndex,
+        nodeListInsertAfter(pointerY, over.rect.top, over.rect.height),
+      );
     }
-    if (newIndex < 0) return;
+    if (newIndex < 0 || newIndex === oldIndex) return;
 
-    const reorderedNodes = Array.from(localNodes);
-    const [reorderedItem] = reorderedNodes.splice(oldIndex, 1);
-    reorderedNodes.splice(Math.min(newIndex, reorderedNodes.length), 0, reorderedItem);
+    const reorderedNodes = arrayMove(localNodes, oldIndex, newIndex);
 
     // 立即更新 UI
     setLocalNodes(reorderedNodes);
@@ -979,24 +1078,21 @@ const NodeTable = ({
   };
 
   return (
-    <div
-      className={`admin-responsive-table-wrap overflow-x-auto overflow-y-hidden ${
-        isDragging ? "select-none" : ""
-      }`}
-    >
+    <div className="admin-responsive-table-wrap admin-node-list-dnd-wrap overflow-x-auto">
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={nodeListCollisionDetection}
         autoScroll={NODE_LIST_AUTO_SCROLL}
+        measuring={NODE_LIST_MEASURING}
         modifiers={NODE_LIST_DND_MODIFIERS}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        onDragCancel={() => setIsDragging(false)}
+        onDragCancel={stopNodeListDragging}
       >
         {isMobile ? (
           <SortableContext
             items={visibleNodes.map((node) => node.uuid)}
-            strategy={verticalListSortingStrategy}
+            strategy={NODE_LIST_SORTING_STRATEGY}
           >
             <AdminMobileCardStack>
               {visibleNodes.map((node) => (
@@ -1041,7 +1137,7 @@ const NodeTable = ({
           <TableBody>
             <SortableContext
               items={visibleNodes.map((node) => node.uuid)}
-              strategy={verticalListSortingStrategy}
+              strategy={NODE_LIST_SORTING_STRATEGY}
             >
               {visibleNodes.map((node) => (
                 <SortableRow
@@ -1069,9 +1165,11 @@ const NodeTable = ({
         }}
         previousDropId={PREVIOUS_PAGE_DROP_ID}
         nextDropId={NEXT_PAGE_DROP_ID}
-        dragging={isDragging}
         showSummary={false}
       />
+        <DragOverlay dropAnimation={null} zIndex={1600}>
+          <NodeListDragPreview nodes={localNodes} />
+        </DragOverlay>
       </DndContext>
     </div>
   );

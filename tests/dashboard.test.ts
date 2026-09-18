@@ -233,6 +233,49 @@ test("dashboard ranking chips share the same pressed chip style", () => {
   assert.match(css, /html\.dark \[data-admin-shell\][\s\S]*--accent-11: #70b8ff/);
 });
 
+test("ranking chips prefetch the full list on hover and open a dialog", () => {
+  const source = readFileSync(
+    new URL("../src/components/admin/DashboardPanels.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /aria-haspopup="dialog"/);
+  assert.match(source, /onMouseEnter=\{onPrefetch\}/);
+  assert.match(source, /DASHBOARD_RANKING_ALL/);
+  assert.match(source, /function DashboardRankingDialog/);
+  assert.match(source, /maxHeight: "88vh"/);
+  assert.match(source, /maxWidth: 960/);
+  assert.match(source, /function DashboardRankingPager/);
+  assert.match(source, /useAdminPagination/);
+  assert.doesNotMatch(source, /fullScreen=\{isMobile\}/);
+  assert.match(source, /requestDashboardCharts\(\["latency"\], DASHBOARD_RANKING_ALL/);
+  assert.match(source, /requestDashboardCharts\(\["latency_jitter"\], DASHBOARD_RANKING_ALL/);
+  assert.match(source, /requestDashboardCharts\(\["packet_loss"\], DASHBOARD_RANKING_ALL/);
+  assert.doesNotMatch(source, /requestDashboardCharts\(\["latency", "latency_jitter"/);
+  assert.match(source, /tone="orange" onExpand=\{expand\.openDialog\} onPrefetch=\{expand\.prefetch\}/);
+  assert.match(source, /allowPrefetch/);
+  const expand = readFileSync(
+    new URL("../src/utils/dashboardRankingExpand.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(expand, /export const DASHBOARD_RANKING_ALL = 0/);
+  assert.match(expand, /DASHBOARD_RANKING_PREFETCH_MS = 280/);
+  assert.match(expand, /if \(!allowPrefetch\) return/);
+  assert.match(expand, /if \(requestRef\.current\) return/);
+  const api = readFileSync(
+    new URL("../src/utils/dashboardApi.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(api, /persistDashboardPayload\(rankingLimit\)/);
+  assert.match(api, /rankingLimit !== 0/);
+  assert.match(api, /dashboardChartsCache\.pending/);
+  const page = readFileSync(
+    new URL("../src/pages/admin/dashboard.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(page, /rankingPrefetchReady/);
+  assert.match(page, /chartSections\.length === 0 \|\| charts !== null \|\| chartsError !== null/);
+});
+
 test("day traffic details can be searched and sorted without loading on dashboard open", () => {
   const items = [
     { uuid: "b", name: "beta", ipv4: "10.0.0.2", group: "lab", tags: "dev;edge<blue>", up: 20, down: 5, billable: 25 },

@@ -168,14 +168,14 @@ export function BillingTrendPanel({
 
   return (
     <section className="@container flex h-full min-w-0 flex-col km-admin-surface p-3">
-      <div className="mb-3 flex items-start justify-between gap-3 @max-[28rem]:flex-col @max-[28rem]:gap-2">
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold text-foreground">{t("admin_dashboard.daily_billable")}</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t("admin_dashboard.daily_billable_hint")}</p>
+      <div className="mb-3">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="min-w-0 text-base font-semibold text-foreground">{t("admin_dashboard.daily_billable")}</h2>
+          <span className="km-dashboard-chip km-dashboard-chip--accent">
+            {t("admin_dashboard.recent_month")}
+          </span>
         </div>
-        <span className="km-dashboard-chip km-dashboard-chip--accent @max-[28rem]:ml-auto">
-          {t("admin_dashboard.recent_month")}
-        </span>
+        <p className="mt-0.5 text-sm text-muted-foreground">{t("admin_dashboard.daily_billable_hint")}</p>
       </div>
       {charts && !charts.traffic.error && !charts.traffic.history_ready ? (
         <p className="mb-2 text-xs text-muted-foreground">{t("admin_dashboard.history_preparing")}</p>

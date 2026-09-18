@@ -143,6 +143,8 @@ export interface DashboardLatencyJitterRankItem {
   previous: number;
   current: number;
   delta: number;
+  task_id?: number;
+  task_name?: string;
   detail_url?: string;
 }
 

@@ -621,13 +621,6 @@ function TerminalWorkspaceInner() {
     };
   }, [callViaHTTP, workspaceEntered]);
 
-  useEffect(() => {
-    const active = tabs.find((tab) => tab.id === activeID);
-    if (!active) return;
-    const node = nodes.find((item) => item.uuid === active.uuid);
-    document.title = `${node?.name || t("common.server")} - ${t("terminal.remote_title")}`;
-  }, [activeID, nodes, t, tabs]);
-
   const nodeMap = useMemo(() => new Map(nodes.map((node) => [node.uuid, node])), [nodes]);
   const labels = useMemo(() => {
     const counts = new Map<string, number>();
@@ -703,6 +696,25 @@ function TerminalWorkspaceInner() {
     () => Object.values(connectionByTab).filter((state) => state === "connected").length,
     [connectionByTab],
   );
+  useEffect(() => {
+    const active = tabs.find((tab) => tab.id === activeID);
+    const node = active ? nodes.find((item) => item.uuid === active.uuid) : undefined;
+    const name = node?.name || t("common.server");
+    document.title = connectedCount > 0
+      ? t("terminal.session.document_title_connected", { name, count: connectedCount })
+      : active
+        ? `${name} - ${t("terminal.remote_title")}`
+        : t("terminal.remote_title");
+  }, [activeID, connectedCount, nodes, t, tabs]);
+  useEffect(() => {
+    if (connectedCount === 0) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = t("terminal.session.close_with_sessions", { count: connectedCount });
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [connectedCount, t]);
   const allConnected = tabs.length > 0 && connectedCount === tabs.length;
   const activeTab = tabs.find((tab) => tab.id === activeID);
   const activeNode = activeTab ? nodeMap.get(activeTab.uuid) : undefined;

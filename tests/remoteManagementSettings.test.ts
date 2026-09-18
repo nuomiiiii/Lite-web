@@ -81,7 +81,18 @@ test("MCP site switch sits with remote management and writes back into settings"
   assert.doesNotMatch(mcpSource, /SettingCardSwitch/);
   assert.doesNotMatch(mcpSource, /mcp\.enable/);
   assert.doesNotMatch(mcpSource, /data\.requests\?\.\[0\]\?\.id/);
-  assert.match(mcpSource, /onSelectRequest/);
+  assert.doesNotMatch(mcpSource, /onSelectRequest/);
+  assert.doesNotMatch(mcpSource, /t\("mcp\.select"\)/);
+  assert.match(mcpSource, /mcp\.view_requests_subtitle/);
+  assert.match(mcpSource, /mcp\.new_authorization/);
+  assert.match(mcpSource, /mcp\.awaiting_authorize/);
+  const pendingBlock = mcpSource.match(/pendingRequests\.map\([\s\S]*?mcp\.deny/);
+  assert.ok(pendingBlock);
+  assert.doesNotMatch(pendingBlock[0], /t\("mcp\.select"\)/);
+  assert.match(pendingBlock[0], /mcp\.deny/);
+  assert.doesNotMatch(mcpSource, /mcp\.account_verify/);
+  assert.doesNotMatch(mcpSource, /mcp\.waiting_for_client/);
+  assert.match(mcpSource, /mcp\.connect_from_client/);
   assert.match(mcpSource, /mcp\.node_need_remote/);
   assert.match(mcpSource, /mcp\.node_need_agent/);
   assert.match(mcpSource, /function mcpUserMessage/);
@@ -96,7 +107,11 @@ test("MCP page matches the access-settings layout instead of stacked setting car
   assert.match(mcpSource, /mcp\.auth_settings/);
   assert.match(mcpSource, /mcp\.copy_endpoint/);
   assert.match(mcpSource, /mcp\.view_guide/);
-  assert.match(mcpSource, /mcp\.client_config_title/);
+  assert.match(mcpSource, /MCP_USER_MANUAL_URL[\s\S]*?color: "error\.main"/);
+  assert.match(mcpSource, /<AdminNodeLiveDataProvider>/);
+  assert.match(mcpSource, /MCP_USER_MANUAL_URL/);
+  assert.match(mcpSource, /Lite-document\/remote\/mcp/);
+  assert.doesNotMatch(mcpSource, /MCPClientConfigDialog/);
   assert.match(mcpSource, /mcp\.current_authorizations/);
   assert.match(mcpSource, /mcp\.view_all/);
   assert.match(mcpSource, /mcp\.revoke_authorization/);
@@ -104,6 +119,63 @@ test("MCP page matches the access-settings layout instead of stacked setting car
   assert.doesNotMatch(mcpSource, /mcp\.remote_mcp/);
   assert.doesNotMatch(mcpSource, /mcp\.site_remote_on/);
   assert.match(mcpSource, /RequireAllowMCP/);
+});
+
+test("MCP authorized dialog copies the approve callback URL", () => {
+  assert.match(mcpSource, /deliverOAuthCallback\(uri\);\s*setAuthorizedRedirectURI\(uri\);\s*setAuthorizedOpen\(true\)/);
+  assert.match(mcpSource, /redirectURI=\{authorizedRedirectURI\}/);
+  assert.match(mcpSource, /setAuthorizedRedirectURI\(""\)/);
+  assert.match(mcpSource, /mcp\.copy_callback/);
+  assert.match(mcpSource, /mcp\.redirect_uri/);
+  assert.match(mcpSource, /overflowWrap: "anywhere"/);
+  assert.match(mcpSource, /navigator\.clipboard\?\.writeText\(callbackURL\)/);
+  assert.doesNotMatch(mcpSource, /console\.log\(/);
+  const zhCN = JSON.parse(readFileSync("src/i18n/locales/zh_CN.json", "utf8"));
+  const en = JSON.parse(readFileSync("src/i18n/locales/en.json", "utf8"));
+  const zhTW = JSON.parse(readFileSync("src/i18n/locales/zh_TW.json", "utf8"));
+  const ja = JSON.parse(readFileSync("src/i18n/locales/ja_JP.json", "utf8"));
+  for (const pack of [zhCN, en, zhTW, ja]) {
+    assert.match(pack.mcp.authorized_body, /./);
+    assert.match(pack.mcp.authorized_ttl, /180/);
+    assert.match(pack.mcp.copy_callback, /./);
+    assert.match(pack.mcp.view_requests_subtitle, /./);
+    assert.match(pack.mcp.awaiting_authorize, /./);
+    assert.doesNotMatch(pack.mcp.authorized_body, /cloudflared|localhost|已连接|已連線|接続されました/);
+  }
+});
+
+test("MCP pending requests can be denied and inactive history can be purged", () => {
+  assert.match(mcpSource, /MCP_HISTORY_DAYS = 3/);
+  assert.match(mcpSource, /authorization-requests\/\$\{id\}\/deny/);
+  assert.match(mcpSource, /mcp\.deny/);
+  assert.match(mcpSource, /mcp\.status_denied/);
+  assert.match(mcpSource, /<MenuItem value="denied">\{t\("mcp\.status_denied"\)\}<\/MenuItem>/);
+  assert.doesNotMatch(mcpSource, /<MenuItem value="denied">\{t\("mcp\.result_denied"\)\}<\/MenuItem>/);
+  assert.match(mcpSource, /op\.tool_name !== "grant"/);
+  assert.doesNotMatch(mcpSource, /op\.state === "denied"/);
+  assert.match(mcpSource, /\/api\/admin\/mcp\/history\/purge/);
+  assert.match(mcpSource, /mcp\.delete_history/);
+  assert.match(mcpSource, /mcp\.delete_history_confirm/);
+  assert.match(mcpSource, /mcp\.revoke_all_confirm/);
+  assert.doesNotMatch(mcpSource, /t\("mcp\.select"\)/);
+  assert.match(mcpSource, /mcp\.authorized_ttl/);
+  assert.match(mcpSource, /active\.length \? \(/);
+  assert.match(mcpSource, /canPurge \|\| rows\.length/);
+  assert.doesNotMatch(mcpSource, /disabled=\{!active\.length \|\| revokingAll\}/);
+  const zhCN = JSON.parse(readFileSync("src/i18n/locales/zh_CN.json", "utf8"));
+  const en = JSON.parse(readFileSync("src/i18n/locales/en.json", "utf8"));
+  const zhTW = JSON.parse(readFileSync("src/i18n/locales/zh_TW.json", "utf8"));
+  const ja = JSON.parse(readFileSync("src/i18n/locales/ja_JP.json", "utf8"));
+  for (const pack of [zhCN, en, zhTW, ja]) {
+    assert.match(pack.mcp.deny, /./);
+    assert.match(pack.mcp.status_denied, /./);
+    assert.match(pack.mcp.result_denied, /./);
+    assert.match(pack.mcp.delete_history, /./);
+    assert.match(pack.mcp.delete_history_confirm, /./);
+    assert.match(pack.mcp.revoke_all, /./);
+    assert.match(pack.mcp.revoke_all_confirm, /./);
+    assert.match(pack.mcp.revoke_all_title, /./);
+  }
 });
 
 test("MCP chrome follows the mockup: split duration, pill presets", () => {
@@ -196,6 +268,8 @@ test("remote management copy is shortened and present in every locale", () => {
     locales.zhCN.settings.general.allow_remote_management_required_description,
     "站点未启用远程管理，请先开启该功能。",
   );
+  assert.equal(locales.zhCN.mcp.view_guide, "帮助");
+  assert.equal(locales.zhCN.mcp.new_authorization, "申请列表");
   for (const locale of Object.values(locales)) {
     assert.equal(typeof locale.settings.general.allow_remote_management_go_enable, "string");
     assert.equal(

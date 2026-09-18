@@ -5,6 +5,7 @@ import {
   nodeDisplayIP,
   nodeMCPUnavailableReason,
   nodeSupportsMCP,
+  operationResultKey,
   previewLine,
   stripANSI,
 } from "../src/utils/mcpDisplay.ts";
@@ -50,4 +51,9 @@ test("full MCP requires remote control and a current Agent capability", () => {
     nodeMCPUnavailableReason({ remote_control_enabled: true, mcp_full: true, mcp_full_version: 1 }),
     null,
   );
+});
+
+test("denied MCP operations map to the denied result key", () => {
+  assert.equal(operationResultKey("denied"), "denied");
+  assert.equal(operationResultKey("rejected"), "denied");
 });
