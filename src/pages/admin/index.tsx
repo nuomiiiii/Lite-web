@@ -90,6 +90,7 @@ import {
   rotateClientToken,
 } from "@/lib/clientToken";
 import { localizeTokenRotationError } from "@/utils/tokenRotation";
+import { confirmAdminPasskey, passkeyUnavailableMessage } from "@/utils/webauthn";
 import Flag from "@/components/Flag";
 import { NODE_OFFLINE, NODE_ONLINE } from "@/theme/brand";
 import {
@@ -535,6 +536,13 @@ const compactIPv6 = (value: string) => {
     ? `${segments.slice(0, 2).join(":")}:...${segments[segments.length - 1]}`
     : value;
 };
+
+function nodePreferredAddress(node: NodeDetail) {
+  const ipv4 = node.ipv4?.trim();
+  if (ipv4) return ipv4;
+  const ipv6 = node.ipv6?.trim();
+  return ipv6 ? compactIPv6(ipv6) : "";
+}
 
 function nodeNetworkAddresses(node: NodeDetail) {
   return (
@@ -1570,6 +1578,135 @@ function DeleteButton({ node }: { node: NodeDetail }) {
   );
 }
 
+function useAccountPasskeyAvailable() {
+  const [passkeyAvailable, setPasskeyAvailable] = React.useState(false);
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/account/passkeys")
+      .then((response) => response.json())
+      .then((body) => {
+        const items = Array.isArray(body?.data) ? body.data : Array.isArray(body) ? body : [];
+        if (!cancelled) setPasskeyAvailable(items.length > 0);
+      })
+      .catch(() => {
+        if (!cancelled) setPasskeyAvailable(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return passkeyAvailable;
+}
+
+function NodeIdentityAuthDialog({
+  otpFieldId,
+  otpFieldRef,
+  otpInput,
+  onOtpChange,
+  otpInvalid,
+  submitting,
+  onDismiss,
+  onConfirmOtp,
+  onConfirmPasskey,
+}: {
+  otpFieldId: string;
+  otpFieldRef: React.RefObject<HTMLInputElement | null>;
+  otpInput: string;
+  onOtpChange: (value: string) => void;
+  otpInvalid: boolean;
+  submitting: boolean;
+  onDismiss: () => void;
+  onConfirmOtp: () => void;
+  onConfirmPasskey: () => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const passkeyAvailable = useAccountPasskeyAvailable();
+  const [passkeyBusy, setPasskeyBusy] = React.useState(false);
+  const busy = submitting || passkeyBusy;
+
+  return (
+    <Dialog.Root
+      open
+      zIndex={1400}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) return;
+        onDismiss();
+      }}
+    >
+      <AppDialogContent className="admin-install-dialog">
+        <Dialog.Title>
+          {t("admin.nodeTable.identityAuthTitle", "身份验证")}
+        </Dialog.Title>
+        <Dialog.Description>
+          {t("admin.nodeTable.identityAuthDescription", "请输入身份验证器中的 6 位动态口令")}
+        </Dialog.Description>
+        <form
+          autoComplete="on"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (otpInput.length === 6 && !busy) {
+              onConfirmOtp();
+            }
+          }}
+        >
+          <TextField.Root
+            ref={otpFieldRef}
+            id={otpFieldId}
+            name="one-time-code"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            autoFocus
+            maxLength={6}
+            color={otpInvalid ? "red" : undefined}
+            disabled={busy}
+            value={otpInput}
+            onChange={(event) =>
+              onOtpChange(event.currentTarget.value.replace(/\D/g, "").slice(0, 6))
+            }
+            placeholder={t("admin.nodeTable.identityAuthInput", "6 位动态口令")}
+            aria-label={t("admin.nodeTable.identityAuthInput", "6 位动态口令")}
+          />
+          {otpInvalid ? (
+            <Text size="2" color="red" className="mt-2" role="alert">
+              {t("admin.nodeTable.twoFactorInvalid", "验证码错误")}
+            </Text>
+          ) : null}
+          <Flex justify="end" gap="2" mt="4" wrap="wrap">
+            <Button
+              type="button"
+              variant="soft"
+              disabled={busy}
+              onClick={onDismiss}
+            >
+              {t("admin.nodeTable.cancel")}
+            </Button>
+            {passkeyAvailable ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() => {
+                  setPasskeyBusy(true);
+                  void Promise.resolve(onConfirmPasskey()).finally(() => setPasskeyBusy(false));
+                }}
+              >
+                {t("login.passkey", "使用通行密钥")}
+              </Button>
+            ) : null}
+            <Button
+              type="submit"
+              disabled={otpInput.length !== 6 || busy}
+            >
+              {t("common.confirm", "确认")}
+            </Button>
+          </Flex>
+        </form>
+      </AppDialogContent>
+    </Dialog.Root>
+  );
+}
+
 function RotateTokenButton({ node }: { node: NodeDetail }) {
   const { t } = useTranslation();
   const [open, setOpen] = React.useState(false);
@@ -1597,11 +1734,11 @@ function RotateTokenButton({ node }: { node: NodeDetail }) {
     return () => window.clearTimeout(timer);
   }, [needTwoFactor, rotating, twoFactorInvalid]);
 
-  const handleRotate = async (twoFactorCode?: string) => {
+  const handleRotate = async (auth: { twoFactorCode?: string; ceremony_id?: string; credential?: unknown } = {}) => {
     try {
       setRotating(true);
       setTwoFactorInvalid(false);
-      await rotateClientToken(node.uuid, { twoFactorCode });
+      await rotateClientToken(node.uuid, auth);
       toast.success(t("admin.nodeTable.rotateTokenSuccess", { name: node.name }));
       closeDialog();
     } catch (error) {
@@ -1616,12 +1753,15 @@ function RotateTokenButton({ node }: { node: NodeDetail }) {
         setOtpInput("");
         return;
       }
+      const cancelled = passkeyUnavailableMessage(error, "") === "cancelled";
       toast.error(
-        t("admin.nodeTable.rotateTokenFailed", {
-          error: localizeTokenRotationError(
-            error instanceof Error ? error.message : String(error),
-          ),
-        }),
+        cancelled
+          ? t("account.passkey_cancelled")
+          : t("admin.nodeTable.rotateTokenFailed", {
+              error: localizeTokenRotationError(
+                error instanceof Error ? error.message : String(error),
+              ),
+            }),
       );
     } finally {
       setRotating(false);
@@ -1668,72 +1808,36 @@ function RotateTokenButton({ node }: { node: NodeDetail }) {
         </Flex>
       </AppDialogContent>
       {needTwoFactor ? (
-        <Dialog.Root
-          open
-          zIndex={1400}
-          onOpenChange={(nextOpen) => {
-            if (nextOpen) return;
-            resetTwoFactor();
+        <NodeIdentityAuthDialog
+          otpFieldId="admin-node-rotate-otp"
+          otpFieldRef={otpFieldRef}
+          otpInput={otpInput}
+          onOtpChange={setOtpInput}
+          otpInvalid={twoFactorInvalid}
+          submitting={rotating}
+          onDismiss={resetTwoFactor}
+          onConfirmOtp={() => {
+            void handleRotate({ twoFactorCode: otpInput });
           }}
-        >
-          <AppDialogContent className="admin-install-dialog">
-            <Dialog.Title>
-              {t("admin.nodeTable.identityAuthTitle", "身份验证")}
-            </Dialog.Title>
-            <Dialog.Description>
-              {t("admin.nodeTable.identityAuthDescription", "请输入身份验证器中的 6 位动态口令")}
-            </Dialog.Description>
-            <form
-              autoComplete="on"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (otpInput.length === 6 && !rotating) {
-                  void handleRotate(otpInput);
-                }
-              }}
-            >
-              <TextField.Root
-                ref={otpFieldRef}
-                id="admin-node-rotate-otp"
-                name="one-time-code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                autoFocus
-                maxLength={6}
-                color={twoFactorInvalid ? "red" : undefined}
-                disabled={rotating}
-                value={otpInput}
-                onChange={(event) =>
-                  setOtpInput(event.currentTarget.value.replace(/\D/g, "").slice(0, 6))
-                }
-                placeholder={t("admin.nodeTable.identityAuthInput", "6 位动态口令")}
-                aria-label={t("admin.nodeTable.identityAuthInput", "6 位动态口令")}
-              />
-              {twoFactorInvalid ? (
-                <Text size="2" color="red" className="mt-2" role="alert">
-                  {t("admin.nodeTable.twoFactorInvalid", "验证码错误")}
-                </Text>
-              ) : null}
-              <Flex justify="end" gap="2" mt="4">
-                <Button
-                  type="button"
-                  variant="soft"
-                  disabled={rotating}
-                  onClick={resetTwoFactor}
-                >
-                  {t("admin.nodeTable.cancel")}
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={otpInput.length !== 6 || rotating}
-                >
-                  {t("common.confirm", "确认")}
-                </Button>
-              </Flex>
-            </form>
-          </AppDialogContent>
-        </Dialog.Root>
+          onConfirmPasskey={async () => {
+            try {
+              const assertion = await confirmAdminPasskey();
+              await handleRotate({
+                ceremony_id: assertion.ceremony_id,
+                credential: assertion.credential,
+              });
+            } catch (error) {
+              const cancelled = passkeyUnavailableMessage(error, "") === "cancelled";
+              toast.error(
+                cancelled
+                  ? t("account.passkey_cancelled")
+                  : error instanceof Error
+                    ? error.message
+                    : String(error),
+              );
+            }
+          }}
+        />
       ) : null}
     </Dialog.Root>
   );
@@ -2343,6 +2447,11 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
         };
     }
   })();
+  const nodeConfigName = node.name?.trim() || "";
+  const nodeConfigAddress = nodePreferredAddress(node);
+  const nodeConfigIdentity = [nodeConfigName, nodeConfigAddress]
+    .filter(Boolean)
+    .join(" ");
   return (
     <Dialog.Root
       open={open}
@@ -2370,7 +2479,22 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
         className="km-node-dialog km-node-deploy-dialog"
       >
         <Dialog.Title>
-          {t("admin.nodeTable.nodeConfig", "节点配置")}
+          <span className="km-node-config-title">
+            <span>{t("admin.nodeTable.nodeConfig", "节点配置")}</span>
+            {nodeConfigIdentity ? (
+              <span className="km-node-config-identity" title={nodeConfigIdentity}>
+                <span className="km-node-config-identity-flag" aria-hidden>
+                  <Flag flag={node.region} compact />
+                </span>
+                {nodeConfigName ? (
+                  <span className="km-node-config-identity-name">{nodeConfigName}</span>
+                ) : null}
+                {nodeConfigAddress ? (
+                  <span className="km-node-config-identity-ip">{nodeConfigAddress}</span>
+                ) : null}
+              </span>
+            ) : null}
+          </span>
         </Dialog.Title>
         <Tabs.Root
           value={dialogTab}
@@ -3063,74 +3187,37 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
         </Tabs.Root>
       </AppDialogContent>
       {needTwoFactor ? (
-      <Dialog.Root
-        open
-        zIndex={1400}
-        onOpenChange={(nextOpen) => {
-          if (nextOpen) return;
-          if (tokenSessionRef.current?.getSnapshot().twoFactorOpen) {
-            cancelDeployTwoFactor();
-          }
-        }}
-      >
-        <AppDialogContent className="admin-install-dialog">
-          <Dialog.Title>
-            {t("admin.nodeTable.identityAuthTitle", "身份验证")}
-          </Dialog.Title>
-          <Dialog.Description>
-            {t("admin.nodeTable.identityAuthDescription", "请输入身份验证器中的 6 位动态口令")}
-          </Dialog.Description>
-          <form
-            autoComplete="on"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (otpInput.length === 6 && !otpSubmitting) {
-                void tokenSessionRef.current?.submitTwoFactor(node.uuid, otpInput);
-              }
-            }}
-          >
-            <TextField.Root
-              ref={otpFieldRef}
-              id="admin-node-deploy-otp"
-              name="one-time-code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoFocus
-              maxLength={6}
-              color={tokenState.twoFactorInvalid ? "red" : undefined}
-              disabled={otpSubmitting}
-              value={otpInput}
-              onChange={(event) =>
-                setOtpInput(event.target.value.replace(/\D/g, "").slice(0, 6))
-              }
-              placeholder={t("admin.nodeTable.identityAuthInput", "6 位动态口令")}
-              aria-label={t("admin.nodeTable.identityAuthInput", "6 位动态口令")}
-            />
-            {tokenState.twoFactorInvalid ? (
-              <Text size="2" color="red" className="mt-2" role="alert">
-                {t("admin.nodeTable.twoFactorInvalid", "验证码错误")}
-              </Text>
-            ) : null}
-            <Flex justify="end" gap="2" mt="4">
-              <Button
-                type="button"
-                variant="soft"
-                disabled={otpSubmitting}
-                onClick={cancelDeployTwoFactor}
-              >
-                {t("admin.nodeTable.cancel")}
-              </Button>
-              <Button
-                type="submit"
-                disabled={otpInput.length !== 6 || otpSubmitting}
-              >
-                {t("common.confirm", "确认")}
-              </Button>
-            </Flex>
-          </form>
-        </AppDialogContent>
-      </Dialog.Root>
+        <NodeIdentityAuthDialog
+          otpFieldId="admin-node-deploy-otp"
+          otpFieldRef={otpFieldRef}
+          otpInput={otpInput}
+          onOtpChange={setOtpInput}
+          otpInvalid={tokenState.twoFactorInvalid}
+          submitting={otpSubmitting}
+          onDismiss={cancelDeployTwoFactor}
+          onConfirmOtp={() => {
+            void tokenSessionRef.current?.submitTwoFactor(node.uuid, otpInput);
+          }}
+          onConfirmPasskey={async () => {
+            try {
+              const assertion = await confirmAdminPasskey();
+              await tokenSessionRef.current?.submitPasskey(
+                node.uuid,
+                assertion.ceremony_id,
+                assertion.credential,
+              );
+            } catch (error) {
+              const cancelled = passkeyUnavailableMessage(error, "") === "cancelled";
+              toast.error(
+                cancelled
+                  ? t("account.passkey_cancelled")
+                  : error instanceof Error
+                    ? error.message
+                    : String(error),
+              );
+            }
+          }}
+        />
       ) : null}
     </Dialog.Root>
   );
@@ -3285,7 +3372,7 @@ function EditButton({ node }: { node: NodeDetail }) {
           </div>
           <div>
             <label className="block mb-1 text-sm font-medium text-muted-foreground">
-              {t("admin.nodeEdit.regionOverride", "国家\\地区图标")}
+              {t("admin.nodeEdit.regionOverride", "国家/地区图标")}
             </label>
             <SelectOrInput
               options={regionOptions}
@@ -3667,7 +3754,7 @@ function BillingButton({ node }: { node: NodeDetail }) {
               </label>
             </label>
             <SelectOrInput
-              options={["¥", "$", "€", "£", "₽", "₣", "₹", "₫", "฿", "C$"]}
+              options={["¥", "$", "€", "£", "C$", "HK$"]}
               name="currency"
               value={currency}
               onChange={(value) => setCurrency(value)}

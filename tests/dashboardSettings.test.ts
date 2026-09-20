@@ -296,6 +296,24 @@ test("packet loss ranking lists every task instead of one row per server", () =>
   }
 });
 
+test("latency ranking lists every task instead of one row per server", () => {
+  const zhCN = JSON.parse(readFileSync("src/i18n/locales/zh_CN.json", "utf8"));
+  const en = JSON.parse(readFileSync("src/i18n/locales/en.json", "utf8"));
+  const zhTW = JSON.parse(readFileSync("src/i18n/locales/zh_TW.json", "utf8"));
+  const ja = JSON.parse(readFileSync("src/i18n/locales/ja_JP.json", "utf8"));
+  for (const pack of [zhCN, en, zhTW, ja]) {
+    assert.match(pack.admin_dashboard.latency_ranking_hint, /探测任务|ping tasks|偵測任務|すべてのタスク/);
+  }
+  assert.match(
+    dashboardPanelsSource,
+    /function LatencyRankingBody[\s\S]+?key=\{`\$\{item\.uuid\}:\$\{item\.task_id \?\? 0\}`\}/,
+  );
+  assert.match(
+    dashboardPanelsSource,
+    /function LatencyRankingBody[\s\S]+?item\.task_name/,
+  );
+});
+
 test("latency jitter ranking lists every task instead of one row per server", () => {
   const zhCN = JSON.parse(readFileSync("src/i18n/locales/zh_CN.json", "utf8"));
   const en = JSON.parse(readFileSync("src/i18n/locales/en.json", "utf8"));

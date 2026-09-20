@@ -33,6 +33,7 @@ import {
     AdminPagination,
     useAdminPagination,
 } from "@/components/admin/AdminPagination";
+import { confirmAdminPasskey, passkeyUnavailableMessage } from "@/utils/webauthn";
 
 interface TaskResult {
     task_id: string;
@@ -127,6 +128,7 @@ const ExecContent = () => {
     const [commandEditorHeight, setCommandEditorHeight] = useState(COMMAND_EDITOR_COLLAPSED_HEIGHT);
     const [passwordInput, setPasswordInput] = useState("");
     const [twoFaCode, setTwoFaCode] = useState("");
+    const [passkeyAvailable, setPasskeyAvailable] = useState(false);
     const twoFaEnabled = Boolean(account?.["2fa_enabled"]);
     const grantRef = useRef("");
     const grantExpiresAtRef = useRef(0);
@@ -161,6 +163,16 @@ const ExecContent = () => {
         grantExpiresAtRef.current = stored.expiresAt;
         if (stored.pageID) pageIDRef.current = stored.pageID;
         setHasGrant(true);
+    }, []);
+
+    useEffect(() => {
+        fetch("/api/admin/account/passkeys")
+            .then((response) => response.json())
+            .then((body) => {
+                const items = Array.isArray(body?.data) ? body.data : Array.isArray(body) ? body : [];
+                setPasskeyAvailable(items.length > 0);
+            })
+            .catch(() => setPasskeyAvailable(false));
     }, []);
 
     useEffect(() => {
@@ -324,7 +336,7 @@ const ExecContent = () => {
         }, 60000);
     };
 
-    const executeCommand = async () => {
+    const executeCommand = async (usePasskey = false) => {
         if (!command.trim()) {
             toast.error(t("exec.errors.emptyCommand"));
             return;
@@ -337,11 +349,11 @@ const ExecContent = () => {
 
         const hasLiveGrant = isRemoteGrantLive(grantRef.current, grantExpiresAtRef.current);
         if (!hasLiveGrant) clearExecGrant();
-        if (twoFaEnabled && !hasLiveGrant && !twoFaCode.trim()) {
+        if (!usePasskey && twoFaEnabled && !hasLiveGrant && !twoFaCode.trim()) {
             toast.error(t("account.otp_empty_error"));
             return;
         }
-        if (!twoFaEnabled && !hasLiveGrant && !passwordInput.trim()) {
+        if (!usePasskey && !twoFaEnabled && !hasLiveGrant && !passwordInput.trim()) {
             toast.error(t("terminal.session.reauth_password_prompt"));
             return;
         }
@@ -361,6 +373,13 @@ const ExecContent = () => {
         try {
             if (!hasLiveGrant) {
                 grantRef.current = "";
+                let ceremony_id: string | undefined;
+                let credential: unknown;
+                if (usePasskey) {
+                    const assertion = await confirmAdminPasskey();
+                    ceremony_id = assertion.ceremony_id;
+                    credential = assertion.credential;
+                }
                 const authorizeResponse = await fetch("/api/admin/client/remote/authorize", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -368,8 +387,10 @@ const ExecContent = () => {
                     body: JSON.stringify({
                         scope: "exec",
                         page_id: pageIDRef.current,
-                        password: twoFaEnabled ? undefined : password || undefined,
-                        otp: twoFaEnabled ? otp : undefined,
+                        password: usePasskey || twoFaEnabled ? undefined : password || undefined,
+                        otp: usePasskey || !twoFaEnabled ? undefined : otp,
+                        ceremony_id,
+                        credential,
                     }),
                 });
                 const authorizePayload = await authorizeResponse.json().catch(() => ({}));
@@ -441,9 +462,14 @@ const ExecContent = () => {
                 throw new Error(data.message);
             }
         } catch (err) {
-            clearExecGrant();
-            const errorMessage = err instanceof Error ? err.message : t("common.error");
-            toast.error(localizeRemoteError(errorMessage, t));
+            const code = passkeyUnavailableMessage(err, "");
+            if (code === "cancelled") {
+                toast.error(t("account.passkey_cancelled"));
+            } else {
+                clearExecGrant();
+                const errorMessage = err instanceof Error ? err.message : t("common.error");
+                toast.error(localizeRemoteError(errorMessage, t));
+            }
         } finally {
             setPasswordInput("");
             setTwoFaCode("");
@@ -623,7 +649,7 @@ const ExecContent = () => {
                             variant="contained"
                             disableElevation
                             className="w-full sm:w-auto"
-                            onClick={executeCommand}
+                            onClick={() => void executeCommand(false)}
                             disabled={executing || !command.trim() || selectedNodes.length === 0 || (!hasGrant && (twoFaEnabled ? !twoFaCode.trim() : !passwordInput.trim()))}
                             sx={{ minWidth: 120, height: 40, borderRadius: "8px", textTransform: "none", fontWeight: 600 }}
                         >
@@ -636,6 +662,25 @@ const ExecContent = () => {
                                 t("exec.execute")
                             )}
                         </MuiButton>
+                        {passkeyAvailable && !hasGrant ? (
+                            <MuiButton
+                                variant="outlined"
+                                className="w-full sm:w-auto"
+                                onClick={() => void executeCommand(true)}
+                                disabled={executing || !command.trim() || selectedNodes.length === 0}
+                                sx={{
+                                    minWidth: 140,
+                                    height: 40,
+                                    borderRadius: "8px",
+                                    textTransform: "none",
+                                    fontWeight: 600,
+                                    color: "text.primary",
+                                    borderColor: "divider",
+                                }}
+                            >
+                                {t("login.passkey", "使用通行密钥")}
+                            </MuiButton>
+                        ) : null}
                     </div>
                 </Flex>
             </section>

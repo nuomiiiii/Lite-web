@@ -38,7 +38,7 @@ const loadAdminSettingsLayout = () =>
 
 export const preloadAdminEntry = (pathname: string) => {
   void loadAdminLayout();
-  if (pathname === "/admin") void loadAdminDashboard();
+  if (normalizeAdminPathname(pathname) === "/admin") void loadAdminDashboard();
 };
 
 const adminRoutePreloaders: Record<string, () => Promise<unknown>> = {
@@ -57,7 +57,6 @@ const adminRoutePreloaders: Record<string, () => Promise<unknown>> = {
   "/admin/settings/site": () => import("./pages/admin/settings/site"),
   "/admin/settings/dashboard": () => import("./pages/admin/settings/dashboard"),
   "/admin/settings/theme": () => import("./pages/admin/settings/theme"),
-  "/admin/settings/custom": () => import("./pages/admin/settings/custom"),
   "/admin/settings/notification": () => import("./pages/admin/settings/notification"),
   "/admin/settings/general": () => import("./pages/admin/settings/general"),
   "/admin/settings/xtermjs": () => import("./pages/admin/settings/xtermjs"),
@@ -167,6 +166,10 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: React.createElement(AdminDashboard) },
       {
+        path: "dashboard",
+        element: React.createElement(AdminDashboard),
+      },
+      {
         path: "servers",
         element: React.createElement(AdminServers),
       },
@@ -236,9 +239,10 @@ export const routes: RouteObject[] = [
           },
           {
             path: "custom",
-            element: React.createElement(
-              lazy(() => import("./pages/admin/settings/custom"))
-            ),
+            element: React.createElement(Navigate, {
+              replace: true,
+              to: "/admin/settings/site",
+            }),
           },
           {
             path: "sign-on",

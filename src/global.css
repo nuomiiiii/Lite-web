@@ -580,6 +580,70 @@ button.km-dashboard-chip:focus-visible {
   min-width: 88px;
 }
 
+.km-node-deploy-dialog > .MuiDialogTitle-root {
+  padding-bottom: 10px;
+}
+
+.km-node-deploy-dialog .km-admin-dialog-title-row {
+  align-items: flex-start;
+}
+
+.km-node-deploy-dialog .km-admin-dialog-title-close.MuiIconButton-root {
+  margin-top: 2px;
+}
+
+.km-node-config-title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.km-node-config-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 10px 4px 8px;
+  border-radius: 8px;
+  background: var(--gray-a3);
+  color: var(--gray-11);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.km-node-config-identity-flag {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.km-node-config-identity-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--gray-12);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.km-node-config-identity-ip {
+  min-width: 0;
+  overflow: hidden;
+  padding-left: 8px;
+  border-left: 1px solid var(--gray-a6);
+  color: var(--gray-11);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .km-node-deploy-dialog .admin-install-platforms {
   align-self: flex-start;
 }
@@ -1286,11 +1350,6 @@ html.dark .km-theme-config-tabs-viewport::after {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.admin-active-filter {
-  min-height: 2.25rem;
-  padding: 0.35rem 0.625rem !important;
-}
-
 /* Keep the admin visual baseline scoped away from dashboard themes. */
 [data-admin-shell],
 html[data-admin-shell-active="true"] {
@@ -1581,6 +1640,16 @@ html[data-admin-shell-active="true"] .MuiAlert-icon > svg {
   display: block;
 }
 
+html[data-admin-shell-active="true"] .km-settings-alert.MuiAlert-root {
+  align-items: center;
+}
+
+html[data-admin-shell-active="true"] .km-settings-alert .MuiAlert-icon {
+  align-items: center;
+  align-self: center;
+  padding-block: 0;
+}
+
 .MuiButton-root[data-text-action="true"] {
   gap: 0;
 }
@@ -1665,6 +1734,11 @@ html[data-admin-shell-active="true"] .MuiAlert-icon > svg {
   gap: 12px;
   border-top: 1px solid var(--gray-a5);
   background: var(--color-panel-solid);
+}
+
+.admin-pagination--plain {
+  border-top: 0;
+  background: transparent;
 }
 
 .admin-pagination-text,

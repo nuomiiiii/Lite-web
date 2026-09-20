@@ -209,8 +209,8 @@ export const TaskView = ({
           <TableRow>
             <TableHead className="w-12 px-3" aria-label={t("common.sort")}></TableHead>
             <TableHead className="w-[16%]">{t("common.name")}</TableHead>
-            <TableHead className="w-[28%]">{t("common.server")}</TableHead>
-            <TableHead className="w-[26%]">{t("ping.target")}</TableHead>
+            <TableHead className="w-[28%]">{t("ping.target")}</TableHead>
+            <TableHead className="w-[26%]">{t("common.server")}</TableHead>
             <TableHead className="w-[72px]">{t("ping.type")}</TableHead>
             <TableHead className="w-[64px]">{t("ping.interval")}</TableHead>
             <TableHead className="w-[96px]">{t("common.action")}</TableHead>
@@ -541,8 +541,8 @@ const Row = ({
           </Stack>
         }
         cells={[
-          [t("common.server"), serverNamesBlock],
           [t("ping.target"), clipCell(task.target)],
+          [t("common.server"), serverNamesBlock],
           [t("ping.type"), task.type],
           [t("ping.interval"), String(task.interval ?? "--")],
         ]}
@@ -577,11 +577,11 @@ const Row = ({
       <TableCell className="max-w-0" data-label={t("common.name")}>
         {clipCell(task.name)}
       </TableCell>
-      <TableCell className="max-w-0" data-label={t("common.server")}>
-        {serverValue}
-      </TableCell>
       <TableCell className="max-w-0" data-label={t("ping.target")}>
         {clipCell(task.target)}
+      </TableCell>
+      <TableCell className="max-w-0" data-label={t("common.server")}>
+        {serverValue}
       </TableCell>
       <TableCell className="overflow-hidden" data-label={t("ping.type")}>
         {task.type}

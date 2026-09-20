@@ -140,8 +140,12 @@ test("MCP authorized dialog copies the approve callback URL", () => {
     assert.match(pack.mcp.copy_callback, /./);
     assert.match(pack.mcp.view_requests_subtitle, /./);
     assert.match(pack.mcp.awaiting_authorize, /./);
-    assert.doesNotMatch(pack.mcp.authorized_body, /cloudflared|localhost|已连接|已連線|接続されました/);
+    assert.doesNotMatch(pack.mcp.authorized_body, /cloudflared|localhost/);
   }
+  assert.equal(zhTW.mcp.authorized_body, "AI 工具已連線，您可以關閉此視窗。");
+  assert.doesNotMatch(zhCN.mcp.authorized_body, /已连接|已連線|接続されました/);
+  assert.doesNotMatch(en.mcp.authorized_body, /已连接|已連線|接続されました/);
+  assert.doesNotMatch(ja.mcp.authorized_body, /已连接|已連線|接続されました/);
 });
 
 test("MCP pending requests can be denied and inactive history can be purged", () => {

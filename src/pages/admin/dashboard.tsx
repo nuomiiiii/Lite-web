@@ -13,7 +13,7 @@ import PaymentsOutlined from "@mui/icons-material/PaymentsOutlined";
 import Refresh from "@mui/icons-material/Refresh";
 import StorageOutlined from "@mui/icons-material/StorageOutlined";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
 import { useAccount } from "@/contexts/AccountContext";
@@ -91,6 +91,14 @@ const moduleGridClass: Record<number, string> = {
 export default function AdminDashboard() {
   const { t, i18n } = useTranslation();
   const { account } = useAccount();
+  const location = useLocation();
+  const navigate = useNavigate();
+  React.useLayoutEffect(() => {
+    const path = location.pathname.replace(/\/$/, "") || "/";
+    if (path === "/admin/dashboard") {
+      navigate("/admin", { replace: true });
+    }
+  }, [location.pathname, navigate]);
   const accountKey = account?.uuid || account?.username || "authenticated";
   const {
     settings,

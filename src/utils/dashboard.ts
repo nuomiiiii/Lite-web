@@ -134,6 +134,8 @@ export interface DashboardLatencyRankItem {
   uuid: string;
   name: string;
   average: number;
+  task_id?: number;
+  task_name?: string;
   detail_url?: string;
 }
 

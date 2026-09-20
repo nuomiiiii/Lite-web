@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -56,4 +57,15 @@ test("full MCP requires remote control and a current Agent capability", () => {
 test("denied MCP operations map to the denied result key", () => {
   assert.equal(operationResultKey("denied"), "denied");
   assert.equal(operationResultKey("rejected"), "denied");
+});
+
+test("MCP authorization dialog offers a passkey button", () => {
+  const source = readFileSync(new URL("../src/pages/admin/remote-management/mcp.tsx", import.meta.url), "utf8");
+  assert.match(source, /confirmAdminPasskey/);
+  assert.match(source, /mcp\.authorize_passkey/);
+  assert.match(source, /approveRequest\(true\)/);
+  assert.match(source, /\/api\/admin\/account\/passkeys/);
+  assert.equal((source.match(/mcp\.authorize_passkey/g) || []).length, 1);
+  assert.equal((source.match(/login\.passkey/g) || []).length, 0);
+  assert.equal((source.match(/approveRequest\(true\)/g) || []).length, 1);
 });

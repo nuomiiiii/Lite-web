@@ -147,8 +147,8 @@ export default function AdminNodeListFilters({
         }}
       >
         <AdminMultiSelect
-          label={t("admin.nodeTable.region", "国家\\地区")}
-          ariaLabel={t("admin.nodeTable.region", "国家\\地区")}
+          label={t("admin.nodeTable.region", "国家/地区")}
+          ariaLabel={t("admin.nodeTable.region", "国家/地区")}
           value={regionFilters}
           onChange={onRegionFiltersChange}
           options={regionOptions.map((option) => ({
@@ -340,7 +340,7 @@ export default function AdminNodeListFilters({
                 size="small"
                 onDelete={() => onRegionFiltersChange(regionFilters.filter((item) => item !== region.key))}
                 deleteIcon={<X size={14} />}
-                label={`${t("admin.nodeTable.region", "国家\\地区")}: ${regionLabel(region.region, region.key)}`}
+                label={`${t("admin.nodeTable.region", "国家/地区")}: ${regionLabel(region.region, region.key)}`}
               />
             ))}
             {selectedGroups.map((group) => (

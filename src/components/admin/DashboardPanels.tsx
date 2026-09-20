@@ -1285,7 +1285,7 @@ function LatencyRankingBody({
   return (
     <DashboardRankingGrid>
       {items.map((item, index) => (
-        <DashboardRankingItemLink key={item.uuid} href={item.detail_url}>
+        <DashboardRankingItemLink key={`${item.uuid}:${item.task_id ?? 0}`} href={item.detail_url}>
           <DashboardRankingItem
             index={indexOffset + index}
             name={item.name}
@@ -1295,6 +1295,11 @@ function LatencyRankingBody({
                 className="h-full rounded-full bg-[var(--orange-9)]"
                 style={{ width: `${maximum > 0 ? (item.average / maximum) * 100 : 0}%` }}
               />
+            )}
+            detail={(
+              <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                <span className="min-w-0 truncate">{item.task_name}</span>
+              </div>
             )}
           />
         </DashboardRankingItemLink>

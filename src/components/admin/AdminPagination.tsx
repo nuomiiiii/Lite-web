@@ -119,6 +119,7 @@ export const AdminPagination = ({
   dragging = false,
   summary,
   showSummary = true,
+  hideDivider = false,
 }: {
   page: number;
   total: number;
@@ -130,6 +131,7 @@ export const AdminPagination = ({
   dragging?: boolean;
   summary?: React.ReactNode;
   showSummary?: boolean;
+  hideDivider?: boolean;
 }) => {
   const { t } = useTranslation();
   const [pageSizeAnchor, setPageSizeAnchor] = React.useState<HTMLElement | null>(null);
@@ -154,7 +156,7 @@ export const AdminPagination = ({
   };
 
   return (
-    <div className="admin-pagination px-3 py-1.5">
+    <div className={`admin-pagination px-3 py-1.5${hideDivider ? " admin-pagination--plain" : ""}`}>
       {showSummary ? (
         <span className="admin-pagination-text">
           {summary ??

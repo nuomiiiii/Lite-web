@@ -38,6 +38,10 @@ import RemoteSession, { type ConnectionState, type RemoteNode } from "./RemoteSe
 import { getRemoteLaunchTarget } from "@/utils/remoteLaunch";
 import { createRandomId } from "@/utils/randomId";
 import {
+  confirmAdminPasskey,
+  passkeyUnavailableMessage,
+} from "@/utils/webauthn";
+import {
   captureRotatedRemoteGrant,
   clearStoredRemoteGrant,
   isRemoteGrantLive,
@@ -134,6 +138,7 @@ function SortableRemoteTab({
 
 type RemoteAuthFieldsProps = {
   twoFaEnabled: boolean;
+  passkeyAvailable?: boolean;
   authFailed: boolean;
   otpInput: string;
   passwordInput: string;
@@ -143,6 +148,7 @@ type RemoteAuthFieldsProps = {
   onOtp: (value: string) => void;
   onPassword: (value: string) => void;
   onSubmit: () => void;
+  onPasskey?: () => void;
   onCancel: () => void;
   onRetry: () => void;
   cancelAsText?: boolean;
@@ -150,6 +156,7 @@ type RemoteAuthFieldsProps = {
 
 function RemoteAuthFields({
   twoFaEnabled,
+  passkeyAvailable = false,
   authFailed,
   otpInput,
   passwordInput,
@@ -159,6 +166,7 @@ function RemoteAuthFields({
   onOtp,
   onPassword,
   onSubmit,
+  onPasskey,
   onCancel,
   onRetry,
   cancelAsText = false,
@@ -219,6 +227,17 @@ function RemoteAuthFields({
         >
           {submitLabel}
         </Button>
+        {passkeyAvailable && onPasskey ? (
+          <Button
+            type="button"
+            variant="outlined"
+            fullWidth
+            onClick={onPasskey}
+            sx={{ minHeight: 52, color: "text.primary", borderColor: "divider" }}
+          >
+            {t("login.passkey", "使用通行密钥")}
+          </Button>
+        ) : null}
         {cancelAsText ? (
           <Box sx={{ display: "flex", justifyContent: "center" }}>
             <Box
@@ -304,6 +323,7 @@ function TerminalWorkspaceInner() {
   const [otpInput, setOtpInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [otpError, setOtpError] = useState("");
+  const [passkeyAvailable, setPasskeyAvailable] = useState(false);
   const initialized = useRef(false);
   const authorizationStarted = useRef(false);
   const grantRef = useRef("");
@@ -378,13 +398,30 @@ function TerminalWorkspaceInner() {
       .finally(() => setNodesLoaded(true));
   }, [t]);
 
-  const authorizeRemote = useCallback(async (credentials?: { password?: string; otp?: string }) => {
+  useEffect(() => {
+    fetch("/api/admin/account/passkeys")
+      .then((response) => response.json())
+      .then((body) => {
+        const items = Array.isArray(body?.data) ? body.data : Array.isArray(body) ? body : [];
+        setPasskeyAvailable(items.length > 0);
+      })
+      .catch(() => setPasskeyAvailable(false));
+  }, []);
+
+  const authorizeRemote = useCallback(async (credentials?: { password?: string; otp?: string; passkey?: boolean }) => {
     setOtpError("");
     const password = credentials?.password || passwordInput;
     const otp = credentials?.otp || otpInput;
     setPasswordInput("");
     setOtpInput("");
     try {
+      let ceremony_id: string | undefined;
+      let credential: unknown;
+      if (credentials?.passkey) {
+        const assertion = await confirmAdminPasskey();
+        ceremony_id = assertion.ceremony_id;
+        credential = assertion.credential;
+      }
       const response = await fetch("/api/admin/client/remote/authorize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -394,6 +431,8 @@ function TerminalWorkspaceInner() {
           page_id: pageIDRef.current,
           password: password || undefined,
           otp: otp || undefined,
+          ceremony_id,
+          credential,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -427,6 +466,11 @@ function TerminalWorkspaceInner() {
       }
       throw new Error(localizeRemoteError(payload?.message, t) || t("terminal.session.auth_failed"));
     } catch (error) {
+      const code = passkeyUnavailableMessage(error, "");
+      if (code === "cancelled") {
+        setOtpError(t("account.passkey_cancelled"));
+        return;
+      }
       setOtpError(
         error instanceof Error
           ? localizeRemoteError(error.message, t)
@@ -731,6 +775,7 @@ function TerminalWorkspaceInner() {
   const authFields = (
     <RemoteAuthFields
       twoFaEnabled={twoFaEnabled}
+      passkeyAvailable={passkeyAvailable}
       authFailed={authFailed}
       otpInput={otpInput}
       passwordInput={passwordInput}
@@ -742,6 +787,9 @@ function TerminalWorkspaceInner() {
       onPassword={setPasswordInput}
       onSubmit={() => {
         void authorizeRemote(twoFaEnabled ? { otp: otpInput } : { password: passwordInput });
+      }}
+      onPasskey={() => {
+        void authorizeRemote({ passkey: true });
       }}
       onCancel={() => {
         if (workspaceEntered) {

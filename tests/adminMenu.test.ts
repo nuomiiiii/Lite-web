@@ -14,7 +14,6 @@ const menuConfig = JSON.parse(
   readFileSync(new URL("../src/config/menuConfig.json", import.meta.url), "utf8"),
 ) as { menu: MenuItem[]; footer: MenuItem[] };
 const adminPanelSource = [
-  "AdminPanelBar.tsx",
   "shell/AdminShell.tsx",
   "shell/useAdminShell.ts",
   "shell/AdminSidebar.tsx",
@@ -327,7 +326,6 @@ test("admin multi-sheet pages share the node-detail tab bar", () => {
     pingTaskPageSource,
     returnRoutePageSource,
     readFileSync(new URL("../src/pages/admin/settings/metrics.tsx", import.meta.url), "utf8"),
-    readFileSync(new URL("../src/pages/admin/settings/account-security.tsx", import.meta.url), "utf8"),
     readFileSync(new URL("../src/pages/admin/settings/reverse-proxy.tsx", import.meta.url), "utf8"),
     readFileSync(new URL("../src/pages/admin/notification/load.tsx", import.meta.url), "utf8"),
     readFileSync(new URL("../src/pages/admin/notification/ping_loss.tsx", import.meta.url), "utf8"),
@@ -367,6 +365,19 @@ test("admin multi-sheet pages share the node-detail tab bar", () => {
   for (const source of sheetPages) {
     assert.match(source, /admin-tab-panel/);
   }
+});
+
+test("account security uses the homepage cards instead of sheet tabs", () => {
+  const source = readFileSync(
+    new URL("../src/pages/admin/settings/account-security.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(source, /<AdminSheetTabs/);
+  assert.match(source, /SettingsFeatureCard/);
+  assert.match(source, /SettingsSheetDialog/);
+  assert.match(source, /\/api\/admin\/account\/avatar/);
+  assert.match(source, /\/api\/admin\/account\/passkeys/);
+  assert.match(source, /openPanel\("avatar"\)[\s\S]{0,120}spacing=\{2\}/);
 });
 
 test("admin checkboxes share the active accent palette", () => {

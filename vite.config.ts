@@ -27,7 +27,7 @@ function keepOnViteDevServer(pathname: string): boolean {
     pathname.startsWith("/assets/logo") ||
     pathname.startsWith("/assets/pwa-icon") ||
     pathname.startsWith("/assets/lite-card-background-v4") ||
-    pathname.startsWith("/favicon") ||
+    pathname.startsWith("/favicon.png") ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/themes")
   );

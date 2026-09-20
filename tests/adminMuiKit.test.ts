@@ -79,7 +79,12 @@ test("admin overlays share one enter and exit duration", () => {
   const layout = readFileSync("src/pages/admin/_layout.tsx", "utf8");
   assert.match(theme, /MuiMenu:[\s\S]*transitionDuration: \{ enter: 220, exit: 150 \}/);
   assert.match(theme, /MuiPopover:[\s\S]*transitionDuration: \{ enter: 220, exit: 150 \}/);
+  assert.match(theme, /MuiDialog:[\s\S]*disableScrollLock: true/);
   assert.match(theme, /MuiDialog:[\s\S]*transitionDuration: \{ enter: 220, exit: 160 \}/);
+  assert.match(theme, /dialogContainerNoFadeSx/);
+  assert.match(theme, /dialogPaperVisibility\(Boolean\(ownerState\?\.open\)\)/);
+  assert.match(dialog, /dialogContainerNoFadeSx/);
+  assert.match(dialog, /dialogPaperVisibility\(isOpen\)/);
   assert.match(menu, /transitionDuration: \{ enter: 220, exit: 150 \}/);
   assert.doesNotMatch(dialog, /transitionDuration:\s*0/);
   assert.match(layout, /AdminRouteViewport/);
@@ -89,7 +94,8 @@ test("vite keeps system flags and logos on the admin origin", () => {
   const source = readFileSync("vite.config.ts", "utf8");
   assert.match(source, /pathname\.startsWith\("\/assets\/flags"\)/);
   assert.match(source, /pathname\.startsWith\("\/assets\/logo"\)/);
-  assert.match(source, /pathname\.startsWith\("\/favicon"\)/);
+  assert.match(source, /pathname\.startsWith\("\/favicon\.png"\)/);
+  assert.doesNotMatch(source, /pathname\.startsWith\("\/favicon"\) \|\|/);
 });
 
 test("node detail overview keeps flag assets, spec icons, and HK preview values", () => {

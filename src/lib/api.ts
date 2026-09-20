@@ -281,7 +281,23 @@ type SettingsContextValue = ReturnType<typeof useSettingsController>;
 const SettingsContext = React.createContext<SettingsContextValue | null>(null);
 
 export function useReduceMotionPreference(): boolean {
-  return false;
+  const [reduceMotion, setReduceMotion] = React.useState(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return false;
+    }
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
+
+  React.useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduceMotion(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  return reduceMotion;
 }
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {

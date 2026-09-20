@@ -199,6 +199,9 @@ test("server details open an overview billing metrics page", () => {
   assert.match(detailSource, /useAdminTabParam\(DETAIL_TABS, "overview"\)/);
   assert.match(detailSource, /currencyForStorage\(currency\)/);
   assert.match(detailSource, /BILLING_CURRENCY_OPTIONS/);
+  assert.match(detailSource, /\["¥", "\$", "€", "£", "C\$", "HK\$"\]/);
+  assert.doesNotMatch(detailSource, /"₽"|"₣"|"₹"|"₫"|"฿"/);
+  assert.match(readFileSync("src/pages/admin/index.tsx", "utf8"), /\["¥", "\$", "€", "£", "C\$", "HK\$"\]/);
   assert.match(detailSource, /rgba\(34, 197, 94, 0\.16\)/);
   assert.doesNotMatch(detailSource, /followBillingCurrency/);
   assert.doesNotMatch(detailSource, /trafficResetNotePlaceholder/);
@@ -419,8 +422,20 @@ test("admin tables align selection controls and use available text width", () =>
   assert.match(loadSource, /truncate whitespace-nowrap/);
   assert.doesNotMatch(loadSource, /whitespace-normal break-words/);
   assert.match(pingTaskSource, /admin-responsive-table admin-sortable-table table-fixed min-w-\[920px\]/);
+  assert.match(pingServerSource, /admin-responsive-table table-fixed w-full min-w-0/);
+  assert.match(pingServerSource, /TableHead className="w-\[56px\]"/);
+  assert.match(pingServerSource, /TableCell className="max-w-0 overflow-hidden"/);
+  assert.match(pingServerSource, /truncate whitespace-nowrap leading-5/);
   assert.match(pingTaskSource, /truncate whitespace-nowrap/);
   assert.match(pingTaskSource, /data-label=\{t\("ping\.target"\)\}[\s\S]{0,80}clipCell\(task\.target\)/);
+  assert.match(
+    pingTaskSource,
+    /<TableHead className="w-\[16%\]">\{t\("common\.name"\)\}<\/TableHead>\s*<TableHead className="w-\[28%\]">\{t\("ping\.target"\)\}<\/TableHead>\s*<TableHead className="w-\[26%\]">\{t\("common\.server"\)\}<\/TableHead>/,
+  );
+  assert.match(
+    pingTaskSource,
+    /data-label=\{t\("ping\.target"\)\}[\s\S]{0,120}data-label=\{t\("common\.server"\)\}/,
+  );
   assert.match(pingTaskSource, /TableHead className="w-\[72px\]"/);
   assert.match(pingTaskSource, /TableHead className="w-\[64px\]"/);
   assert.doesNotMatch(pingTaskSource, /whitespace-normal break-words/);

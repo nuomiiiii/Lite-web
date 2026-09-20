@@ -24,6 +24,7 @@ import { useAccount } from "./contexts/AccountContext";
 import FullPageLoading from "./components/FullPageLoading";
 import DocumentTitle from "./components/DocumentTitle";
 import AccountPreferenceSync from "./components/AccountPreferenceSync";
+import SessionActivitySync from "./components/SessionActivitySync";
 import {
   getIdleAdminWarmupTargets,
   scheduleIdleAdminWarmup,
@@ -183,6 +184,7 @@ const App = () => {
   ) : (
     <AccountProvider>
       <AccountPreferenceSync />
+      <SessionActivitySync />
       <AdminRoutePreloader />
       <AccountScopedRPC2>
         <PublicInfoProvider>

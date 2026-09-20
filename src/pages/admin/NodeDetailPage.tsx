@@ -76,7 +76,7 @@ import {
   metricCardSx,
 } from "@/pages/admin/nodeDetailCardStyles";
 
-const BILLING_CURRENCY_OPTIONS = ["¥", "$", "€", "£", "₽", "₣", "₹", "₫", "฿", "C$"];
+const BILLING_CURRENCY_OPTIONS = ["¥", "$", "€", "£", "C$", "HK$"];
 
 const DETAIL_TABS = ["overview", "billing", "metrics"] as const;
 
@@ -850,7 +850,7 @@ function NodeDetailPageBody() {
               />
               <Stack spacing={1.25} sx={{ p: 2, flex: 1, minHeight: 0 }}>
                 <CopyRow
-                  label={t("admin.nodeTable.region", "国家\\地区")}
+                  label={t("admin.nodeTable.region", "国家/地区")}
                   value={location}
                   leading={countryFlag}
                 />

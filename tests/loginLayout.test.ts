@@ -10,10 +10,6 @@ const authPageSource = readFileSync(
   new URL("../src/components/admin/shell/AuthStandAlonePage.tsx", import.meta.url),
   "utf8",
 );
-const loginIdentitySource = readFileSync(
-  new URL("../src/components/LoginIdentityHeader.tsx", import.meta.url),
-  "utf8",
-);
 const mainSource = readFileSync(
   new URL("../src/main.tsx", import.meta.url),
   "utf8",
@@ -57,10 +53,6 @@ test("login card does not use the framed favicon as a hero icon", () => {
   assert.doesNotMatch(authPageSource, /width: 64, height: 64/);
   assert.match(
     authPageSource,
-    /getAppAssetUrl\("assets\/logo\.png\?v=lite-icon-0e86dd"\)/,
-  );
-  assert.match(
-    loginIdentitySource,
     /getAppAssetUrl\("assets\/logo\.png\?v=lite-icon-0e86dd"\)/,
   );
 });

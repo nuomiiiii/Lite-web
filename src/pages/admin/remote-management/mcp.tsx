@@ -112,6 +112,7 @@ import {
 } from "@/utils/mcpDisplay";
 import { filterRemoteNodes, orderRemoteNodes } from "@/utils/remoteNodePicker";
 import { getRegionCode } from "@/utils/regionHelper";
+import { confirmAdminPasskey, passkeyUnavailableMessage } from "@/utils/webauthn";
 
 type MCPTab = "settings" | "leases" | "operations";
 const MCP_TABS = ["settings", "leases", "operations"] as const;
@@ -2397,10 +2398,25 @@ function MCPAuthorizeDialog({
   const [denyingID, setDenyingID] = useState("");
   const [missingClient, setMissingClient] = useState(!requestID);
   const [requestReady, setRequestReady] = useState(false);
+  const [passkeyAvailable, setPasskeyAvailable] = useState(false);
 
   useEffect(() => {
     setSelected(prefillNodes);
   }, [prefillNodes]);
+
+  useEffect(() => {
+    if (!open) {
+      setPasskeyAvailable(false);
+      return;
+    }
+    fetch("/api/admin/account/passkeys")
+      .then((response) => response.json())
+      .then((body) => {
+        const items = Array.isArray(body?.data) ? body.data : Array.isArray(body) ? body : [];
+        setPasskeyAvailable(items.length > 0);
+      })
+      .catch(() => setPasskeyAvailable(false));
+  }, [open]);
 
   useEffect(() => {
     if (!open || !requestID) {
@@ -2506,7 +2522,8 @@ function MCPAuthorizeDialog({
     : durationMinutes != null && durationMinutes > settings.mcp_max_duration_minutes
       ? "range"
       : null;
-  const canSubmit = Boolean(requestID && !missingClient && requestReady && selected.length && durationMinutes && secret && !durationError && !submitting && !denyingID);
+  const canApproveBase = Boolean(requestID && !missingClient && requestReady && selected.length && durationMinutes && !durationError && !submitting && !denyingID);
+  const canSubmit = Boolean(canApproveBase && secret);
 
   const denyRequest = async (id: string, closeAfter: boolean) => {
     if (!id || denyingID) return;
@@ -2525,6 +2542,45 @@ function MCPAuthorizeDialog({
       toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setDenyingID("");
+    }
+  };
+
+  const approveRequest = async (usePasskey: boolean) => {
+    if (!requestID) return;
+    setSubmitting(true);
+    try {
+      let ceremony_id: string | undefined;
+      let credential: unknown;
+      if (usePasskey) {
+        const assertion = await confirmAdminPasskey();
+        ceremony_id = assertion.ceremony_id;
+        credential = assertion.credential;
+      }
+      const result = await mcpFetch<{ redirect_uri: string }>(`/api/admin/mcp/authorization-requests/${requestID}/approve`, {
+        method: "POST",
+        body: JSON.stringify({
+          target_uuids: selected,
+          duration_minutes: durationMinutes,
+          note,
+          password: usePasskey || twoFaEnabled ? undefined : secret,
+          otp: usePasskey || !twoFaEnabled ? undefined : secret,
+          ceremony_id,
+          credential,
+        }),
+      });
+      setSecret("");
+      await onApproved();
+      onClose();
+      onConnected(result.redirect_uri || "");
+    } catch (err) {
+      const code = passkeyUnavailableMessage(err, "");
+      if (code === "cancelled") {
+        toast.error(t("account.passkey_cancelled"));
+      } else {
+        toast.error(err instanceof Error ? err.message : String(err));
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -3039,7 +3095,7 @@ function MCPAuthorizeDialog({
           "& > :not(style) ~ :not(style)": { ml: 0 },
         }}
       >
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap", justifyContent: "flex-end" }}>
           <Button onClick={onClose}>{t("common.cancel")}</Button>
           <Button
             color="error"
@@ -3053,32 +3109,19 @@ function MCPAuthorizeDialog({
             variant="contained"
             disabled={!canSubmit}
             startIcon={<Check size={16} />}
-          onClick={async () => {
-            setSubmitting(true);
-            try {
-              const result = await mcpFetch<{ redirect_uri: string }>(`/api/admin/mcp/authorization-requests/${requestID}/approve`, {
-                method: "POST",
-                body: JSON.stringify({
-                  target_uuids: selected,
-                  duration_minutes: durationMinutes,
-                  note,
-                  password: twoFaEnabled ? undefined : secret,
-                  otp: twoFaEnabled ? secret : undefined,
-                }),
-              });
-              setSecret("");
-              await onApproved();
-              onClose();
-              onConnected(result.redirect_uri || "");
-            } catch (err) {
-              toast.error(err instanceof Error ? err.message : String(err));
-            } finally {
-              setSubmitting(false);
-            }
-          }}
-        >
-          {t("mcp.authorize")}
-        </Button>
+            onClick={() => void approveRequest(false)}
+          >
+            {t("mcp.authorize")}
+          </Button>
+          {passkeyAvailable ? (
+            <Button
+              variant="outlined"
+              disabled={!canApproveBase}
+              onClick={() => void approveRequest(true)}
+            >
+              {t("mcp.authorize_passkey")}
+            </Button>
+          ) : null}
         </Stack>
       </DialogActions>
     </Dialog>

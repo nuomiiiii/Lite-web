@@ -13,6 +13,7 @@ import { useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { adminLetterAvatarSx } from "@/components/admin/SettingsChrome";
 import { useAccount } from "@/contexts/AccountContext";
 import { logout } from "./useAdminShell";
 import { ChromeIconButton, LanguageMenu, ThemeMenu } from "./ChromeActions";
@@ -35,6 +36,7 @@ export default function AdminTopbar({
   const navigate = useNavigate();
   const [userAnchor, setUserAnchor] = useState<HTMLElement | null>(null);
   const username = account?.username || "admin";
+  const avatarUrl = account?.avatar_url || "";
 
   return (
     <AppBar
@@ -103,13 +105,19 @@ export default function AdminTopbar({
             }}
           >
             <Avatar
+              src={avatarUrl || undefined}
+              slotProps={{
+                img: {
+                  onError: (event) => {
+                    (event.currentTarget as HTMLImageElement).style.display = "none";
+                  },
+                },
+              }}
               sx={{
                 width: 36,
                 height: 36,
                 fontSize: 14,
-                fontWeight: 700,
-                bgcolor: "text.primary",
-                color: "background.paper",
+                ...adminLetterAvatarSx,
               }}
             >
               {username.slice(0, 1).toUpperCase()}
