@@ -62,6 +62,12 @@ import { useAccount } from "@/contexts/AccountContext";
 import { useAdminTabParam } from "@/hooks/useAdminTabParam";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
+import {
+  getAccountPasskeySnapshot,
+  prefetchAccountPasskeys,
+  rememberAccountPasskeys,
+  type AccountPasskeySummary,
+} from "@/lib/accountPasskeys";
 import Sessions, { SessionsDeleteAllButton } from "@/pages/admin/sessions";
 import SignOnSettings from "@/pages/admin/settings/sign-on";
 import {
@@ -113,6 +119,7 @@ type AccountPanel = (typeof ACCOUNT_PANELS)[number];
 const otpFieldHtmlInput = {
   autoComplete: "one-time-code",
   inputMode: "numeric" as const,
+  pattern: "[0-9]*",
   maxLength: 6,
   autoCorrect: "off",
   autoCapitalize: "off",
@@ -140,21 +147,29 @@ export default function AccountSecuritySettings() {
   const [nestFrom, setNestFrom] = useState<AccountPanel | null>(null);
   const usernameButtonRef = useRef<HTMLButtonElement>(null);
   const [sessionCount, setSessionCount] = useState(0);
-  const [passkeyCount, setPasskeyCount] = useState(0);
+  const [passkeyCount, setPasskeyCount] = useState<number | null>(
+    () => getAccountPasskeySnapshot()?.length ?? null,
+  );
 
   useEffect(() => {
     setPanel(urlPanel);
   }, [urlPanel]);
 
   useEffect(() => {
-    fetch("/api/admin/account/passkeys")
-      .then((response) => response.json())
-      .then((body) => {
-        const items = Array.isArray(body?.data) ? body.data : Array.isArray(body) ? body : [];
-        setPasskeyCount(items.length);
+    let cancelled = false;
+    const cached = getAccountPasskeySnapshot();
+    if (cached) setPasskeyCount(cached.length);
+    void prefetchAccountPasskeys(Boolean(cached))
+      .then((items) => {
+        if (!cancelled) setPasskeyCount(items.length);
       })
-      .catch(() => undefined);
-  }, [panel]);
+      .catch(() => {
+        if (!cancelled && getAccountPasskeySnapshot() === null) setPasskeyCount(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const ttl = splitSessionTtl(Number(settings.session_ttl_seconds) || DEFAULT_SESSION_TTL_SECONDS);
   const stackedOnSignin = nestFrom === "signin" || panel === "signin";
@@ -204,7 +219,7 @@ export default function AccountSecuritySettings() {
   const passwordLoginEnabled = !settings.disable_password_login && hasPassword;
   const methodCount =
     (passwordLoginEnabled ? 1 : 0) +
-    (passkeyCount > 0 ? 1 : 0) +
+    ((passkeyCount ?? 0) > 0 ? 1 : 0) +
     (account?.sso_id ? 1 : 0);
   const deviceLabel = UserAgentHelper.shortDevice(navigator.userAgent);
 
@@ -335,8 +350,16 @@ export default function AccountSecuritySettings() {
           icon={<FingerprintIcon size={24} />}
           title={t("account.sign_in_methods", "登录方式")}
           description={t("account.sign_in_methods_description", "密码、通行密钥与第三方登录")}
-          chip={t("account.methods_available", "{{count}} 种可用", { count: methodCount })}
-          meta={t("account.methods_meta", "{{count}} 种登录方式", { count: methodCount })}
+          chip={
+            passkeyCount === null
+              ? undefined
+              : t("account.methods_available", "{{count}} 种可用", { count: methodCount })
+          }
+          meta={
+            passkeyCount === null
+              ? undefined
+              : t("account.methods_meta", "{{count}} 种登录方式", { count: methodCount })
+          }
           actionLabel={t("common.manage", "管理")}
           onAction={() => openPanel("signin")}
         />
@@ -415,6 +438,7 @@ export default function AccountSecuritySettings() {
         onOpen={(next) => openPanel(next)}
         account={account}
         settings={settings}
+        passkeyCount={passkeyCount ?? 0}
       />
       <PasswordPanel
         open={panel === "password"}
@@ -449,7 +473,13 @@ export default function AccountSecuritySettings() {
         refresh={refresh}
         oauthProvider={String(settings.o_auth_provider || "")}
       />
-      <PasskeysPanel open={panel === "passkeys"} hideBackdrop={stackedOnSignin} onClose={closePanel} account={account} />
+      <PasskeysPanel
+        open={panel === "passkeys"}
+        hideBackdrop={stackedOnSignin}
+        onClose={closePanel}
+        account={account}
+        onCount={setPasskeyCount}
+      />
       <TwoFactorPanel
         open={panel === "security"}
         onClose={closePanel}
@@ -761,7 +791,7 @@ function PasswordPanel({
               label={t("account.2fa_otp_input_prompt")}
               value={twoFa}
               slotProps={{ htmlInput: otpFieldHtmlInput }}
-              onChange={(event) => setTwoFa(event.target.value)}
+              onChange={(event) => setTwoFa(event.target.value.replace(/\D/g, "").slice(0, 6))}
               sx={settingsFieldSx}
             />
           ) : null}
@@ -1103,6 +1133,7 @@ function SignInMethodsPanel({
   onOpen,
   account,
   settings,
+  passkeyCount,
 }: {
   open: boolean;
   conceal?: boolean;
@@ -1110,13 +1141,13 @@ function SignInMethodsPanel({
   onOpen: (panel: AccountPanel) => void;
   account: { sso_id?: string; "2fa_enabled"?: boolean; has_password?: boolean } | null;
   settings: Record<string, any>;
+  passkeyCount: number;
 }) {
   const { t } = useTranslation();
   const bound = Boolean(account?.sso_id);
   const providerKey = ssoProviderKey(account?.sso_id, String(settings.o_auth_provider || ""));
   const provider = ssoProviderLabel(providerKey);
   const uniqueId = ssoExternalId(account?.sso_id);
-  const [passkeyCount, setPasskeyCount] = useState(0);
   const hasPassword = account?.has_password !== false;
   const passwordDisabled = Boolean(settings.disable_password_login);
   const passwordDescription = passwordDisabled
@@ -1126,17 +1157,6 @@ function SignInMethodsPanel({
     : hasPassword
       ? t("account.password_login_description", "已设置密码")
       : t("account.password_login_unset", "未设置");
-
-  useEffect(() => {
-    if (!open) return;
-    fetch("/api/admin/account/passkeys")
-      .then((response) => response.json())
-      .then((body) => {
-        const items = Array.isArray(body?.data) ? body.data : Array.isArray(body) ? body : [];
-        setPasskeyCount(items.length);
-      })
-      .catch(() => undefined);
-  }, [open]);
 
   return (
     <SettingsSheetDialog
@@ -1854,17 +1874,23 @@ function PasskeysPanel({
   hideBackdrop = false,
   onClose,
   account,
+  onCount,
 }: {
   open: boolean;
   hideBackdrop?: boolean;
   onClose: () => void;
   account: { "2fa_enabled"?: boolean; sso_id?: string; has_password?: boolean; username?: string } | null;
+  onCount?: (count: number) => void;
 }) {
   const { t } = useTranslation();
-  const [items, setItems] = useState<Array<{ id: string; name: string; created_at?: string }>>([]);
+  const isMobile = useIsMobile();
+  const [items, setItems] = useState<AccountPasskeySummary[]>(
+    () => getAccountPasskeySnapshot() ?? [],
+  );
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [twoFa, setTwoFa] = useState("");
+  const [confirmKey, setConfirmKey] = useState(0);
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
   const [step, setStep] = useState<"list" | "add" | "confirm">("list");
@@ -1873,17 +1899,33 @@ function PasskeysPanel({
   const [renameValue, setRenameValue] = useState("");
   const [deletingId, setDeletingId] = useState("");
   const [saveTarget, setSaveTarget] = useState<"" | "platform" | "password-manager">("");
+  const ceremonyAbort = useRef<AbortController | null>(null);
+  const windowsHelloAvailable = UserAgentHelper.isWindows(
+    typeof navigator !== "undefined" ? navigator.userAgent : "",
+  );
   const ipHost = Boolean(typeof window !== "undefined" && netIsIpHost(window.location.hostname));
   const hasPassword = account?.has_password !== false;
   const ssoOnly = Boolean(account?.sso_id) && account?.has_password === false;
   const provider = ssoProviderLabel(ssoProviderKey(account?.sso_id));
   const uniqueId = ssoExternalId(account?.sso_id);
 
+  const applyPasskeys = (next: AccountPasskeySummary[]) => {
+    const items = rememberAccountPasskeys(next);
+    setItems(items);
+    onCount?.(items.length);
+  };
+
   const load = async () => {
-    const response = await fetch("/api/admin/account/passkeys");
-    if (!response.ok) return;
-    const data = await response.json();
-    setItems(data.data || data || []);
+    try {
+      applyPasskeys(await prefetchAccountPasskeys(true));
+    } catch {
+      return;
+    }
+  };
+
+  const abortCeremony = () => {
+    ceremonyAbort.current?.abort();
+    ceremonyAbort.current = null;
   };
 
   const beginConfirm = (count = items.length) => {
@@ -1894,7 +1936,12 @@ function PasskeysPanel({
   };
 
   useEffect(() => {
+    void load();
+  }, []);
+
+  useEffect(() => {
     if (open) return;
+    abortCeremony();
     setName("");
     setPassword("");
     setTwoFa("");
@@ -1919,8 +1966,10 @@ function PasskeysPanel({
     const pending = sessionStorage.getItem("lite-passkey-pending-name") || "";
     const pendingPrefer = sessionStorage.getItem("lite-passkey-pending-prefer") || "";
     if (pending) setName(pending);
-    if (pendingPrefer === "platform" || pendingPrefer === "password-manager") {
+    if (pendingPrefer === "password-manager" || (pendingPrefer === "platform" && windowsHelloAvailable)) {
       setSaveTarget(pendingPrefer);
+    } else if (!windowsHelloAvailable) {
+      setSaveTarget("password-manager");
     }
     if (oauthError === "passkey_confirm_failed" || oauthError === "passkey_confirm_mismatch") {
       setConfirmMode("sso");
@@ -1940,7 +1989,10 @@ function PasskeysPanel({
         void registerPasskey({
           name: pending,
           method: "sso",
-          prefer: pendingPrefer === "password-manager" ? "password-manager" : "platform",
+          prefer:
+            pendingPrefer === "password-manager" || !windowsHelloAvailable
+              ? "password-manager"
+              : "platform",
         });
       }
     }
@@ -1954,7 +2006,10 @@ function PasskeysPanel({
   }) => {
     const nextName = (opts?.name ?? name).trim();
     const method = opts?.method || "password";
-    const prefer = opts?.prefer || saveTarget || "platform";
+    const prefer =
+      !windowsHelloAvailable || opts?.prefer === "password-manager" || saveTarget === "password-manager"
+        ? "password-manager"
+        : opts?.prefer || saveTarget || "platform";
     setAdding(true);
     setError("");
     try {
@@ -1983,9 +2038,14 @@ function PasskeysPanel({
       const publicKey = toPasskeyCreateOptions(
         optionsBody.data?.publicKey || optionsBody.publicKey,
         prefer,
+        { windows: windowsHelloAvailable },
       );
+      abortCeremony();
+      const controller = new AbortController();
+      ceremonyAbort.current = controller;
       const credential = (await navigator.credentials.create({
         publicKey,
+        signal: controller.signal,
       })) as PublicKeyCredential;
       const verifyRes = await fetch("/api/admin/account/passkeys/register/verify", {
         method: "POST",
@@ -1998,13 +2058,27 @@ function PasskeysPanel({
       });
       const verifyBody = await verifyRes.json();
       if (!verifyRes.ok) throw new Error(verifyBody.message || "failed");
+      const created = (verifyBody.data ?? verifyBody) as { id?: string; name?: string; created_at?: string };
       setName("");
       setPassword("");
       setTwoFa("");
       setStep("list");
+      setItems((current) => {
+        const id = String(created?.id || "");
+        const next = id
+          ? current.some((row) => row.id === id)
+            ? current
+            : [...current, { id, name: created.name || nextName, created_at: created.created_at }]
+          : current;
+        const count = id ? next.length : current.length + 1;
+        rememberAccountPasskeys(id ? next : current);
+        onCount?.(count);
+        return id ? next : current;
+      });
       await load();
     } catch (reason) {
       const code = passkeyUnavailableMessage(reason, "failed");
+      if (code === "aborted") return;
       setError(
         t(`account.passkey_${code}`, reason instanceof Error ? reason.message : String(reason)),
       );
@@ -2024,10 +2098,17 @@ function PasskeysPanel({
       try {
         setAdding(true);
         setError("");
-        const assertion = await confirmAdminPasskey();
+        abortCeremony();
+        const controller = new AbortController();
+        ceremonyAbort.current = controller;
+        const assertion = await confirmAdminPasskey(controller.signal);
         await registerPasskey({ method: "passkey", assertion });
       } catch (reason) {
         const code = passkeyUnavailableMessage(reason, "failed");
+        if (code === "aborted") {
+          setAdding(false);
+          return;
+        }
         setError(
           t(`account.passkey_${code}`, reason instanceof Error ? reason.message : String(reason)),
         );
@@ -2038,11 +2119,16 @@ function PasskeysPanel({
     await registerPasskey({ method: "password" });
   };
 
+  const close = () => {
+    abortCeremony();
+    onClose();
+  };
+
   return (
     <SettingsSheetDialog
       open={open}
       hideBackdrop={hideBackdrop}
-      onClose={onClose}
+      onClose={close}
       title={
         adding
           ? saveTarget === "password-manager"
@@ -2057,14 +2143,17 @@ function PasskeysPanel({
       actions={
         adding ? (
           <SettingsSheetActions
-            onCancel={onClose}
+            onCancel={close}
             cancelLabel={t("account.cancel_add_passkey", "取消添加")}
           />
         ) : step === "confirm" ? (
           <SettingsSheetActions
             onCancel={() => {
-              setStep("add");
+              setPassword("");
+              setTwoFa("");
               setError("");
+              setConfirmKey((key) => key + 1);
+              setStep("add");
             }}
             onConfirm={() => void confirmAndRegister()}
             confirmLabel={
@@ -2089,14 +2178,20 @@ function PasskeysPanel({
         ) : items.length === 0 ? (
           <SettingsSheetActions
             onCancel={onClose}
-            onConfirm={() => setStep("add")}
+            onConfirm={() => {
+              if (!windowsHelloAvailable) setSaveTarget("password-manager");
+              setStep("add");
+            }}
             cancelLabel={t("common.back", "返回")}
             confirmLabel={t("account.add_passkey", "添加通行密钥")}
           />
         ) : (
           <SettingsSheetActions
             onCancel={onClose}
-            onConfirm={() => setStep("add")}
+            onConfirm={() => {
+              if (!windowsHelloAvailable) setSaveTarget("password-manager");
+              setStep("add");
+            }}
             cancelLabel={t("common.done", "完成")}
             confirmLabel={t("account.add_passkey", "添加通行密钥")}
           />
@@ -2164,20 +2259,12 @@ function PasskeysPanel({
             ) : null}
           </>
         ) : (
-          <Stack
-            component="form"
-            spacing={2}
-            autoComplete="on"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void confirmAndRegister();
-            }}
-          >
+          <Stack spacing={2}>
             <TextField
+              key={`passkey-password-${confirmKey}`}
               size="small"
               fullWidth
               type="password"
-              name="password"
               autoComplete="current-password"
               label={t("account.password_confirm", "账户密码")}
               value={password}
@@ -2186,15 +2273,24 @@ function PasskeysPanel({
             />
             {account?.["2fa_enabled"] ? (
               <TextField
+                key={`passkey-otp-${confirmKey}`}
                 size="small"
                 fullWidth
-                name="one-time-code"
-                autoComplete="one-time-code"
+                name={isMobile ? undefined : "one-time-code"}
+                autoComplete={isMobile ? "off" : "one-time-code"}
                 label={t("account.2fa_otp_input_prompt")}
                 value={twoFa}
-                onChange={(event) => setTwoFa(event.target.value)}
+                onChange={(event) => setTwoFa(event.target.value.replace(/\D/g, "").slice(0, 6))}
                 sx={settingsFieldSx}
-                slotProps={{ htmlInput: otpFieldHtmlInput }}
+                slotProps={{
+                  htmlInput: isMobile
+                    ? {
+                        ...secretNotPasswordHtmlInput,
+                        inputMode: "numeric",
+                        maxLength: 6,
+                      }
+                    : otpFieldHtmlInput,
+                }}
               />
             ) : null}
             {items.length > 0 ? (
@@ -2219,40 +2315,42 @@ function PasskeysPanel({
             sx={settingsFieldSx}
           />
           <Stack spacing={1}>
-            <Paper
-              component="button"
-              type="button"
-              variant="outlined"
-              onClick={() => {
-                setSaveTarget("platform");
-                if (name.trim()) beginConfirm();
-              }}
-              sx={(theme) => ({
-                display: "block",
-                width: "100%",
-                p: 0,
-                px: 2,
-                appearance: "none",
-                font: "inherit",
-                color: "inherit",
-                textAlign: "left",
-                boxShadow: "none",
-                cursor: "pointer",
-                bgcolor: saveTarget === "platform" ? settingsSoftBg(theme) : "transparent",
-                borderColor: saveTarget === "platform" ? "primary.main" : "divider",
-                "&:hover": {
-                  bgcolor: saveTarget === "platform" ? settingsSoftBg(theme) : theme.palette.action.hover,
+            {windowsHelloAvailable ? (
+              <Paper
+                component="button"
+                type="button"
+                variant="outlined"
+                onClick={() => {
+                  setSaveTarget("platform");
+                  if (name.trim()) beginConfirm();
+                }}
+                sx={(theme) => ({
+                  display: "block",
+                  width: "100%",
+                  p: 0,
+                  px: 2,
+                  appearance: "none",
+                  font: "inherit",
+                  color: "inherit",
+                  textAlign: "left",
+                  boxShadow: "none",
+                  cursor: "pointer",
+                  bgcolor: saveTarget === "platform" ? settingsSoftBg(theme) : "transparent",
                   borderColor: saveTarget === "platform" ? "primary.main" : "divider",
-                },
-              })}
-            >
-              <SettingsDetailRow
-                icon={<Devices size={21} />}
-                title="Windows Hello"
-                description={t("account.passkey_hello_desc", "在 Windows 上使用指纹、面容或设备 PIN")}
-                border={false}
-              />
-            </Paper>
+                  "&:hover": {
+                    bgcolor: saveTarget === "platform" ? settingsSoftBg(theme) : theme.palette.action.hover,
+                    borderColor: saveTarget === "platform" ? "primary.main" : "divider",
+                  },
+                })}
+              >
+                <SettingsDetailRow
+                  icon={<Devices size={21} />}
+                  title="Windows Hello"
+                  description={t("account.passkey_hello_desc", "在 Windows 上使用指纹、面容或设备 PIN")}
+                  border={false}
+                />
+              </Paper>
+            ) : null}
             <Paper
               component="button"
               type="button"
@@ -2289,9 +2387,11 @@ function PasskeysPanel({
               />
             </Paper>
           </Stack>
-          <Typography sx={{ fontSize: 12, color: "text.secondary", lineHeight: 1.8 }}>
-            {t("account.passkey_available_hint", "点哪一项就用哪种方式添加。")}
-          </Typography>
+          {windowsHelloAvailable ? (
+            <Typography sx={{ fontSize: 12, color: "text.secondary", lineHeight: 1.8 }}>
+              {t("account.passkey_available_hint", "点哪一项就用哪种方式添加。")}
+            </Typography>
+          ) : null}
         </>
       ) : items.length === 0 ? (
         <SettingsHero
@@ -2351,6 +2451,11 @@ function PasskeysPanel({
                             return;
                           }
                           setDeletingId("");
+                          setItems((current) => {
+                            const next = rememberAccountPasskeys(current.filter((row) => row.id !== item.id));
+                            onCount?.(next.length);
+                            return next;
+                          });
                           await load();
                         }}
                       >

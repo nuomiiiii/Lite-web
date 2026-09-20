@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 
 import { adminLetterAvatarSx } from "@/components/admin/SettingsChrome";
 import { useAccount } from "@/contexts/AccountContext";
+import { preloadAdminRoute } from "@/routes";
 import { logout } from "./useAdminShell";
 import { ChromeIconButton, LanguageMenu, ThemeMenu } from "./ChromeActions";
 
@@ -150,8 +151,12 @@ export default function AdminTopbar({
             <MenuItem
               data-testid="admin-account-security-menu-item"
               sx={{ mx: 0.75, my: 0.25, borderRadius: "8px", minHeight: 40 }}
+              onMouseEnter={() => {
+                void preloadAdminRoute("/admin/settings/account-security");
+              }}
               onClick={() => {
                 setUserAnchor(null);
+                void preloadAdminRoute("/admin/settings/account-security");
                 void navigate("/admin/settings/account-security?tab=account");
               }}
             >

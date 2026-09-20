@@ -93,6 +93,10 @@ export class UserAgentHelper {
     return { device, browser, version };
   }
 
+  static isWindows(userAgent: string = typeof navigator !== "undefined" ? navigator.userAgent : ""): boolean {
+    return detectDevice((userAgent || "").toLowerCase()) === "windows";
+  }
+
   static shortDevice(userAgent: string = ""): string {
     const ua = userAgent.toLowerCase();
     const device = detectDevice(ua);

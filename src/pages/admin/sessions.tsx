@@ -125,11 +125,11 @@ function formatLogoutAt(
   logoutMs: number,
   serverNowMs: number,
   nowMs: number,
-  expiredLabel: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
 ) {
   if (!Number.isFinite(logoutMs)) return "—";
-  const remain = remainingSessionLabel(logoutMs, serverNowMs, nowMs);
-  const suffix = remain.expired ? expiredLabel : remain.text;
+  const remain = remainingSessionLabel(logoutMs, serverNowMs, nowMs, t);
+  const suffix = remain.expired ? t("sessions.expired") : remain.text;
   return `${new Date(logoutMs).toLocaleString()} (${suffix})`;
 }
 
@@ -221,9 +221,7 @@ export default function Sessions({
     return (
       <>
         <Typography sx={{ fontSize: 12, color: "text.secondary", mb: 1.4 }}>
-          {t("sessions.site_count", "本站共 {{count}} 个会话，含当前会话。", {
-            count: sessionItems.length,
-          })}
+          {t("sessions.site_count", { count: sessionItems.length })}
         </Typography>
         <Paper variant="outlined" sx={{ px: 2, boxShadow: "none" }}>
           {pageItems.map((s, index) => {
@@ -244,18 +242,18 @@ export default function Sessions({
                 action={
                   <Dialog.Root>
                     <Dialog.Trigger>
-                      <SettingsTextButton>{t("sessions.detail", "详情")}</SettingsTextButton>
+                      <SettingsTextButton>{t("sessions.detail")}</SettingsTextButton>
                     </Dialog.Trigger>
                     <AppDialogContent>
                       <Dialog.Title>{t("sessions.active_sessions")}</Dialog.Title>
                       <Flex direction="column" gap="1">
-                        <label className="text-base font-bold">{t("sessions.device", "设备")}</label>
+                        <label className="text-base font-bold">{t("sessions.device")}</label>
                         <label className="text-sm">
                           {UserAgentHelper.format(s.user_agent, t) || s.user_agent || "Web"}
                         </label>
                         <label className="text-base font-bold">{t("sessions.login_method")}</label>
                         <label className="text-sm">{loginMethodLabel(s.login_method, t)}</label>
-                        <label className="text-base font-bold">IP / {t("sessions.latest_ip")}</label>
+                        <label className="text-base font-bold">{t("sessions.ip_latest")}</label>
                         <label className="text-sm">
                           {s.ip} / {s.latest_ip}
                         </label>
@@ -267,7 +265,7 @@ export default function Sessions({
                         <label className="text-base font-bold">{t("sessions.latest_online")}</label>
                         <label className="text-sm">{formatLastOnline(lastMs, nowMs, t)}</label>
                         <label className="text-base font-bold">{t("sessions.expires_at")}</label>
-                        <label className="text-sm">{formatLogoutAt(logoutMs, serverNowMs, nowMs, t("sessions.expired", { defaultValue: "已过期" }))}</label>
+                        <label className="text-sm">{formatLogoutAt(logoutMs, serverNowMs, nowMs, t)}</label>
                         <Flex justify="end" gap="2">
                           <Dialog.Close>
                             <Button variant="soft">{t("close")}</Button>
@@ -275,8 +273,8 @@ export default function Sessions({
                           <Dialog.Close>
                             <Button color="red" onClick={() => deleteSession(s.session)}>
                               {isCurrent
-                                ? t("sessions.logout_current", "退出当前会话")
-                                : t("sessions.end_session", "结束会话")}
+                                ? t("sessions.logout_current")
+                                : t("sessions.end_session")}
                             </Button>
                           </Dialog.Close>
                         </Flex>
@@ -318,11 +316,11 @@ export default function Sessions({
           <TableHeader>
             <TableRow>
               <TableHead>{t("sessions.session_id")}</TableHead>
-              <TableHead>UA</TableHead>
+              <TableHead>{t("sessions.ua")}</TableHead>
               <TableHead>IP</TableHead>
-              <TableHead>Latest IP</TableHead>
+              <TableHead>{t("sessions.latest_ip")}</TableHead>
               <TableHead>{t("sessions.expires_at")}</TableHead>
-              <TableHead>{t("sessions.remaining", "剩余时间")}</TableHead>
+              <TableHead>{t("sessions.remaining")}</TableHead>
               <TableHead>{t("sessions.last_login")}</TableHead>
               <TableHead>{t("sessions.actions")}</TableHead>
             </TableRow>
@@ -355,13 +353,13 @@ export default function Sessions({
                           </label>
                           <label className="text-sm">{s.session}</label>
                           <label className="text-base font-bold">
-                            IP / {t("sessions.latest_ip")}
+                            {t("sessions.ip_latest")}
                           </label>
                           <label className="text-sm">
                             {s.ip} / {s.latest_ip}
                           </label>
                           <label className="text-base font-bold">
-                            User Agent
+                            {t("sessions.user_agent")}
                           </label>
                           <label className="text-sm">{s.user_agent}</label>
                           <label className="text-sm text-muted-foreground font-bold">
@@ -394,7 +392,7 @@ export default function Sessions({
                           <label className="text-base font-bold">
                             {t("sessions.expires_at")}
                           </label>
-                          <label className="text-sm">{formatLogoutAt(logoutMs, serverNowMs, nowMs, t("sessions.expired", { defaultValue: "已过期" }))}</label>
+                          <label className="text-sm">{formatLogoutAt(logoutMs, serverNowMs, nowMs, t)}</label>
                           <Flex justify={"end"}>
                             <Dialog.Close>
                               <Button variant="soft">{t("close")}</Button>
@@ -410,8 +408,8 @@ export default function Sessions({
                   <TableCell>{new Date(logoutMs).toLocaleString()}</TableCell>
                   <TableCell>
                     {(() => {
-                      const remain = remainingSessionLabel(logoutMs, serverNowMs, nowMs);
-                      return remain.expired ? t("sessions.expired", { defaultValue: "已过期" }) : remain.text;
+                      const remain = remainingSessionLabel(logoutMs, serverNowMs, nowMs, t);
+                      return remain.expired ? t("sessions.expired") : remain.text;
                     })()}
                   </TableCell>
                   <TableCell>
@@ -470,9 +468,9 @@ export default function Sessions({
   );
 }
 
-function loginMethodLabel(method: string, t: any) {
-  if (method === "passkey") return t("sessions.method_passkey", "通行密钥");
-  if (method === "password") return t("sessions.method_password", "密码登录");
+function loginMethodLabel(method: string, t: (key: string) => string) {
+  if (method === "passkey") return t("sessions.method_passkey");
+  if (method === "password") return t("sessions.method_password");
   if (!method) return t("common.unknown");
-  return t("sessions.method_sso", "SSO 登录");
+  return t("sessions.method_sso");
 }

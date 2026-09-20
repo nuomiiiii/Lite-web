@@ -118,18 +118,19 @@ export function formatSessionAge(deltaMs: number, t: (key: string) => string): s
 export function remainingSessionLabel(
   expiresAtMs: number,
   serverNowMs: number,
-  clientNowMs = Date.now(),
+  clientNowMs: number,
+  t: (key: string, options?: Record<string, unknown>) => string,
 ) {
   const alignedNow = expiresAtMs - (expiresAtMs - serverNowMs - (clientNowMs - serverNowMs));
   const remainMs = expiresAtMs - alignedNow;
-  if (remainMs <= 0) return { expired: true, text: "0m" };
+  if (remainMs <= 0) return { expired: true, text: t("sessions.expired") };
   const totalMinutes = Math.max(1, Math.round(remainMs / 60_000));
   const days = Math.floor(totalMinutes / (24 * 60));
   const hours = Math.floor((totalMinutes - days * 24 * 60) / 60);
   const minutes = totalMinutes % 60;
   const parts: string[] = [];
-  if (days) parts.push(`${days}d`);
-  if (hours) parts.push(`${hours}h`);
-  if (minutes || parts.length === 0) parts.push(`${minutes}m`);
-  return { expired: false, text: parts.join(" ") };
+  if (days) parts.push(t("sessions.remain_d", { count: days }));
+  if (hours) parts.push(t("sessions.remain_h", { count: hours }));
+  if (minutes || parts.length === 0) parts.push(t("sessions.remain_m", { count: minutes }));
+  return { expired: false, text: parts.join("") };
 }

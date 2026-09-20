@@ -118,6 +118,11 @@ export const preloadAdminRoute = async (target: string): Promise<void> => {
       .then((mod) => mod.prefetchDatabaseOverview())
       .catch(() => undefined);
   }
+  if (pathname === "/admin/settings/account-security") {
+    void import("./lib/accountPasskeys")
+      .then((mod) => mod.prefetchAccountPasskeys())
+      .catch(() => undefined);
+  }
   await Promise.all(
     expandAdminPreloadTargets(pathname).map((path) => {
       const preload = adminRoutePreloaders[path];

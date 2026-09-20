@@ -234,6 +234,10 @@ test("remote management pages and launchers require the site switch", () => {
   assert.match(nodeDetailSource, /ensureMCPEnabled\(\)/);
   assert.match(gateSource, /ALLOW_REMOTE_MANAGEMENT_SETTING_PATH/);
   assert.match(gateSource, /ensureMCPEnabled/);
+  assert.doesNotMatch(
+    gateSource,
+    /useRemoteManagementGate must be used within RemoteManagementGateProvider/,
+  );
 });
 
 test("the remote-management required prompt is a dialog on every screen size", () => {

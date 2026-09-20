@@ -35,24 +35,45 @@ export type PasskeyCreatePrefer = "platform" | "password-manager";
 export function withPasskeyCreatePreference<T extends Record<string, any>>(
   options: T,
   prefer: PasskeyCreatePrefer,
+  env?: { windows?: boolean },
 ) {
-  const platform = prefer !== "password-manager";
+  const { hints: _hints, authenticatorSelection: _selection, ...rest } = options;
+  const authenticatorSelection: Record<string, unknown> = {
+    residentKey: "required",
+    requireResidentKey: true,
+    userVerification: "required",
+  };
+  if (prefer === "password-manager") {
+    // iOS password managers need unspecified attachment. On Windows, leaving it
+    // unset lets Chrome fall through to Hello after Bitwarden is dismissed.
+    if (env?.windows) {
+      return {
+        ...rest,
+        authenticatorSelection: {
+          ...authenticatorSelection,
+          authenticatorAttachment: "cross-platform",
+        },
+      };
+    }
+    return { ...rest, authenticatorSelection };
+  }
   return {
-    ...options,
-    hints: platform ? ["client-device"] : ["hybrid"],
+    ...rest,
+    hints: ["client-device"],
     authenticatorSelection: {
-      ...(options.authenticatorSelection || {}),
-      authenticatorAttachment: platform ? "platform" : "cross-platform",
-      residentKey: "required",
-      requireResidentKey: true,
-      userVerification: "required",
+      ...authenticatorSelection,
+      authenticatorAttachment: "platform",
     },
   };
 }
 
-export function toPasskeyCreateOptions(raw: any, prefer: PasskeyCreatePrefer): PublicKeyCredentialCreationOptions {
+export function toPasskeyCreateOptions(
+  raw: any,
+  prefer: PasskeyCreatePrefer,
+  env?: { windows?: boolean },
+): PublicKeyCredentialCreationOptions {
   const source = raw && typeof raw === "object" ? raw : {};
-  const decoded: any = decodePublicKeyCreationOptions(withPasskeyCreatePreference(source, prefer));
+  const decoded: any = decodePublicKeyCreationOptions(withPasskeyCreatePreference(source, prefer, env));
   return withPasskeyCreatePreference(
     {
       rp: decoded.rp,
@@ -65,6 +86,7 @@ export function toPasskeyCreateOptions(raw: any, prefer: PasskeyCreatePrefer): P
       extensions: decoded.extensions,
     },
     prefer,
+    env,
   ) as PublicKeyCredentialCreationOptions;
 }
 
@@ -145,6 +167,7 @@ export function serializeCredential(credential: PublicKeyCredential) {
 export function passkeyUnavailableMessage(reason: unknown, fallback: string) {
   if (reason && typeof reason === "object" && "name" in reason) {
     const name = String((reason as DOMException).name);
+    if (name === "AbortError") return "aborted";
     if (name === "NotAllowedError") return "cancelled";
     if (name === "InvalidStateError") return "already_registered";
     if (name === "NotSupportedError") return "unsupported";
@@ -152,11 +175,12 @@ export function passkeyUnavailableMessage(reason: unknown, fallback: string) {
   return fallback;
 }
 
-export async function confirmAdminPasskey() {
+export async function confirmAdminPasskey(signal?: AbortSignal) {
   const optionsRes = await fetch("/api/admin/account/passkeys/confirm/options", {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
+    signal,
   });
   const optionsBody = await optionsRes.json().catch(() => ({}));
   if (!optionsRes.ok) {
@@ -164,6 +188,7 @@ export async function confirmAdminPasskey() {
   }
   const assertion = (await navigator.credentials.get({
     publicKey: decodePublicKeyRequestOptions(optionsBody.data?.publicKey || optionsBody.publicKey),
+    signal,
   })) as PublicKeyCredential;
   return {
     ceremony_id: optionsBody.data?.ceremony_id || optionsBody.ceremony_id,

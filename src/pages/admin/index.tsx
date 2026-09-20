@@ -104,6 +104,16 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatBytes, stringToBytes } from "@/utils/unitHelper";
 import { normalizeBandwidth } from "@/utils/bandwidth";
+import {
+  TRAFFIC_RESET_TIMEZONES,
+  normalizeTrafficResetTime,
+  normalizeTrafficResetTimezone,
+} from "@/utils/trafficResetTimezones";
+
+const trafficResetTimezoneOptions = TRAFFIC_RESET_TIMEZONES.map((zone) => ({
+  label: zone.label,
+  value: zone.value,
+}));
 import PriceTags, { CustomTags } from "@/components/PriceTags";
 import Loading from "@/components/loading";
 import Tips from "@/components/ui/tips";
@@ -122,6 +132,7 @@ import { openRemoteTerminal } from "@/utils/remoteLaunch";
 import { useRemoteManagementGate } from "@/components/admin/RemoteManagementGate";
 import { SelectOrInput } from "@/components/ui/select-or-input";
 import AdminPageTitle from "@/components/admin/AdminPageTitle";
+import TrafficResetTimeField from "@/components/admin/TrafficResetTimeField";
 import { AdminSheetTabs, AdminTabLabel } from "@/components/admin/AdminSheetTabs";
 import AdminNodeListFilters, {
   type AdminNodeStatusValue,
@@ -1858,6 +1869,8 @@ type InstallOptions = {
   includeMountpoints: string;
   interval: string;
   monthRotate: string;
+  monthRotateTime: string;
+  monthRotateTimezone: string;
 };
 
 type DeploymentProfilePayload = {
@@ -1884,6 +1897,8 @@ type DeploymentProfilePayload = {
   interval: number;
   enable_month_rotate: boolean;
   month_rotate: number;
+  month_rotate_time: string;
+  month_rotate_timezone: string;
 };
 
 type DeploymentProfileResponse = {
@@ -1915,6 +1930,8 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
     configuredResetDay <= 31
       ? String(configuredResetDay)
       : "";
+  const initialResetTime = normalizeTrafficResetTime(node.traffic_reset_time);
+  const initialResetTimezone = normalizeTrafficResetTimezone(node.traffic_reset_timezone);
   const [selectedPlatform, setSelectedPlatform] =
     React.useState<Platform>("linux");
   const [installOptions, setInstallOptions] = React.useState<InstallOptions>({
@@ -1932,6 +1949,8 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
     includeMountpoints: "",
     interval: "",
     monthRotate: initialResetDay,
+    monthRotateTime: initialResetTime,
+    monthRotateTimezone: initialResetTimezone,
   });
 
   const [enableGhproxy, setEnableGhproxy] = React.useState(false);
@@ -2028,8 +2047,10 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
     setInstallOptions((previous) => ({
       ...previous,
       monthRotate: initialResetDay,
+      monthRotateTime: initialResetTime,
+      monthRotateTimezone: initialResetTimezone,
     }));
-  }, [node.uuid, initialResetDay]);
+  }, [node.uuid, initialResetDay, initialResetTime, initialResetTimezone]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -2062,6 +2083,8 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
           includeMountpoints: profile.include_mountpoints || "",
           interval: profile.enable_interval ? String(profile.interval) : "",
           monthRotate: profile.enable_month_rotate ? String(profile.month_rotate) : "",
+          monthRotateTime: normalizeTrafficResetTime(profile.month_rotate_time),
+          monthRotateTimezone: normalizeTrafficResetTimezone(profile.month_rotate_timezone),
         });
         setEnableGhproxy(profile.enable_ghproxy);
         setEnableCustomDir(profile.enable_custom_dir);
@@ -2157,6 +2180,8 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
     interval: selectedInterval() ?? 0,
     enable_month_rotate: enableMonthRotate,
     month_rotate: selectedTrafficResetDay() ?? 0,
+    month_rotate_time: normalizeTrafficResetTime(installOptions.monthRotateTime),
+    month_rotate_timezone: normalizeTrafficResetTimezone(installOptions.monthRotateTimezone),
   });
 
   const generateCommand = () => {
@@ -2229,6 +2254,10 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
       const rotateVal = (installOptions.monthRotate || "").trim() || "1"; // 默认 1
       args.push(`--month-rotate`);
       args.push(rotateVal);
+      args.push(`--month-rotate-time`);
+      args.push(normalizeTrafficResetTime(installOptions.monthRotateTime));
+      args.push(`--month-rotate-timezone`);
+      args.push(normalizeTrafficResetTimezone(installOptions.monthRotateTimezone));
     }
     let scriptFile: "install.sh" | "install.ps1" = "install.sh";
     if (selectedPlatform === "windows") {
@@ -3033,6 +3062,12 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
                         monthRotate: prev.monthRotate?.trim()
                           ? prev.monthRotate
                           : "1",
+                        monthRotateTime: prev.monthRotateTime?.trim()
+                          ? prev.monthRotateTime
+                          : initialResetTime,
+                        monthRotateTimezone: prev.monthRotateTimezone?.trim()
+                          ? prev.monthRotateTimezone
+                          : initialResetTimezone,
                       }));
                     }
                   }}
@@ -3053,24 +3088,70 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
                         monthRotate: prev.monthRotate?.trim()
                           ? prev.monthRotate
                           : "1",
+                        monthRotateTime: prev.monthRotateTime?.trim()
+                          ? prev.monthRotateTime
+                          : initialResetTime,
+                        monthRotateTimezone: prev.monthRotateTimezone?.trim()
+                          ? prev.monthRotateTimezone
+                          : initialResetTimezone,
                       }));
                     }
                   }}
                 >
-                  {t("admin.nodeTable.monthRotate", "流量重置日")}
+                  {t("admin.nodeTable.monthRotate", "流量重置时间")}
                 </label>
               </Flex>
               {enableMonthRotate && (
-                <TextField.Root
-                  placeholder="1"
-                  value={installOptions.monthRotate}
-                  onChange={(e) =>
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      monthRotate: e.target.value,
-                    }))
-                  }
-                />
+                <Flex direction="column" gap="2">
+                  <div className="km-traffic-reset-clock-row">
+                    <div className="km-traffic-reset-timezone">
+                      <SelectOrInput
+                        options={trafficResetTimezoneOptions}
+                        value={installOptions.monthRotateTimezone}
+                        allowCustomInput
+                        onChange={(value) =>
+                          setInstallOptions((prev) => ({
+                            ...prev,
+                            monthRotateTimezone: value,
+                          }))
+                        }
+                        placeholder="Asia/Shanghai"
+                        aria-label={t("admin.nodeTable.monthRotateTimezone", "时区")}
+                      />
+                    </div>
+                    <div className="km-traffic-reset-day">
+                      <TextField.Root
+                        placeholder="1"
+                        aria-label={t("admin.nodeTable.monthRotateDay", "日期")}
+                        value={installOptions.monthRotate}
+                        onChange={(e) =>
+                          setInstallOptions((prev) => ({
+                            ...prev,
+                            monthRotate: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="km-traffic-reset-time">
+                      <TrafficResetTimeField
+                        ariaLabel={t("admin.nodeTable.monthRotateTime", "时间")}
+                        value={installOptions.monthRotateTime}
+                        onChange={(value) =>
+                          setInstallOptions((prev) => ({
+                            ...prev,
+                            monthRotateTime: value,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                  <Text size="1" color="gray">
+                    {t(
+                      "admin.nodeTable.monthRotateHint",
+                      "流量重置时间按厂商账单填写，Lite 会换算到北京时间才重置。",
+                    )}
+                  </Text>
+                </Flex>
               )}
               <div
                 className="admin-deployment-delivery"
@@ -3238,6 +3319,8 @@ function EditButton({ node }: { node: NodeDetail }) {
   const [traffic_limit, setTrafficLimit] = useState(0);
   const [traffic_limit_type, setTrafficLimitType] = useState("sum");
   const [trafficResetDay, setTrafficResetDay] = useState(0);
+  const [trafficResetTime, setTrafficResetTime] = useState("00:00:00");
+  const [trafficResetTimezone, setTrafficResetTimezone] = useState("Asia/Shanghai");
   const [regionOverride, setRegionOverride] = useState("");
   const [trafficResetAllowance, setTrafficResetAllowance] = useState(0);
 
@@ -3264,6 +3347,8 @@ function EditButton({ node }: { node: NodeDetail }) {
     setTrafficLimit(node.traffic_limit || 0);
     setTrafficLimitType(node.traffic_limit_type || "sum");
     setTrafficResetDay(node.traffic_reset_day ?? 0);
+    setTrafficResetTime(normalizeTrafficResetTime(node.traffic_reset_time));
+    setTrafficResetTimezone(normalizeTrafficResetTimezone(node.traffic_reset_timezone));
     setRegionOverride(
       node.region_override ? getRegionCode(node.region_override) : "",
     );
@@ -3273,6 +3358,8 @@ function EditButton({ node }: { node: NodeDetail }) {
     node.traffic_limit,
     node.traffic_limit_type,
     node.traffic_reset_day,
+    node.traffic_reset_time,
+    node.traffic_reset_timezone,
     node.region_override,
     node.traffic_reset_allowance,
   ]);
@@ -3305,6 +3392,8 @@ function EditButton({ node }: { node: NodeDetail }) {
         payload.traffic_limit_type = traffic_limit_type;
       }
       payload.traffic_reset_day = trafficResetDay;
+      payload.traffic_reset_time = normalizeTrafficResetTime(trafficResetTime);
+      payload.traffic_reset_timezone = normalizeTrafficResetTimezone(trafficResetTimezone);
       const currentRegionOverride = node.region_override
         ? getRegionCode(node.region_override)
         : "";
@@ -3467,25 +3556,46 @@ function EditButton({ node }: { node: NodeDetail }) {
           <div className="km-node-traffic-section">
             <div className="space-y-2 pb-3 pt-2">
               <label className="block text-sm font-semibold leading-5">
-                {t("admin.nodeEdit.trafficResetDay", "流量重置日")}
+                {t("admin.nodeEdit.trafficResetDay", "流量重置时间")}
               </label>
-              <TextField.Root
-                aria-label={t("admin.nodeEdit.trafficResetDay")}
-                value={String(trafficResetDay)}
-                onChange={(event) => {
-                  const day = Number.parseInt(event.target.value || "0", 10);
-                  setTrafficResetDay(
-                    Math.min(
-                      31,
-                      Math.max(0, Number.isFinite(day) ? day : 0),
-                    ),
-                  );
-                }}
-              />
+              <div className="km-traffic-reset-clock-row">
+                <div className="km-traffic-reset-timezone">
+                  <SelectOrInput
+                    options={trafficResetTimezoneOptions}
+                    value={trafficResetTimezone}
+                    allowCustomInput
+                    onChange={setTrafficResetTimezone}
+                    placeholder="Asia/Shanghai"
+                    aria-label={t("admin.nodeEdit.trafficResetTimezone")}
+                  />
+                </div>
+                <div className="km-traffic-reset-day">
+                  <TextField.Root
+                    aria-label={t("admin.nodeEdit.trafficResetDate", "日期")}
+                    value={String(trafficResetDay)}
+                    onChange={(event) => {
+                      const day = Number.parseInt(event.target.value || "0", 10);
+                      setTrafficResetDay(
+                        Math.min(
+                          31,
+                          Math.max(0, Number.isFinite(day) ? day : 0),
+                        ),
+                      );
+                    }}
+                  />
+                </div>
+                <div className="km-traffic-reset-time">
+                  <TrafficResetTimeField
+                    ariaLabel={t("admin.nodeEdit.trafficResetTime")}
+                    value={trafficResetTime}
+                    onChange={setTrafficResetTime}
+                  />
+                </div>
+              </div>
               <p className="text-sm leading-6 text-muted-foreground">
                 {t(
                   "admin.nodeEdit.trafficResetDay_description",
-                  "0 表示关闭；1-31 表示每月重置日。保存后自动同步到 Agent。",
+                  "0 表示关闭；1-31 为每月重置日。流量重置时间按厂商账单填写，Lite 会换算到北京时间才重置。存量数据为北京时间 0:00。保存后同步到 Agent。",
                 )}
               </p>
             </div>

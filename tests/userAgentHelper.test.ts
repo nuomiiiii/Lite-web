@@ -92,4 +92,16 @@ test("iPhone and iPad Safari are iOS even when the UA says like Mac OS X", () =>
     ),
     "Mac",
   );
+  assert.equal(
+    UserAgentHelper.isWindows(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.0 Safari/537.36",
+    ),
+    true,
+  );
+  assert.equal(
+    UserAgentHelper.isWindows(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1",
+    ),
+    false,
+  );
 });

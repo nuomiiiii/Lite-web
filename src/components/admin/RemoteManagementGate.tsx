@@ -5,9 +5,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Typography from "@mui/material/Typography";
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -26,30 +24,16 @@ import {
   isRemoteManagementPath,
 } from "@/utils/allowRemoteManagement";
 import { clearStoredRemoteGrant } from "@/utils/remoteSession";
+import {
+  rememberRemoteManagementGate,
+  RemoteManagementGateContext,
+  type RemoteManagementGateValue,
+} from "@/components/admin/remoteManagementGateContext";
 
-type GateValue = {
-  enabled: boolean;
-  mcpEnabled: boolean;
-  loading: boolean;
-  ensureEnabled: () => boolean;
-  ensureMCPEnabled: () => boolean;
-};
-
-const RemoteManagementGateContext = createContext<GateValue | null>(null);
-
-export function useOptionalRemoteManagementGate(): GateValue | null {
-  return useContext(RemoteManagementGateContext);
-}
-
-export function useRemoteManagementGate(): GateValue {
-  const context = useContext(RemoteManagementGateContext);
-  if (!context) {
-    throw new Error(
-      "useRemoteManagementGate must be used within RemoteManagementGateProvider",
-    );
-  }
-  return context;
-}
+export {
+  useOptionalRemoteManagementGate,
+  useRemoteManagementGate,
+} from "@/components/admin/remoteManagementGateContext";
 
 function RequiredSettingDialog({
   open,
@@ -168,10 +152,14 @@ export function RemoteManagementGateProvider({
     return false;
   }, [enabled, loading, mcpEnabled]);
 
-  const value = useMemo(
+  const value = useMemo<RemoteManagementGateValue>(
     () => ({ enabled, mcpEnabled, loading, ensureEnabled, ensureMCPEnabled }),
     [enabled, mcpEnabled, loading, ensureEnabled, ensureMCPEnabled],
   );
+
+  useEffect(() => {
+    rememberRemoteManagementGate(value);
+  }, [value]);
 
   const goEnable = useCallback(() => {
     setRemoteOpen(false);

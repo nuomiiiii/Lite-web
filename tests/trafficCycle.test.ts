@@ -46,3 +46,16 @@ test("disabled or missing reset day has no cycle range", () => {
   assert.equal(formatTrafficResetRangeLabel(undefined, now), null);
   assert.equal(formatTrafficResetRangeLabel(32, now), null);
 });
+
+test("UTC 12:38:12 does not flip the cycle until that instant", () => {
+  const before = new Date("2026-09-15T12:38:11Z");
+  assert.equal(
+    formatTrafficResetRangeLabel(15, before, { time: "12:38:12", timezone: "UTC" }),
+    "8月15日 12:38:12 - 9月15日 12:38:12",
+  );
+  const at = new Date("2026-09-15T12:38:12Z");
+  assert.equal(
+    formatTrafficResetRangeLabel(15, at, { time: "12:38:12", timezone: "UTC" }),
+    "9月15日 12:38:12 - 10月15日 12:38:12",
+  );
+});

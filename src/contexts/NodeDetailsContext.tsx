@@ -30,6 +30,8 @@ export type NodeDetail = {
   mcp_full?: boolean;
   mcp_full_version?: number;
   traffic_reset_day?: number | null;
+  traffic_reset_time?: string;
+  traffic_reset_timezone?: string;
   traffic_reset_allowance: number;
   effective_traffic_limit: number;
   effective_traffic_type: "sum" | "max" | "min" | "up" | "down";

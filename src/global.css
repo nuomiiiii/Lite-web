@@ -752,6 +752,39 @@ html.dark .km-node-deploy-dialog .km-admin-sheet-tabs {
   padding-top: 0;
 }
 
+.km-traffic-reset-clock-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+
+.km-traffic-reset-timezone {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.km-traffic-reset-day {
+  flex: 0 0 4.75rem;
+  width: 4.75rem;
+  min-width: 4.75rem;
+  max-width: 4.75rem;
+}
+
+.km-traffic-reset-time {
+  flex: 0 0 7.5rem;
+  width: 7.5rem;
+  min-width: 7.5rem;
+  max-width: 7.5rem;
+}
+
+.km-traffic-reset-clock-row .MuiAutocomplete-root,
+.km-traffic-reset-clock-row .MuiFormControl-root,
+.km-traffic-reset-clock-row .MuiTextField-root {
+  width: 100% !important;
+  min-width: 0;
+}
+
 .km-return-route-rules > .MuiAlert-root {
   min-height: 36px;
   margin: 0;
@@ -1556,6 +1589,43 @@ html[data-admin-shell-active="true"] .km-table td {
   font-size: 14.5px;
   font-weight: 400;
   vertical-align: middle;
+}
+
+[data-admin-shell] .km-log-table,
+html[data-admin-shell-active="true"] .km-log-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+[data-admin-shell] .km-log-col-id,
+html[data-admin-shell-active="true"] .km-log-col-id {
+  width: 72px;
+}
+
+[data-admin-shell] .km-log-col-ip,
+html[data-admin-shell-active="true"] .km-log-col-ip {
+  width: 148px;
+}
+
+[data-admin-shell] .km-log-col-type,
+html[data-admin-shell-active="true"] .km-log-col-type {
+  width: 110px;
+}
+
+[data-admin-shell] .km-log-col-time,
+html[data-admin-shell-active="true"] .km-log-col-time {
+  width: 188px;
+}
+
+[data-admin-shell] .km-log-col-message,
+html[data-admin-shell-active="true"] .km-log-col-message {
+  overflow: hidden;
+}
+
+[data-admin-shell] .km-log-message,
+html[data-admin-shell-active="true"] .km-log-message {
+  display: block;
+  cursor: default;
 }
 
 [data-admin-shell] .km-traffic-day-table th:first-child,
