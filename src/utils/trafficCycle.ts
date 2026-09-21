@@ -1,3 +1,8 @@
+import {
+  formatTimezoneLabel,
+  normalizeTrafficResetTimezone,
+} from "./trafficResetTimezones.ts";
+
 const BEIJING_TZ = "Asia/Shanghai";
 
 export type CalendarDay = {
@@ -127,4 +132,55 @@ export function formatTrafficResetRangeLabel(
   if (!range) return null;
   const tod = parseClock(clock.time);
   return `${formatMonthDay(range.start, tod)} - ${formatMonthDay(range.next, tod)}`;
+}
+
+function padClock(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function formatCivilDateTime(
+  value: CalendarDay,
+  clock: { hour: number; minute: number; second: number },
+  language: string,
+): string {
+  const locale = language.replace("_", "-");
+  const date = new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(value.year, value.month - 1, value.day)));
+  return `${date} ${padClock(clock.hour)}:${padClock(clock.minute)}:${padClock(clock.second)}`;
+}
+
+export type TrafficCalibrationCycleLabel = {
+  timezone: string;
+  start: string;
+  next: string;
+};
+
+export function formatTrafficCalibrationCycleRange(
+  cycleStart: string | Date,
+  options: {
+    day?: number | null;
+    time?: string | null;
+    timezone?: string | null;
+    language?: string;
+  } = {},
+): TrafficCalibrationCycleLabel | null {
+  const language = options.language || "zh-CN";
+  const timeZone = normalizeTrafficResetTimezone(options.timezone);
+  const startAt = cycleStart instanceof Date ? cycleStart : new Date(cycleStart);
+  if (Number.isNaN(startAt.getTime())) return null;
+  const range = trafficResetCycleRange(options.day, startAt, {
+    time: options.time,
+    timezone: timeZone,
+  });
+  if (!range) return null;
+  const tod = parseClock(options.time);
+  return {
+    timezone: formatTimezoneLabel(timeZone, startAt),
+    start: formatCivilDateTime(range.start, tod, language),
+    next: formatCivilDateTime(range.next, tod, language),
+  };
 }

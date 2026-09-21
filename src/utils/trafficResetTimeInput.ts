@@ -31,6 +31,42 @@ function padPart(value: number, max: number): string {
   return String(next).padStart(2, "0");
 }
 
+export function incomingClockDigits(
+  incoming: string,
+  previous: string,
+  replaceOnType: boolean,
+  typedCount: TypedCount,
+): string {
+  const digits = incoming.replace(/\D/g, "");
+  const prev = previous.replace(/\D/g, "");
+  if (replaceOnType) {
+    if (digits.length >= 6) return digits.slice(-6);
+    if (digits.length > prev.length) {
+      for (let index = 0; index < digits.length; index += 1) {
+        if (digits[index] !== prev[index]) return digits[index];
+      }
+      return digits.slice(prev.length);
+    }
+    return digits.slice(-1);
+  }
+  if (typedCount === 1) return digits.slice(-1);
+  return digits;
+}
+
+export function applyTrafficResetTimeDigits(
+  value: string,
+  segment: TimeSegment,
+  typedCount: TypedCount,
+  digits: string,
+): { value: string; segment: TimeSegment; typedCount: TypedCount } {
+  let current = { value, segment, typedCount };
+  for (const ch of digits) {
+    if (ch < "0" || ch > "9") continue;
+    current = applyTrafficResetTimeDigit(current.value, current.segment, current.typedCount, Number(ch));
+  }
+  return current;
+}
+
 export function applyTrafficResetTimeDigit(
   value: string,
   segment: TimeSegment,

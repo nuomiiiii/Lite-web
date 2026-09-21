@@ -411,6 +411,7 @@
         "download": "下載",
         "effective": "校準後用量",
         "history": "最近校準記錄",
+        "historyIncomplete": "目前週期首日流量已超過指標保留期，無法完整還原。請重新校準目前週期。",
         "invalidResponse": "伺服器未回傳校準結果",
         "invalidValue": "請輸入有效傳輸量，例如 10 GB 或 1.5 TB",
         "noHistory": "本週期尚未校準",

@@ -411,6 +411,7 @@
         "download": "下载",
         "effective": "校准后用量",
         "history": "最近校准记录",
+        "historyIncomplete": "当前周期首日流量已超过指标保留期，无法完整还原。请重新校准当前周期。",
         "invalidResponse": "服务器未返回校准结果",
         "invalidValue": "请输入有效的流量，例如 10 GB 或 1.5 TB",
         "noHistory": "本周期尚未校准",

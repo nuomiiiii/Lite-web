@@ -158,3 +158,24 @@ test("admin RPC2 mounts only after login", () => {
   assert.match(mainSource, /<RPC2Provider>\{children\}<\/RPC2Provider>/);
   assert.match(mainSource, /<AccountScopedRPC2>/);
 });
+
+const editDialogSource = indexSource.slice(
+  indexSource.indexOf("function EditButton"),
+  indexSource.indexOf("function BillingButton") !== -1
+    ? indexSource.indexOf("function BillingButton")
+    : indexSource.length,
+);
+
+test("unsaved traffic reset clock reverts before the dialog paints again", () => {
+  assert.match(installDialogSource, /const revertTrafficResetClock = \(\) =>/);
+  assert.match(installDialogSource, /revertTrafficResetClock\(\);\s*setOpen\(nextOpen\)/);
+  assert.match(installDialogSource, /React\.useLayoutEffect\(\(\) => \{\s*if \(open\) return;\s*revertTrafficResetClock\(\);/);
+  assert.match(editDialogSource, /const hydrateEditForm = \(\) =>/);
+  assert.match(editDialogSource, /if \(next \|\| !pendingSavedEditRef\.current\) hydrateEditForm\(\)/);
+  assert.match(editDialogSource, /React\.useLayoutEffect/);
+  assert.match(editDialogSource, /pendingSavedEditRef/);
+  assert.doesNotMatch(
+    editDialogSource,
+    /<Dialog\.Root open=\{open\} onOpenChange=\{setOpen\}>/,
+  );
+});

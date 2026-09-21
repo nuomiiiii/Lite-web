@@ -778,6 +778,60 @@ html.dark .km-node-deploy-dialog .km-admin-sheet-tabs {
   max-width: 7.5rem;
 }
 
+.km-traffic-reset-time-parts {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  width: 100%;
+}
+
+.km-traffic-reset-time-part {
+  display: flex;
+  flex: 1 1 0;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.km-traffic-reset-time-part-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.km-traffic-reset-time-sep {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 0 1px;
+  color: var(--gray-9);
+  user-select: none;
+}
+
+.km-traffic-reset-time-part-input .MuiOutlinedInput-input {
+  padding-left: 0;
+  padding-right: 0;
+  text-align: center;
+}
+
+@media (max-width: 1023px) {
+  .km-traffic-reset-clock-row {
+    flex-wrap: wrap;
+  }
+
+  .km-traffic-reset-timezone {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .km-traffic-reset-time {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 8.75rem;
+    max-width: none;
+  }
+}
+
 .km-traffic-reset-clock-row .MuiAutocomplete-root,
 .km-traffic-reset-clock-row .MuiFormControl-root,
 .km-traffic-reset-clock-row .MuiTextField-root {

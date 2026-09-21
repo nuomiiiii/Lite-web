@@ -411,6 +411,7 @@
         "download": "Download",
         "effective": "Calibrated usage",
         "history": "Recent calibrations",
+        "historyIncomplete": "The first day of this cycle is past metric retention and cannot be rebuilt. Recalibrate the current cycle.",
         "invalidResponse": "The server did not return a calibration result",
         "invalidValue": "Enter valid traffic, such as 10 GB or 1.5 TB",
         "noHistory": "No calibration in this cycle",

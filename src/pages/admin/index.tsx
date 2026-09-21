@@ -104,6 +104,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatBytes, stringToBytes } from "@/utils/unitHelper";
 import { normalizeBandwidth } from "@/utils/bandwidth";
+import { formatTrafficCalibrationCycleRange } from "@/utils/trafficCycle";
 import {
   TRAFFIC_RESET_TIMEZONES,
   normalizeTrafficResetTime,
@@ -1249,6 +1250,7 @@ type TrafficCalibrationSnapshot = {
   adjustment: SignedTrafficUsage;
   effective: TrafficUsage;
   history: TrafficCalibrationHistory[];
+  history_complete?: boolean;
 };
 
 const trafficInputPattern = /^\s*(\d+(?:\.\d+)?)\s*(b|kb|kib|mb|mib|gb|gib|tb|tib|pb|pib)?\s*$/i;
@@ -1263,17 +1265,6 @@ function parseTrafficInput(value: string): number | null {
 function formatSignedTraffic(value: number): string {
   if (value === 0) return formatBytes(0);
   return `${value > 0 ? "+" : "-"}${formatBytes(Math.abs(value))}`;
-}
-
-function formatTrafficCycleRange(snapshot: TrafficCalibrationSnapshot, language: string): string {
-  const locale = language.replace("_", "-");
-  const formatter = new Intl.DateTimeFormat(locale, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "Asia/Shanghai",
-  });
-  return `${formatter.format(new Date(snapshot.cycle_start))}-${formatter.format(new Date(snapshot.cycle_end))}`;
 }
 
 const ActionButtons = ({ node, settings }: { node: NodeDetail, settings: any }) => {
@@ -1339,8 +1330,12 @@ function TrafficCalibrationButton({ node }: { node: NodeDetail }) {
       const data = payload?.data;
       const nextAvailable = data?.available !== false;
       setAvailable(nextAvailable);
-      setReason(data?.reason || "");
-      if (nextAvailable && data?.snapshot) {
+      setReason(
+        data?.history_complete === false
+          ? t("admin.nodeTable.trafficCalibration.historyIncomplete")
+          : (data?.reason || ""),
+      );
+      if (data?.snapshot) {
         const next = data.snapshot as TrafficCalibrationSnapshot;
         setSnapshot(next);
         setTargetUp(formatBytes(next.effective.up));
@@ -1387,6 +1382,8 @@ function TrafficCalibrationButton({ node }: { node: NodeDetail }) {
       setSnapshot(next);
       setTargetUp(formatBytes(next.effective.up));
       setTargetDown(formatBytes(next.effective.down));
+      setAvailable(true);
+      setReason("");
       toast.success(t("admin.nodeTable.trafficCalibration.saved"));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -1402,6 +1399,14 @@ function TrafficCalibrationButton({ node }: { node: NodeDetail }) {
         [t("admin.nodeTable.trafficCalibration.effective"), snapshot.effective],
       ]
     : [];
+  const cycleLabel = snapshot
+    ? formatTrafficCalibrationCycleRange(snapshot.cycle_start, {
+        day: node.traffic_reset_day,
+        time: node.traffic_reset_time,
+        timezone: node.traffic_reset_timezone,
+        language: i18n.resolvedLanguage || i18n.language,
+      })
+    : null;
 
   return (
     <Dialog.Root
@@ -1436,7 +1441,7 @@ function TrafficCalibrationButton({ node }: { node: NodeDetail }) {
           </div>
         ) : (
           <Flex direction="column" gap="4" mt="4">
-            {!available && (
+            {(reason || !available) && (
               <Callout.Root color="amber" role="alert">
                 <Callout.Text>{reason || t("admin.nodeTable.trafficCalibration.resetDayRequired")}</Callout.Text>
               </Callout.Root>
@@ -1449,11 +1454,20 @@ function TrafficCalibrationButton({ node }: { node: NodeDetail }) {
 
             {snapshot && (
               <>
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-                  <Text size="2" color="gray">{t("admin.nodeTable.trafficCalibration.currentCycle")}</Text>
-                  <Text size="2" weight="bold">
-                    {formatTrafficCycleRange(snapshot, i18n.resolvedLanguage || i18n.language)}
-                  </Text>
+                <div className="flex flex-col gap-1 rounded-md border border-[var(--gray-a5)] bg-[var(--gray-a2)] px-3 py-2.5 md:flex-row md:items-center md:justify-between md:gap-4">
+                  <Badge color="blue" variant="soft" className="w-fit">
+                    {t("admin.nodeTable.trafficCalibration.currentCycle")}
+                  </Badge>
+                  {cycleLabel && (
+                    <div className="min-w-0 md:text-right">
+                      <Text as="div" size="2" weight="bold">{cycleLabel.timezone}</Text>
+                      <Text as="div" size="2" color="gray">
+                        <span className="whitespace-nowrap">{cycleLabel.start}</span>
+                        {" - "}
+                        <span className="whitespace-nowrap">{cycleLabel.next}</span>
+                      </Text>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1527,7 +1541,7 @@ function TrafficCalibrationButton({ node }: { node: NodeDetail }) {
               <Dialog.Close>
                 <Button variant="soft">{t("admin.nodeTable.cancel")}</Button>
               </Dialog.Close>
-              <Button disabled={!snapshot || !available || saving} onClick={() => void saveCalibration()}>
+              <Button disabled={!snapshot || saving} onClick={() => void saveCalibration()}>
                 {saving ? t("common.loading") : t("admin.nodeTable.trafficCalibration.save")}
               </Button>
             </Flex>
@@ -2042,7 +2056,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
     if (installToken) setOtpInput("");
   }, [installToken]);
 
-  React.useEffect(() => {
+  const revertTrafficResetClock = () => {
     setEnableMonthRotate(initialResetDay !== "");
     setInstallOptions((previous) => ({
       ...previous,
@@ -2050,7 +2064,12 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
       monthRotateTime: initialResetTime,
       monthRotateTimezone: initialResetTimezone,
     }));
-  }, [node.uuid, initialResetDay, initialResetTime, initialResetTimezone]);
+  };
+
+  React.useLayoutEffect(() => {
+    if (open) return;
+    revertTrafficResetClock();
+  }, [node.uuid, initialResetDay, initialResetTime, initialResetTimezone, open]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -2486,6 +2505,7 @@ function GenerateCommandButton({ node, settings }: { node: NodeDetail, settings:
       open={open}
       disableEnforceFocus={needTwoFactor}
       onOpenChange={(nextOpen) => {
+        revertTrafficResetClock();
         setOpen(nextOpen);
         if (nextOpen) {
           setDialogTab("online");
@@ -3318,11 +3338,25 @@ function EditButton({ node }: { node: NodeDetail }) {
   const [saving, setSaving] = useState(false);
   const [traffic_limit, setTrafficLimit] = useState(0);
   const [traffic_limit_type, setTrafficLimitType] = useState("sum");
-  const [trafficResetDay, setTrafficResetDay] = useState(0);
-  const [trafficResetTime, setTrafficResetTime] = useState("00:00:00");
-  const [trafficResetTimezone, setTrafficResetTimezone] = useState("Asia/Shanghai");
+  const [trafficResetDay, setTrafficResetDay] = useState(node.traffic_reset_day ?? 0);
+  const [trafficResetTime, setTrafficResetTime] = useState(() =>
+    normalizeTrafficResetTime(node.traffic_reset_time),
+  );
+  const [trafficResetTimezone, setTrafficResetTimezone] = useState(() =>
+    normalizeTrafficResetTimezone(node.traffic_reset_timezone),
+  );
   const [regionOverride, setRegionOverride] = useState("");
   const [trafficResetAllowance, setTrafficResetAllowance] = useState(0);
+  const pendingSavedEditRef = React.useRef<{
+    hidden: boolean;
+    traffic_limit: number;
+    traffic_limit_type: string;
+    trafficResetDay: number;
+    trafficResetTime: string;
+    trafficResetTimezone: string;
+    regionOverride: string;
+    trafficResetAllowance: number;
+  } | null>(null);
 
   const regionOptions = React.useMemo(
     () => [
@@ -3342,18 +3376,52 @@ function EditButton({ node }: { node: NodeDetail }) {
     [i18n.language, t],
   );
 
-  React.useEffect(() => {
-    setHidden(node.hidden);
-    setTrafficLimit(node.traffic_limit || 0);
-    setTrafficLimitType(node.traffic_limit_type || "sum");
-    setTrafficResetDay(node.traffic_reset_day ?? 0);
-    setTrafficResetTime(normalizeTrafficResetTime(node.traffic_reset_time));
-    setTrafficResetTimezone(normalizeTrafficResetTimezone(node.traffic_reset_timezone));
-    setRegionOverride(
-      node.region_override ? getRegionCode(node.region_override) : "",
-    );
-    setTrafficResetAllowance(node.traffic_reset_allowance ?? 0);
+  const editFormFromNode = () => ({
+    hidden: node.hidden,
+    traffic_limit: node.traffic_limit || 0,
+    traffic_limit_type: node.traffic_limit_type || "sum",
+    trafficResetDay: node.traffic_reset_day ?? 0,
+    trafficResetTime: normalizeTrafficResetTime(node.traffic_reset_time),
+    trafficResetTimezone: normalizeTrafficResetTimezone(node.traffic_reset_timezone),
+    regionOverride: node.region_override ? getRegionCode(node.region_override) : "",
+    trafficResetAllowance: node.traffic_reset_allowance ?? 0,
+  });
+
+  const applyEditForm = (form: ReturnType<typeof editFormFromNode>) => {
+    setHidden(form.hidden);
+    setTrafficLimit(form.traffic_limit);
+    setTrafficLimitType(form.traffic_limit_type);
+    setTrafficResetDay(form.trafficResetDay);
+    setTrafficResetTime(form.trafficResetTime);
+    setTrafficResetTimezone(form.trafficResetTimezone);
+    setRegionOverride(form.regionOverride);
+    setTrafficResetAllowance(form.trafficResetAllowance);
+  };
+
+  const hydrateEditForm = () => {
+    applyEditForm(pendingSavedEditRef.current ?? editFormFromNode());
+  };
+
+  React.useLayoutEffect(() => {
+    const pending = pendingSavedEditRef.current;
+    const fromNode = editFormFromNode();
+    if (
+      pending &&
+      pending.trafficResetDay === fromNode.trafficResetDay &&
+      pending.trafficResetTime === fromNode.trafficResetTime &&
+      pending.trafficResetTimezone === fromNode.trafficResetTimezone &&
+      pending.hidden === fromNode.hidden &&
+      pending.traffic_limit === fromNode.traffic_limit &&
+      pending.traffic_limit_type === fromNode.traffic_limit_type &&
+      pending.regionOverride === fromNode.regionOverride &&
+      pending.trafficResetAllowance === fromNode.trafficResetAllowance
+    ) {
+      pendingSavedEditRef.current = null;
+    }
+    if (open) return;
+    hydrateEditForm();
   }, [
+    open,
     node.hidden,
     node.traffic_limit,
     node.traffic_limit_type,
@@ -3414,6 +3482,16 @@ function EditButton({ node }: { node: NodeDetail }) {
         const message = await response.text();
         throw new Error(message || `HTTP ${response.status}`);
       }
+      pendingSavedEditRef.current = {
+        hidden,
+        traffic_limit,
+        traffic_limit_type,
+        trafficResetDay,
+        trafficResetTime: normalizeTrafficResetTime(trafficResetTime),
+        trafficResetTimezone: normalizeTrafficResetTimezone(trafficResetTimezone),
+        regionOverride,
+        trafficResetAllowance,
+      };
       refresh();
       setOpen(false);
       toast.success(t("admin.nodeEdit.saveSuccess", "保存成功"));
@@ -3425,7 +3503,13 @@ function EditButton({ node }: { node: NodeDetail }) {
     }
   };
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (next || !pendingSavedEditRef.current) hydrateEditForm();
+        setOpen(next);
+      }}
+    >
       <Dialog.Trigger>
         <IconButton
           variant="ghost"

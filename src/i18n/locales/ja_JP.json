@@ -411,6 +411,7 @@
         "download": "ダウンロード",
         "effective": "校正後の使用量",
         "history": "最近の校正履歴",
+        "historyIncomplete": "この期間初日の通信量は保持期限を過ぎて復元できません。現在の期間を再校正してください。",
         "invalidResponse": "サーバーから校正結果が返されませんでした",
         "invalidValue": "10 GB や 1.5 TB のような有効な通信量を入力してください",
         "noHistory": "この期間の校正履歴はありません",
