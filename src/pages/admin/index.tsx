@@ -18,6 +18,22 @@ import {
 } from "@/contexts/NodeDetailsContext";
 import { createInstallTokenSession, installCommandCopyAllowed } from "@/lib/installTokenSession";
 import { AdminMobileCardStack, AdminMobileListCard } from "@/components/admin/AdminMobileListCard";
+import {
+  NODE_COLUMN_KEYS,
+  NODE_COLUMN_MIN,
+  NODE_SORT_COLUMN_WIDTH,
+  clampNodeColumnWidth,
+  clearNodeColumnWidths,
+  defaultNodeColumnWidths,
+  fitNodeColumnWidths,
+  nodeColumnStyle,
+  sameNodeColumnWidths,
+  readNodeColumnLayout,
+  readNodeColumnWidths,
+  writeNodeColumnWidths,
+  type NodeColumnKey,
+  type NodeColumnWidths,
+} from "@/components/admin/nodeTableColumnWidths";
 import Alert from "@mui/material/Alert";
 import MuiButton from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
@@ -722,11 +738,11 @@ const SortableRowCells = React.memo(function SortableRowCells({
       >
         <NodeNameLink node={node} online={online} />
       </TableCell>
-      <TableCell className="!align-middle" data-label={t("admin.nodeTable.network", "网络")}>
+      <TableCell className="!align-middle overflow-hidden" data-label={t("admin.nodeTable.network", "网络")}>
         <div className="flex min-w-0 flex-col justify-center text-sm leading-[1.125rem] text-muted-foreground">
           {networkAddresses.length > 0 ? networkAddresses.map(([type, address]) => (
-            <div key={type} className="flex min-w-0 items-center gap-1" title={address}>
-              <span className="whitespace-nowrap tabular-nums">
+            <div key={type} className="flex min-w-0 items-center gap-1 overflow-hidden" title={address}>
+              <span className="min-w-0 truncate whitespace-nowrap tabular-nums">
                 {type} {type === "IPv6" ? compactIPv6(address) : address}
               </span>
               <button
@@ -742,9 +758,9 @@ const SortableRowCells = React.memo(function SortableRowCells({
           )) : <span className="tabular-nums">--</span>}
         </div>
       </TableCell>
-      <TableCell className="!align-middle" data-label={t("admin.nodeTable.agent", "Agent")}>
-        <div className="admin-node-agent-cell flex min-w-0 flex-col items-center justify-center gap-0.5 text-center leading-none">
-          <span className="block max-w-full truncate text-sm leading-5 text-muted-foreground" title={publicVersion(node.version) || "--"}>
+      <TableCell className="!align-middle whitespace-normal" data-label={t("admin.nodeTable.agent", "Agent")}>
+        <div className="admin-node-agent-cell flex min-w-0 flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-center" title={[publicVersion(node.version) || "--", deploymentStatusPresentation?.label].filter(Boolean).join(" ")}>
+          <span className="admin-node-agent-version text-sm text-muted-foreground">
             {publicVersion(node.version) || "--"}
           </span>
           {deploymentStatusPresentation ? (
@@ -778,7 +794,7 @@ const SortableRowCells = React.memo(function SortableRowCells({
           <PriceTags
             className="admin-node-billing-tags [&_label]:!text-xs"
             direction="row"
-            wrap="nowrap"
+            wrap="wrap"
             price={node.price}
             billing_cycle={node.billing_cycle}
             expired_at={node.expired_at}
@@ -786,7 +802,7 @@ const SortableRowCells = React.memo(function SortableRowCells({
           />
         )}
       </TableCell>
-      <TableCell className="!align-middle min-w-0 overflow-hidden" data-label={t("admin.nodeTable.tags", "标签")}>
+      <TableCell className="!align-middle min-w-0 whitespace-normal" data-label={t("admin.nodeTable.tags", "标签")}>
         {(node.tags || "").trim() ? (
           <div className="admin-cell-clip-row" title={node.tags || ""}>
             <CustomTags tags={node.tags || ""} />
@@ -945,6 +961,12 @@ const SortableMobileCard = React.memo(function SortableMobileCard({
   );
 });
 
+function nodeListTableWidth(root: HTMLElement | null) {
+  const scroller = root?.querySelector("[data-slot='table-container']");
+  if (scroller && scroller.clientWidth > 0) return Math.max(0, scroller.clientWidth - 1);
+  return root?.clientWidth ?? 0;
+}
+
 const NodeTable = ({
   nodes,
   settings,
@@ -978,6 +1000,10 @@ const NodeTable = ({
   );
   // 添加 localNodes 状态，实现即时 UI 更新
   const [localNodes, setLocalNodes] = useState<NodeDetail[]>(nodes);
+  const [columnWidths, setColumnWidths] = useState<NodeColumnWidths | null>(() => readNodeColumnWidths());
+  const [defaultLayout, setDefaultLayout] = useState<NodeColumnWidths | null>(null);
+  const [sortColumnWidth, setSortColumnWidth] = useState(() => readNodeColumnLayout()?.sort ?? NODE_SORT_COLUMN_WIDTH);
+  const columnResizeLock = React.useRef(false);
   const [currentPage, setCurrentPage] = useState(1);
   const defaultPageSize = useAdminDefaultPageSize();
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -1000,6 +1026,33 @@ const NodeTable = ({
         `${node.uuid}:${node.price}:${node.billing_cycle}:${node.expired_at}:${node.currency}`,
     )
     .join("|");
+
+  const layoutMode = columnWidths ? "custom" : "default";
+  const activeWidths = columnWidths ?? defaultLayout;
+  const activeSort = columnWidths ? sortColumnWidth : NODE_SORT_COLUMN_WIDTH;
+
+  React.useLayoutEffect(() => {
+    if (isMobile) return;
+    const root = tableWrapRef.current;
+    if (!root) return;
+    const fit = () => {
+      if (columnResizeLock.current) return;
+      const width = nodeListTableWidth(root);
+      if (layoutMode === "custom") {
+        setColumnWidths((current) => {
+          if (!current) return current;
+          return fitNodeColumnWidths(current, width, sortColumnWidth);
+        });
+        return;
+      }
+      const next = defaultNodeColumnWidths(width, NODE_SORT_COLUMN_WIDTH);
+      setDefaultLayout((current) => (sameNodeColumnWidths(current, next) ? current : next));
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [isMobile, sortColumnWidth, layoutMode]);
 
   React.useLayoutEffect(() => {
     if (isMobile) return;
@@ -1097,6 +1150,93 @@ const NodeTable = ({
     }
   };
 
+  const startColumnResize = (column: NodeColumnKey, event: React.PointerEvent<HTMLElement>) => {
+    if (event.button !== 0) return;
+    const partner = NODE_COLUMN_KEYS[NODE_COLUMN_KEYS.indexOf(column) + 1];
+    if (!partner) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const row = event.currentTarget.closest("tr");
+    const cells = row ? [...row.querySelectorAll("th")] : [];
+    if (cells.length !== NODE_COLUMN_KEYS.length + 1) return;
+    const measured = {} as NodeColumnWidths;
+    const measuredSort = Math.max(44, Math.round(cells[0].getBoundingClientRect().width));
+    NODE_COLUMN_KEYS.forEach((key, index) => {
+      measured[key] = Math.round(cells[index + 1].getBoundingClientRect().width);
+    });
+    const container = nodeListTableWidth(tableWrapRef.current);
+    const baseline = container > 0 ? fitNodeColumnWidths(measured, container, measuredSort) : measured;
+    const origin = baseline[column];
+    const startX = event.clientX;
+    const handle = event.currentTarget;
+    const rightKeys = NODE_COLUMN_KEYS.slice(NODE_COLUMN_KEYS.indexOf(column) + 1);
+    try {
+      handle.setPointerCapture(event.pointerId);
+    } catch {
+      /* The pointer is only capturable during a real drag. */
+    }
+    columnResizeLock.current = true;
+    setSortColumnWidth(measuredSort);
+    handle.classList.add("is-active");
+    document.body.classList.add("admin-node-col-resizing");
+    const widthsAt = (clientX: number) => {
+      const limits = NODE_COLUMN_MIN;
+      let desired = Math.max(limits[column], clampNodeColumnWidth(column, origin + clientX - startX));
+      let delta = desired - origin;
+      const next = { ...baseline };
+      if (delta > 0) {
+        let remain = delta;
+        for (const key of rightKeys) {
+          const spare = Math.max(0, baseline[key] - limits[key]);
+          const take = Math.min(spare, remain);
+          next[key] = baseline[key] - take;
+          remain -= take;
+        }
+        next[column] = origin + (delta - remain);
+      } else {
+        const shrink = Math.min(-delta, Math.max(0, origin - limits[column]));
+        next[column] = origin - shrink;
+        next[partner] = baseline[partner] + shrink;
+      }
+      return next;
+    };
+    const move = (ev: PointerEvent) => setColumnWidths(widthsAt(ev.clientX));
+    const end = (ev: PointerEvent) => {
+      columnResizeLock.current = false;
+      const root = tableWrapRef.current;
+      const fitted = root
+        ? fitNodeColumnWidths(widthsAt(ev.clientX), nodeListTableWidth(root), measuredSort)
+        : widthsAt(ev.clientX);
+      setSortColumnWidth(measuredSort);
+      setColumnWidths(fitted);
+      writeNodeColumnWidths(fitted, measuredSort);
+      handle.classList.remove("is-active");
+      document.body.classList.remove("admin-node-col-resizing");
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", end);
+      handle.removeEventListener("pointercancel", end);
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  };
+
+  const resetColumnWidths = () => {
+    clearNodeColumnWidths();
+    setColumnWidths(null);
+    setSortColumnWidth(NODE_SORT_COLUMN_WIDTH);
+  };
+
+  const resizeHandle = (column: NodeColumnKey) => (
+    <span
+      className="admin-node-col-resize"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={t("admin.nodeTable.resizeColumn", "拖动调整列宽")}
+      onPointerDown={(event) => startColumnResize(column, event)}
+    />
+  );
+
   return (
     <div className="admin-responsive-table-wrap admin-node-list-dnd-wrap overflow-x-auto">
       <DndContext
@@ -1128,30 +1268,69 @@ const NodeTable = ({
           </SortableContext>
         ) : (
         <div ref={tableWrapRef}>
-        <Table className={`admin-responsive-table admin-node-table min-w-[1172px] table-fixed text-sm${billingStack ? " admin-node-billing-stack" : ""}`}>
+        <Table
+          className={`admin-responsive-table admin-node-table min-w-[1172px] table-fixed text-sm${billingStack ? " admin-node-billing-stack" : ""}${activeWidths ? " is-column-sized" : ""}`}
+        >
+          {activeWidths ? (
+            <colgroup>
+              <col style={{ width: activeSort }} />
+              {NODE_COLUMN_KEYS.map((key) => (
+                <col
+                  key={key}
+                  style={{ width: activeWidths[key] }}
+                />
+              ))}
+            </colgroup>
+          ) : null}
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[44px]">
+              <TableHead className="w-[44px]" style={activeWidths ? nodeColumnStyle(activeSort) : undefined}>
                 <span className="sr-only">{t("common.sort", "排序")}</span>
               </TableHead>
-              <TableHead className="w-[170px]">{t("admin.nodeTable.name")}</TableHead>
-              <TableHead className="w-[170px]">
+              <TableHead className="w-[170px]" style={nodeColumnStyle(activeWidths?.name)}>
+                {t("admin.nodeTable.name")}
+                {resizeHandle("name")}
+              </TableHead>
+              <TableHead className="w-[170px]" style={nodeColumnStyle(activeWidths?.network)}>
                 {t("admin.nodeTable.network", "网络")}
+                {resizeHandle("network")}
               </TableHead>
-              <TableHead className="w-[64px] text-center">
+              <TableHead
+                className="w-[64px] text-center"
+                style={nodeColumnStyle(activeWidths?.agent)}
+              >
                 {t("admin.nodeTable.agent", "Agent")}
+                {resizeHandle("agent")}
               </TableHead>
-              <TableHead className="w-[64px]">
+              <TableHead className="w-[64px]" style={nodeColumnStyle(activeWidths?.group)}>
                 {t("common.group", "分组")}
+                {resizeHandle("group")}
               </TableHead>
-              <TableHead className="w-[64px]">
+              <TableHead className="w-[64px]" style={nodeColumnStyle(activeWidths?.remark)}>
                 {t("common.remark", "备注")}
+                {resizeHandle("remark")}
               </TableHead>
-              <TableHead className="w-[80px]">{t("admin.nodeTable.billing")}</TableHead>
-              <TableHead className="w-[116px]">
+              <TableHead className="w-[80px]" style={nodeColumnStyle(activeWidths?.billing)}>
+                {t("admin.nodeTable.billing")}
+                {resizeHandle("billing")}
+              </TableHead>
+              <TableHead className="w-[116px]" style={nodeColumnStyle(activeWidths?.tags)}>
                 {t("admin.nodeTable.tags", "标签")}
+                {resizeHandle("tags")}
               </TableHead>
-              <TableHead className="w-[308px]">{t("common.action", "操作")}</TableHead>
+              <TableHead className="w-[308px]" style={nodeColumnStyle(activeWidths?.action)}>
+                <span className="admin-node-action-head">
+                  <span>{t("common.action", "操作")}</span>
+                  <button
+                    type="button"
+                    className="admin-node-col-reset"
+                    onClick={resetColumnWidths}
+                  >
+                    <RefreshCw size="14" />
+                    {t("admin.nodeTable.resetColumnWidths", "重置列宽")}
+                  </button>
+                </span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

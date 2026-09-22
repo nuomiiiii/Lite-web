@@ -43,3 +43,10 @@ test("UTC aliases collapse to a single UTC option", () => {
   assert.equal(normalizeTrafficResetTimezone("Etc/GMT"), "UTC");
   assert.equal(normalizeTrafficResetTimezone("UTC"), "UTC");
 });
+
+test("dropdown labels are stored as IANA timezone names", () => {
+  assert.equal(normalizeTrafficResetTimezone("Asia/Shanghai (UTC+8)"), "Asia/Shanghai");
+  assert.equal(normalizeTrafficResetTimezone("Europe/London (UTC+0)"), "Europe/London");
+  assert.equal(normalizeTrafficResetTimezone("UTC (UTC)"), "UTC");
+  assert.equal(normalizeTrafficResetTimezone("  Asia/Tokyo (UTC+9)  "), "Asia/Tokyo");
+});

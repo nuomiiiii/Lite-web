@@ -12,6 +12,17 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 
+function sonnerExitHold(): Plugin {
+  return {
+    name: "sonner-exit-hold",
+    transform(code, id) {
+      const normalized = id.replace(/\\/g, "/");
+      if (!normalized.includes("/sonner/dist/index.")) return;
+      return code.replace("TIME_BEFORE_UNMOUNT = 200", "TIME_BEFORE_UNMOUNT = 360");
+    },
+  };
+}
+
 function keepOnViteDevServer(pathname: string): boolean {
   return (
     pathname.startsWith("/admin") ||
@@ -83,7 +94,11 @@ export default defineConfig(({ mode }) => {
       : "/";
   const baseConfig: UserConfig = {
     base: base,
+    optimizeDeps: {
+      exclude: ["sonner"],
+    },
     plugins: [
+      sonnerExitHold(),
       react(),
       tailwindcss(),
       ...(systemUiBuild ? [] : [VitePWA({

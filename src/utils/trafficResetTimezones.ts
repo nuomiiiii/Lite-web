@@ -126,7 +126,9 @@ export function normalizeTrafficResetTime(value: string | null | undefined): str
 }
 
 export function normalizeTrafficResetTimezone(value: string | null | undefined): string {
-  const timezone = String(value || "").trim();
+  let timezone = String(value || "").trim();
+  const labeled = timezone.match(/^(.*)\s+\((?:UTC|GMT)[^)]*\)$/);
+  if (labeled?.[1]) timezone = labeled[1].trim();
   if (!timezone) return "Asia/Shanghai";
   return UTC_ALIASES.has(timezone) ? "UTC" : timezone;
 }

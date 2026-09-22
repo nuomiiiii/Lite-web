@@ -387,6 +387,8 @@
       "priceTips": "0不显示，-1表示免费",
       "region": "国家/地区",
       "reinstallRequired": "重装后生效",
+      "resetColumnWidths": "重置列宽",
+      "resizeColumn": "拖动调整列宽",
       "rotateToken": "重置 Token",
       "rotateTokenDescription": "生成新 Token 后，旧 Token 最多保留 24 小时；新 Token 首次成功连接后旧 Token 会立即失效。",
       "rotateTokenFailed": "重置 Token 失败：{{error}}",

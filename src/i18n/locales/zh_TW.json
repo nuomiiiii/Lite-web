@@ -387,6 +387,8 @@
       "priceTips": "0 不顯示，-1 表示免費",
       "region": "國家/地區",
       "reinstallRequired": "重裝後才可生效",
+      "resetColumnWidths": "重設欄寬",
+      "resizeColumn": "拖曳調整欄寬",
       "rotateToken": "重設 Token",
       "rotateTokenDescription": "重設 Token 後，舊 Token 最多保留 24 小時；新 Token 首次連線即作廢舊 Token。",
       "rotateTokenFailed": "無法重設 Token：{{error}}",

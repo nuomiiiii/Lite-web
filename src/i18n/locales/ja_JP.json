@@ -387,6 +387,8 @@
       "priceTips": "0は表示しない、-1は無料を示す",
       "region": "国/地域",
       "reinstallRequired": "再インストール後に有効",
+      "resetColumnWidths": "列幅をリセット",
+      "resizeColumn": "ドラッグして列幅を調整",
       "rotateToken": "Token をリセット",
       "rotateTokenDescription": "新しい Token の発行後も古い Token は最大 24 時間有効です。新しい Token で初めて接続すると古い Token は直ちに無効になります。",
       "rotateTokenFailed": "Token のリセットに失敗しました：{{error}}",

@@ -387,6 +387,8 @@
       "priceTips": "0 is not displayed, -1 means free",
       "region": "Country/Region",
       "reinstallRequired": "Takes effect after reinstalling",
+      "resetColumnWidths": "Reset column widths",
+      "resizeColumn": "Drag to resize column",
       "rotateToken": "Reset token",
       "rotateTokenDescription": "After a new token is generated, the old token remains valid for up to 24 hours and is revoked as soon as the new token connects successfully.",
       "rotateTokenFailed": "Failed to reset token: {{error}}",
