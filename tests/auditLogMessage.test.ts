@@ -83,3 +83,22 @@ test("secret logs do not gain a value while changing language", () => {
   const text = formatAuditMessage(message, translate(locale("zh_CN.json")));
   assert.equal(text, "更换了「站点 API 密钥」");
 });
+
+test("command clipboard logs show the command name", () => {
+  const message = JSON.stringify({
+    k: "audit.clipboard_delete",
+    p: { name: "test·" },
+  });
+  assert.equal(
+    formatAuditMessage(message, translate(locale("zh_CN.json"))),
+    "删除了命令剪贴板「test·」",
+  );
+  const older = JSON.stringify({
+    k: "audit.clipboard_update",
+    p: { id: "3" },
+  });
+  assert.equal(
+    formatAuditMessage(older, translate(locale("zh_CN.json"))),
+    "修改了命令剪贴板「#3」",
+  );
+});

@@ -93,6 +93,15 @@ export function formatAuditMessage(message: string, t: AuditTranslate): string {
   if (params.to) params.to = displayValue(settingKey, params.to, t);
   const opKey = FILE_OP[params.operation ?? ""];
   if (opKey) params.operation = t(opKey);
+  if (
+    (parsed.k === "audit.clipboard_create" ||
+      parsed.k === "audit.clipboard_update" ||
+      parsed.k === "audit.clipboard_delete") &&
+    !params.name &&
+    params.id
+  ) {
+    params.name = "#" + params.id;
+  }
   return t(parsed.k, params);
 }
 

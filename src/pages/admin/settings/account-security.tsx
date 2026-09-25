@@ -64,6 +64,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { updateSettingsWithToast, useSettings } from "@/lib/api";
 import {
   getAccountPasskeySnapshot,
+  isWindowsHelloPasskey,
   prefetchAccountPasskeys,
   rememberAccountPasskeys,
   type AccountPasskeySummary,
@@ -2041,7 +2042,6 @@ function PasskeysPanel({
       const publicKey = toPasskeyCreateOptions(
         optionsBody.data?.publicKey || optionsBody.publicKey,
         prefer,
-        { windows: windowsHelloAvailable },
       );
       abortCeremony();
       const controller = new AbortController();
@@ -2061,7 +2061,12 @@ function PasskeysPanel({
       });
       const verifyBody = await verifyRes.json();
       if (!verifyRes.ok) throw new Error(verifyBody.message || "failed");
-      const created = (verifyBody.data ?? verifyBody) as { id?: string; name?: string; created_at?: string };
+      const created = (verifyBody.data ?? verifyBody) as {
+        id?: string;
+        name?: string;
+        created_at?: string;
+        aaguid?: string;
+      };
       setName("");
       setPassword("");
       setTwoFa("");
@@ -2071,7 +2076,15 @@ function PasskeysPanel({
         const next = id
           ? current.some((row) => row.id === id)
             ? current
-            : [...current, { id, name: created.name || nextName, created_at: created.created_at }]
+            : [
+                ...current,
+                {
+                  id,
+                  name: created.name || nextName,
+                  created_at: created.created_at,
+                  aaguid: created.aaguid,
+                },
+              ]
           : current;
         const count = id ? next.length : current.length + 1;
         rememberAccountPasskeys(id ? next : current);
@@ -2408,10 +2421,16 @@ function PasskeysPanel({
       ) : (
         <>
           <Paper variant="outlined" sx={{ px: 2, boxShadow: "none" }}>
-            {items.map((item, index) => (
+            {items.map((item) => (
               <SettingsDetailRow
                 key={item.id}
-                icon={index === 0 ? <Devices size={21} /> : <KeyRound size={21} />}
+                icon={
+                  isWindowsHelloPasskey(item.aaguid) ? (
+                    <Devices size={21} />
+                  ) : (
+                    <KeyRound size={21} />
+                  )
+                }
                 title={
                   renamingId === item.id ? (
                     <TextField
