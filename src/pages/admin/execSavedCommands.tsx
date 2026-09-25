@@ -123,7 +123,10 @@ export function SavedExecCommands({ onApply }: SavedExecCommandsProps) {
               title={t("exec.savedCommandClear")}
               variant="ghost"
               className="!h-6 !w-6 !min-w-0"
-              onClick={() => setSelectedId("")}
+              onClick={() => {
+                setSelectedId("");
+                onApply("");
+              }}
             >
               <X size={14} />
             </IconButton>
