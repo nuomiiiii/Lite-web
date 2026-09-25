@@ -626,7 +626,7 @@
     "traffic_calibrate": "サーバー「{{name}}」の今周期トラフィックを校正しました。上り {{up}}、下り {{down}}",
     "user_update": "アカウント情報を更新しました",
     "value_change": "「{{setting}}」を「{{from}}」から「{{to}}」に変更しました",
-    "visitor": "{{detail}}",
+    "visitor": "訪問者イベント {{detail}}",
     "xterm_update": "ターミナル設定を更新しました"
   },
   "billing": {

@@ -626,7 +626,7 @@
     "traffic_calibrate": "Calibrated this cycle's traffic for {{name}}: up {{up}}, down {{down}}",
     "user_update": "Updated the account profile",
     "value_change": "Changed {{setting}} from {{from}} to {{to}}",
-    "visitor": "{{detail}}",
+    "visitor": "Visitor event {{detail}}",
     "xterm_update": "Updated terminal settings"
   },
   "billing": {

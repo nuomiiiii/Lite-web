@@ -626,7 +626,7 @@
     "traffic_calibrate": "校正了伺服器「{{name}}」本週期傳輸用量，上行 {{up}}，下行 {{down}}",
     "user_update": "更新了帳戶資料",
     "value_change": "將「{{setting}}」從「{{from}}」改為「{{to}}」",
-    "visitor": "{{detail}}",
+    "visitor": "訪客事件 {{detail}}",
     "xterm_update": "更新了終端機設定"
   },
   "billing": {
