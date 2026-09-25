@@ -115,15 +115,19 @@ export function SavedExecCommands({ onApply }: SavedExecCommandsProps) {
           </Select.Content>
         </Select.Root>
         {selected ? (
-          <IconButton
-            title={t("exec.savedCommandClear")}
-            variant="ghost"
-            className="!absolute right-7 top-1/2 z-10 !h-6 !w-6 !min-w-0 -translate-y-1/2"
+          <div
+            className="absolute right-7 top-1/2 z-10 -translate-y-1/2"
             onMouseDown={(event) => event.preventDefault()}
-            onClick={() => setSelectedId("")}
           >
-            <X size={14} />
-          </IconButton>
+            <IconButton
+              title={t("exec.savedCommandClear")}
+              variant="ghost"
+              className="!h-6 !w-6 !min-w-0"
+              onClick={() => setSelectedId("")}
+            >
+              <X size={14} />
+            </IconButton>
+          </div>
         ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-1">

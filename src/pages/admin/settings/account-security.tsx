@@ -2421,7 +2421,7 @@ function PasskeysPanel({
       ) : (
         <>
           <Paper variant="outlined" sx={{ px: 2, boxShadow: "none" }}>
-            {items.map((item) => (
+            {items.map((item, index) => (
               <SettingsDetailRow
                 key={item.id}
                 icon={
