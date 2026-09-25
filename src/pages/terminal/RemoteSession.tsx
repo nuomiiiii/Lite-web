@@ -277,9 +277,9 @@ export default function RemoteSession({ tabId, node, live, online, active, compa
   }, [sendTerminalText]);
 
   const submitMobileCommand = useCallback(() => {
-    if (mobileComposing.current || !mobileCommand) return;
+    if (mobileComposing.current) return;
     if (!sendTerminalText(`${mobileCommand}\r`)) return;
-    setMobileCommand("");
+    if (mobileCommand) setMobileCommand("");
     const dismissKeyboard = () => {
       mobileCommandInput.current?.blur();
       terminalHost.current?.querySelector<HTMLTextAreaElement>("textarea.xterm-helper-textarea")?.blur();
@@ -887,8 +887,8 @@ export default function RemoteSession({ tabId, node, live, online, active, compa
               <button
                 type="submit"
                 className="remote-mobile-send"
-                aria-label={t("terminal.session.send_command")}
-                disabled={!remoteReady || !mobileCommand}
+                aria-label={mobileCommand ? t("terminal.session.send_command") : t("terminal.session.send_enter")}
+                disabled={!remoteReady}
               >
                 <CornerDownLeft size={18} />
               </button>

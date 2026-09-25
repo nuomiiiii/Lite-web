@@ -2534,6 +2534,7 @@
       "select_content_first": "請先選取內容",
       "selected": "已選取",
       "send_command": "傳送指令",
+      "send_enter": "傳送回車",
       "session_full": "連線數量已滿，請關閉未使用的分頁後重試",
       "sessions": "工作階段",
       "status_bar": "遠端工作階段狀態",

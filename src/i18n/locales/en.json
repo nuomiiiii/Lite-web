@@ -2534,6 +2534,7 @@
       "select_content_first": "Select terminal content first",
       "selected": "Selected",
       "send_command": "Send command",
+      "send_enter": "Send Enter",
       "session_full": "Too many remote sessions are open. Close unused terminals and try again",
       "sessions": "Sessions",
       "status_bar": "Remote session status",

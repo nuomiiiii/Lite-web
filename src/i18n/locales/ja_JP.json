@@ -2534,6 +2534,7 @@
       "select_content_first": "先にターミナルの内容を選択してください",
       "selected": "選択中",
       "send_command": "コマンドを送信",
+      "send_enter": "Enter を送信",
       "session_full": "リモートセッション数が上限に達しました。使っていないターミナルを閉じてから再試行してください",
       "sessions": "セッション",
       "status_bar": "リモートセッションの状態",

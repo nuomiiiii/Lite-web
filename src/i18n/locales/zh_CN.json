@@ -2534,6 +2534,7 @@
       "select_content_first": "请先选中终端内容",
       "selected": "已选中",
       "send_command": "发送命令",
+      "send_enter": "发送回车",
       "session_full": "远程会话数量已满，请关闭不用的终端后重试",
       "sessions": "会话",
       "status_bar": "远程会话状态",
