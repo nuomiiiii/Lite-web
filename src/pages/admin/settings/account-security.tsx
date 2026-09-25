@@ -296,7 +296,10 @@ export default function AccountSecuritySettings() {
                 borderColor: "divider",
                 borderRadius: "50%",
                 color: "primary.main",
-                boxShadow: "0 0 0 1px rgba(255,255,255,0.8)",
+                boxShadow: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? `0 0 0 2px ${theme.palette.background.paper}`
+                    : "0 0 0 1px rgba(255,255,255,0.8)",
               }}
             >
               <PhotoCameraOutlined sx={{ fontSize: 14 }} />
