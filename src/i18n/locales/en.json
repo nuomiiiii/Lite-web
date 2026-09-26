@@ -442,7 +442,12 @@
       "login_description": "Send a notification when a new session logs into Lite.",
       "page_description": "Configure general expiration, login, and traffic usage notifications.",
       "traffic": "Traffic Usage",
-      "traffic_description": "Lite sends a notification when server traffic reaches the configured percentage, followed by reminders at 5% increments. Usage is calculated against the effective quota for the current billing cycle, including any reset traffic allowance added for that cycle. No notification is sent without a traffic limit; set this value to 0 to disable reminders."
+      "traffic_start": "Starting percentage",
+      "traffic_start_invalid": "Enter a number for the starting percentage",
+      "traffic_description": "Lite sends a notification when server traffic reaches the configured percentage, then again each time usage rises by the reminder step. Usage is calculated against the effective quota for the current billing cycle, including any reset traffic allowance added for that cycle. No notification is sent without a traffic limit; set this value to 0 to disable reminders.",
+      "traffic_step": "Reminder step",
+      "traffic_step_description": "After the first alert, Lite reminds again each time usage rises by this many percentage points. The default is 5. Use a whole number from 1 to 100, such as 8 or 10.",
+      "traffic_step_invalid": "Enter a whole number from 1 to 100"
     }
   },
   "admin_dashboard": {
@@ -2230,6 +2235,9 @@
     "settings_saved": "Settings Saved",
     "sign_on": {
       "disable_password": "Disable password login",
+      "keep_one_ack": "Got it",
+      "keep_one_message": "Password sign-in, site sign-in, and passkeys cannot all be turned off.",
+      "keep_one_title": "Keep one sign-in method",
       "title": "Sign-On"
     },
     "site": {
@@ -2642,6 +2650,7 @@
       "session_full": "Too many remote sessions are open. Close unused terminals and try again",
       "sessions": "Sessions",
       "status_bar": "Remote session status",
+      "tab_complete": "Send Tab to complete the command",
       "tabbar": "Remote server tabs",
       "terminal": "Terminal",
       "two_factor_valid_for": "This verification stays valid for 10 minutes.",

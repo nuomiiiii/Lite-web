@@ -101,7 +101,7 @@ test("session touch logs out on 401 and coalesces inflight activity", () => {
 test("passkeys can be deleted from the account sheet", () => {
   const source = readFileSync("src/pages/admin/settings/account-security.tsx", "utf8");
   assert.match(source, /method: "DELETE"/);
-  assert.match(source, /account\.passkey_last_method/);
+  assert.match(source, /LastSignInMethodDialog/);
   assert.match(source, /onCount=\{setPasskeyCount\}/);
   assert.match(source, /getAccountPasskeySnapshot/);
   assert.match(source, /prefetchAccountPasskeys/);

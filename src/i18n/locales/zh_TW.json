@@ -442,7 +442,12 @@
       "login_description": "當偵測到新的 Lite 登入時，向您傳送通知。",
       "page_description": "設定伺服器到期續約、登入記錄與傳輸用量等一般通知規則。",
       "traffic": "傳輸用量提醒",
-      "traffic_description": "當伺服器傳輸用量達到設定比例時傳送通知，並以 5% 為級距持續提醒。使用比例依目前計費週期的有效額度計算（包含本週期的重設傳輸量額度）。若伺服器未設定傳輸量上限則不傳送通知；設定為 0 則關閉此提醒。"
+      "traffic_start": "起始百分比",
+      "traffic_start_invalid": "起始百分比請填寫數字",
+      "traffic_description": "當伺服器傳輸用量達到設定的百分比時傳送通知，之後每增加一個提醒幅度再提醒。使用比例依目前計費週期的有效額度計算（包含本週期的重設傳輸量額度）。若伺服器未設定傳輸量上限則不傳送通知；起始百分比設為 0 則關閉此提醒。",
+      "traffic_step": "提醒幅度",
+      "traffic_step_description": "達到起始比例後，用量每再增加這個百分點就再提醒一次。預設為 5，可改為 8、10 等。請填寫 1 到 100 的整數。",
+      "traffic_step_invalid": "請填寫 1 到 100 的整數"
     }
   },
   "admin_dashboard": {
@@ -2230,6 +2235,9 @@
     "settings_saved": "設定已儲存",
     "sign_on": {
       "disable_password": "停用密碼登入功能",
+      "keep_one_ack": "好的",
+      "keep_one_message": "密碼登入、站點登入和通行密鑰不能同時關閉。",
+      "keep_one_title": "至少保留一種登入方式",
       "title": "登入功能進階設定"
     },
     "site": {
@@ -2642,6 +2650,7 @@
       "session_full": "連線數量已滿，請關閉未使用的分頁後重試",
       "sessions": "工作階段",
       "status_bar": "遠端工作階段狀態",
+      "tab_complete": "傳送 Tab 補全命令",
       "tabbar": "終端機分頁",
       "terminal": "終端機",
       "two_factor_valid_for": "此次驗證於 10 分鐘內有效。",

@@ -30,6 +30,7 @@ import {
   ClipboardPaste,
   Copy,
   CornerDownLeft,
+  KeyboardTab,
   Cpu,
   Files,
   HardDrive,
@@ -275,6 +276,13 @@ export default function RemoteSession({ tabId, node, live, online, active, compa
       instance?.focus();
     }
   }, [sendTerminalText]);
+
+  const sendTerminalTab = useCallback(() => {
+    if (mobileComposing.current) return;
+    const pending = mobileCommand;
+    if (!sendTerminalText(pending ? `${pending}\t` : "\t")) return;
+    if (pending) setMobileCommand("");
+  }, [mobileCommand, sendTerminalText]);
 
   const submitMobileCommand = useCallback(() => {
     if (mobileComposing.current) return;
@@ -847,6 +855,15 @@ export default function RemoteSession({ tabId, node, live, online, active, compa
                 <button type="button" disabled={!remoteReady} onClick={() => void pasteTerminalClipboard()}>
                   <ClipboardPaste size={13} />
                   {t("terminal.session.paste")}
+                </button>
+                <button
+                  type="button"
+                  disabled={!remoteReady}
+                  aria-label={t("terminal.session.tab_complete")}
+                  onClick={sendTerminalTab}
+                >
+                  <KeyboardTab size={13} />
+                  Tab
                 </button>
               </div>
             ) : null}

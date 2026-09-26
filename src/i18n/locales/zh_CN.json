@@ -442,7 +442,12 @@
       "login_description": "当有新的会话登录到Lite时，向您发送通知",
       "page_description": "配置到期、登录与流量用量等通用通知规则。",
       "traffic": "流量用量",
-      "traffic_description": "Lite 将在服务器流量达到设定比例时发送通知，并按 5% 梯度持续提醒。使用比例按当前计费周期的有效额度计算，包含本周期设置的重置流量额度。服务器未设置流量阈值时不发送通知；设置为 0 可关闭流量提醒。"
+      "traffic_start": "起始百分比",
+      "traffic_start_invalid": "起始百分比请填写数字",
+      "traffic_description": "Lite 将在服务器流量达到设定的百分比时发送通知，之后每增加一个提醒幅度再提醒。使用比例按当前计费周期的有效额度计算，包含本周期设置的重置流量额度。服务器未设置流量阈值时不发送通知；起始百分比设为 0 可关闭流量提醒。",
+      "traffic_step": "提醒幅度",
+      "traffic_step_description": "达到起始比例后，用量每再增加这个百分点就再提醒一次。默认为 5，可改为 8、10 等。请填写 1 到 100 的整数。",
+      "traffic_step_invalid": "请填写 1 到 100 的整数"
     }
   },
   "admin_dashboard": {
@@ -2230,6 +2235,9 @@
     "settings_saved": "设置已保存",
     "sign_on": {
       "disable_password": "禁止密码登录",
+      "keep_one_ack": "知道了",
+      "keep_one_message": "密码登录、站点登录和通行密钥不能同时关闭。",
+      "keep_one_title": "至少保留一种登录方式",
       "title": "登录"
     },
     "site": {
@@ -2642,6 +2650,7 @@
       "session_full": "远程会话数量已满，请关闭不用的终端后重试",
       "sessions": "会话",
       "status_bar": "远程会话状态",
+      "tab_complete": "发送 Tab 补全命令",
       "tabbar": "远程服务器标签",
       "terminal": "终端",
       "two_factor_valid_for": "本次验证在 10 分钟内有效。",

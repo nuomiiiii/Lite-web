@@ -41,6 +41,7 @@ const SETTING_LABEL: Record<string, string> = {
   tempory_share_token: "settings.site.tempory_share",
   theme: "navigation.appearance",
   traffic_limit_percentage: "admin.notification.traffic",
+  traffic_reminder_step: "admin.notification.traffic_step",
   traffic_report_time: "notification.traffic_report.report_time",
   ws_allowed_origins: "settings.site.ws_allowed_origins",
   ws_origin_check_enabled: "settings.site.ws_origin_check_enabled",
