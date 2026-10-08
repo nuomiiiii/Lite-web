@@ -867,15 +867,15 @@ const AlertRow = ({
     ? blank
     : rule.adaptive_baseline_enabled
       ? rule.adaptive_baseline_ms
-        ? `${Number(rule.adaptive_baseline_ms).toFixed(1)} ms`
+        ? `${Number(rule.adaptive_baseline_ms).toFixed(2)} ms`
         : t("notification.ping_loss.adaptive_status_warming")
       : rule.fixed_baseline_ms
-        ? `${Number(rule.fixed_baseline_ms).toFixed(1)} ms`
+        ? `${Number(rule.fixed_baseline_ms).toFixed(2)} ms`
         : t("notification.ping_loss.mode_fixed");
   const rangeText = (() => {
     if (!sideOn || !rule) return blank;
     if (!rule.adaptive_baseline_enabled) {
-      return `${Number(rule.low_latency_threshold_ms || 0).toFixed(1)}–${Number(rule.high_latency_threshold_ms || 0).toFixed(1)} ms`;
+      return `${Number(rule.low_latency_threshold_ms || 0).toFixed(2)}–${Number(rule.high_latency_threshold_ms || 0).toFixed(2)} ms`;
     }
     const baseline = Number(rule.adaptive_baseline_ms);
     const lowerPercent = Number(rule.adaptive_lower_deviation_percent || 0);
@@ -885,7 +885,7 @@ const AlertRow = ({
     }
     const low = baseline * (1 - lowerPercent / 100);
     const high = baseline * (1 + upperPercent / 100);
-    return `${low.toFixed(1)}–${high.toFixed(1)} ms`;
+    return `${low.toFixed(2)}–${high.toFixed(2)} ms`;
   })();
   const noticedAt = sheet === "loss" ? rule?.last_notified : rule?.latency_last_notified;
   const lastNotified = !sideOn ? blank : noticedAt ? new Date(noticedAt).toLocaleString() : t("notification.ping_loss.never");
@@ -1164,7 +1164,7 @@ const PingLossConfigurationFields = ({
                 <div className="text-sm text-muted-foreground">
                   {t("notification.ping_loss.current_baseline")}:{" "}
                   {baselinePreview.adaptive_baseline_ms
-                    ? `${Number(baselinePreview.adaptive_baseline_ms).toFixed(1)} ms`
+                    ? `${Number(baselinePreview.adaptive_baseline_ms).toFixed(2)} ms`
                     : t("notification.ping_loss.adaptive_status_warming")}
                 </div>
                 <div className="text-sm text-muted-foreground">
