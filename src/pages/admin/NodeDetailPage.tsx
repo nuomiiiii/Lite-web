@@ -71,7 +71,7 @@ import { getRegionCode, getRegionDisplayName } from "@/utils/regionHelper";
 import { openRemoteTerminal } from "@/utils/remoteLaunch";
 import { useRemoteManagementGate } from "@/components/admin/RemoteManagementGate";
 import { nodeTrafficType, trafficUsed } from "@/utils/trafficAccounting";
-import { formatBytes, stringToBytes } from "@/utils/unitHelper";
+import { formatBytes, isNegativeByteInput, stringToBytes } from "@/utils/unitHelper";
 import { billingSaveFailedToast } from "@/utils/billingI18n";
 import { createRandomId } from "@/utils/randomId";
 import { LITE_BLUE, LITE_BLUE_SOFT_STRONG } from "@/theme/brand";
@@ -1187,7 +1187,15 @@ function TrafficResetCostDialog({
 
   const submit = async () => {
     if (!amount.trim()) return;
+    if (isNegativeByteInput(allowance)) {
+      toast.error(t("admin.nodeEdit.trafficResetAllowanceNonNegative", "重置流量额度不能为负数"));
+      return;
+    }
     const nextAllowance = stringToBytes(allowance);
+    if (nextAllowance < 0) {
+      toast.error(t("admin.nodeEdit.trafficResetAllowanceNonNegative", "重置流量额度不能为负数"));
+      return;
+    }
     setSaving(true);
     try {
       await billingRequest(`/api/admin/client/${node.uuid}/billing/traffic-reset`, {
@@ -1247,8 +1255,19 @@ function TrafficResetCostDialog({
             <FieldLabel>{t("admin.nodeEdit.trafficResetAllowance", "重置流量额度")}</FieldLabel>
             <AdminTextField.Root
               value={allowance}
-              onChange={(event) => setAllowance(event.target.value)}
-              onBlur={() => setAllowance(formatBytes(stringToBytes(allowance)))}
+              onChange={(event) => {
+                const next = event.target.value;
+                if (isNegativeByteInput(next)) return;
+                setAllowance(next);
+              }}
+              onBlur={() => {
+                if (isNegativeByteInput(allowance)) {
+                  setAllowance(formatBytes(Math.max(0, node.traffic_reset_allowance ?? 0)));
+                  return;
+                }
+                const bytes = stringToBytes(allowance);
+                setAllowance(formatBytes(bytes < 0 ? Math.max(0, node.traffic_reset_allowance ?? 0) : bytes));
+              }}
             />
             <p className="mt-1 text-xs text-muted-foreground">
               {t("admin.nodeEdit.trafficResetAllowance_description", "同一计费周期可多次调整；与原流量限额相加，并在下个重置日自动归零。")}

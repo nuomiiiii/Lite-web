@@ -118,7 +118,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { formatBytes, stringToBytes } from "@/utils/unitHelper";
+import { formatBytes, isNegativeByteInput, stringToBytes } from "@/utils/unitHelper";
 import { normalizeBandwidth } from "@/utils/bandwidth";
 import { formatTrafficCalibrationCycleRange } from "@/utils/trafficCycle";
 import {
@@ -3580,7 +3580,10 @@ function EditButton({ node, initiallyOpen = false, onClose }: { node: NodeDetail
   const [regionOverride, setRegionOverride] = useState(() =>
     node.region_override ? getRegionCode(node.region_override) : "",
   );
-  const [trafficResetAllowance, setTrafficResetAllowance] = useState(node.traffic_reset_allowance ?? 0);
+  const [trafficResetAllowance, setTrafficResetAllowance] = useState(Math.max(0, node.traffic_reset_allowance ?? 0));
+  const [trafficResetAllowanceInput, setTrafficResetAllowanceInput] = useState(() =>
+    formatBytes(Math.max(0, node.traffic_reset_allowance ?? 0)),
+  );
   const pendingSavedEditRef = React.useRef<{
     hidden: boolean;
     traffic_limit: number;
@@ -3632,7 +3635,9 @@ function EditButton({ node, initiallyOpen = false, onClose }: { node: NodeDetail
     setTrafficResetTime(form.trafficResetTime);
     setTrafficResetTimezone(form.trafficResetTimezone);
     setRegionOverride(form.regionOverride);
-    setTrafficResetAllowance(form.trafficResetAllowance);
+    const allowance = Math.max(0, form.trafficResetAllowance);
+    setTrafficResetAllowance(allowance);
+    setTrafficResetAllowanceInput(formatBytes(allowance));
   };
 
   const hydrateEditForm = () => {
@@ -3670,6 +3675,10 @@ function EditButton({ node, initiallyOpen = false, onClose }: { node: NodeDetail
   ]);
 
   const save = async () => {
+    if (isNegativeByteInput(trafficResetAllowanceInput) || trafficResetAllowance < 0) {
+      toast.error(t("admin.nodeEdit.trafficResetAllowanceNonNegative", "重置流量额度不能为负数"));
+      return;
+    }
     if (trafficResetAllowance > 0 && (trafficResetDay < 1 || trafficResetDay > 31)) {
       toast.error(
         t(
@@ -3731,6 +3740,7 @@ function EditButton({ node, initiallyOpen = false, onClose }: { node: NodeDetail
       };
       refresh();
       setOpen(false);
+      onClose?.();
       toast.success(t("admin.nodeEdit.saveSuccess", "保存成功"));
     } catch (error) {
       console.error("Error updating client:", error);
@@ -3974,13 +3984,26 @@ function EditButton({ node, initiallyOpen = false, onClose }: { node: NodeDetail
                   "admin.nodeEdit.trafficResetAllowance_description",
                   "同一计费周期可多次调整；与原流量限额相加，按上方统计方式计算，并在下个重置日自动归零。",
                 )}
-                defaultValue={formatBytes(trafficResetAllowance || 0)}
+                value={trafficResetAllowanceInput}
                 showSaveButton={false}
                 onChange={(event) => {
-                  setTrafficResetAllowance(stringToBytes(event.currentTarget.value));
+                  const raw = event.currentTarget.value;
+                  if (isNegativeByteInput(raw)) return;
+                  setTrafficResetAllowanceInput(raw);
+                  const bytes = stringToBytes(raw);
+                  if (bytes >= 0) setTrafficResetAllowance(bytes);
                 }}
-                onBlur={(event) => {
-                  event.currentTarget.value = formatBytes(trafficResetAllowance);
+                onBlur={() => {
+                  if (isNegativeByteInput(trafficResetAllowanceInput)) {
+                    const restored = Math.max(0, trafficResetAllowance);
+                    setTrafficResetAllowance(restored);
+                    setTrafficResetAllowanceInput(formatBytes(restored));
+                    return;
+                  }
+                  const bytes = stringToBytes(trafficResetAllowanceInput);
+                  const next = bytes < 0 ? Math.max(0, trafficResetAllowance) : bytes;
+                  setTrafficResetAllowance(next);
+                  setTrafficResetAllowanceInput(formatBytes(next));
                 }}
               />
             </div>
@@ -4195,6 +4218,7 @@ function BillingButton({ node, initiallyOpen = false, onClose }: { node: NodeDet
       }
       if (followUp.close) {
         setOpen(false);
+        onClose?.();
       }
     } catch (error) {
       toast.error(
